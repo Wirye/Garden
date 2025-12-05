@@ -162,9 +162,18 @@ class MainActivity : AppCompatActivity() {
                 else if (obj_type == "scrolly_obj") {
                     changeable_obj_list_y = changeable_obj_list
                 }
+                else if (obj_type == "") {
+                    for (i in 0 until obj_hierarchy.get(0).scrollx_obj_list.size) {
+                        changeable_obj_list_x.add(obj_hierarchy.get(0).scrollx_obj_list.get(i).get(0).obj)
+                    }
+                    for (i in 0 until obj_hierarchy.get(0).scrolly_obj_list.size) {
+                        changeable_obj_list_y.add(obj_hierarchy.get(0).scrolly_obj_list.get(i).get(0).obj)
+                    }
+                }
                 touched = true
             }
             // Scroll
+            var sensivity = 0.8f
             if (is_touchable_obj_touched == true) {
 
                 // Get scroll direction
@@ -181,7 +190,6 @@ class MainActivity : AppCompatActivity() {
 
                 // Horizontal scroll
                 if (scroll_direction == "x") {
-                    var sensivity = 0.8f
                     val diffrent = (x-x_start)*sensivity
                     var id_of_first_object = 0
                     var id_of_last_object = 0
@@ -196,7 +204,7 @@ class MainActivity : AppCompatActivity() {
                     for (i in 0 until changeable_obj_list_x.size) {
                         val obj1 = changeable_obj_list_x.get(i)
                         val obj_name1 = resources.getResourceName(obj1)
-                        if (("1" in obj_name1) || (changeable_obj_list_x.size == 1)) {
+                        if ("1" in obj_name1) {
                             id_of_first_object = obj1
                             margin_start_and_end = findViewById<View>(obj1).marginStart
                         }
@@ -211,7 +219,7 @@ class MainActivity : AppCompatActivity() {
                     for (i in 0 until changeable_obj_list_x.size) {
                         val obj = changeable_obj_list_x.get(i)
                         val obj_name = resources.getResourceName(obj)
-                        if (("${amout_cards}" in obj_name) || (changeable_obj_list_x.size == 1)) {
+                        if ("${amout_cards}" in obj_name) {
                             id_of_last_object = obj
                         }
                     }
@@ -220,21 +228,27 @@ class MainActivity : AppCompatActivity() {
                     for (i in 0 until changeable_obj_list_x.size) {
                         val obj = changeable_obj_list_x.get(i)
                         val obj_name = resources.getResourceName(obj)
+                        val parent_obj_width = findViewById<View>(find_in_view_hierarchy_help(obj_hierarchy.get(0), obj).first).width
                         // Scroll to right
                         if (x > x_start) {
                             if ((findViewById<View>(id_of_first_object).x+diffrent >= margin_start_and_end)) {
-                                if (((findViewById<View>(id_of_last_object).x+diffrent) >= (screen_width - margin_start_and_end - findViewById<View>(id_of_last_object).width)) == false) {
-                                    for (i in 0 until changeable_obj_list_x.size) {
-                                        val obj6 = changeable_obj_list_x.get(i)
+                                if (((findViewById<View>(id_of_last_object).x+diffrent) >= (parent_obj_width - margin_start_and_end - findViewById<View>(id_of_last_object).width)) == false) {
+                                    for (o in 0 until changeable_obj_list_x.size) {
+                                        val obj6 = changeable_obj_list_x.get(o)
                                         val obj_name6 = resources.getResourceName(obj6)
                                         findViewById<View>(id_of_first_object).x=margin_start_and_end.toFloat()
-                                        if ((("1" in obj_name6) == false) && (changeable_obj_list_x.size > 1)) {
+                                        if (("1" in obj_name6) == false) {
                                             try {
                                                 val k = obj_name6.get(obj_name6.lastIndex).toString().toInt()
-                                                findViewById<View>(obj6).x=(margin_start_and_end+((findViewById<View>(obj6).width + findViewById<View>(obj6).marginStart)*(k-1))).toFloat()
+                                                var q = 0.0f
+                                                for (j in 0 until k-1) {
+                                                    q = q + findViewById<View>(changeable_obj_list_x.get(j)).width
+                                                    q = q + findViewById<View>(changeable_obj_list_x.get(j)).marginStart
+                                                }
+                                                findViewById<View>(obj6).x=(margin_start_and_end+q).toFloat()
                                             }
                                             catch (e: NumberFormatException) {
-                                                Log.d("ERROR", "ITEM DON'T HAVE positionNumber IN HIS ID")
+                                                Log.d("ERROR", "ITEM ${obj_name6} DON'T HAVE positionNumber IN HIS ID")
                                             }
                                         }
                                     }
@@ -254,19 +268,27 @@ class MainActivity : AppCompatActivity() {
                         }
                         // Scroll to left
                         else if (x < x_start) {
-                            if ((findViewById<View>(id_of_last_object).x+diffrent) <= (screen_width - margin_start_and_end - findViewById<View>(id_of_last_object).width)) {
+                            if ((findViewById<View>(id_of_last_object).x+diffrent) <= (parent_obj_width - margin_start_and_end - findViewById<View>(id_of_last_object).width)) {
                                 if (((findViewById<View>(id_of_first_object).x+diffrent <= margin_start_and_end)) == false) {
-                                    for (i in 0 until changeable_obj_list_x.size) {
-                                        val obj7 = changeable_obj_list_x.get(i)
+                                    for (o in 0 until changeable_obj_list_x.size) {
+                                        val obj7 = changeable_obj_list_x.get(o)
                                         val obj_name7 = resources.getResourceName(obj7)
-                                        findViewById<View>(id_of_last_object).x=(screen_width - margin_start_and_end - findViewById<View>(id_of_last_object).width).toFloat()
-                                        if (((resources.getResourceName(id_of_last_object)) in obj_name7 == false) && (changeable_obj_list_x.size > 1)) {
+                                        findViewById<View>(id_of_last_object).x=(parent_obj_width - margin_start_and_end - findViewById<View>(id_of_last_object).width).toFloat()
+                                        if (("${amout_cards}" in obj_name7) == false) {
                                             try {
                                                 val k2 = obj_name7.get(obj_name7.lastIndex).toString().toInt()
-                                                findViewById<View>(obj7).x=(screen_width - margin_start_and_end - ((findViewById<View>(id_of_last_object).width)*(amout_cards-k2+1)) - ((findViewById<View>(id_of_last_object).marginStart)*(amout_cards-k2))).toFloat()
+                                                var q = 0.0f
+                                                var q1 = 0.0f
+                                                for (j in 1 until amout_cards-k2+2) {
+                                                    q = q + findViewById<View>(changeable_obj_list_x.get(amout_cards-j+1-1)).width
+                                                }
+                                                for (j in 0 until amout_cards-k2) {
+                                                    q1 = q1 + findViewById<View>(changeable_obj_list_x.get(amout_cards-j)).marginStart
+                                                }
+                                                findViewById<View>(obj7).x=(parent_obj_width - margin_start_and_end - q - q1).toFloat()
                                             }
                                             catch (e: NumberFormatException) {
-                                                Log.d("ERROR", "ITEM DON'T HAVE positionNumber IN HIS ID")
+                                                Log.d("ERROR", "ITEM ${obj_name7} DON'T HAVE positionNumber IN HIS ID")
                                             }
                                         }
                                     }
@@ -289,18 +311,126 @@ class MainActivity : AppCompatActivity() {
 
                 // Vertical scroll
                 if (scroll_direction == "y") {
+                    val diffrent = (y-y_start)*sensivity
+                    var id_of_first_object = 0
+                    var id_of_last_object = 0
                     var margin_start_and_end = 0
+                    var amout_cards = 0
 
-                    if (changeable_obj_list_y.size != 0) {
-                        margin_start_and_end = findViewById<View>(changeable_obj_list_y.get(0)).marginTop
+                    // Create or recreate changeable_obj_list_y list
+                    if (changeable_obj_list_y.isEmpty() && changeable_obj_list_x.isNotEmpty()) {
+                        changeable_obj_list_y = get_nearest_scrolly_obj(changeable_obj_list_x.get(0))
                     }
 
-                    if (y > y_start) {
-                        Log.d("up", margin_start_and_end.toString())
+                    // Log.d all changeable_obj_list_y list
+                    for (i in 0 until changeable_obj_list_y.size) {
+                        Log.d("changeable_obj_list_y list", changeable_obj_list_y.get(i).toString() + "        " + resources.getResourceName(changeable_obj_list_y.get(i)))
                     }
-                    else if (y < y_start) {
-                        Log.d("down", "")
+
+                    // Calculate id of first obj and start, end margins
+                    for (i in 0 until changeable_obj_list_y.size) {
+                        val obj = changeable_obj_list_y.get(i)
+                        val obj_name = resources.getResourceName(obj)
+                        if ("1" in obj_name) {
+                            id_of_first_object = obj
+                            margin_start_and_end = findViewById<View>(obj).marginTop
+                        }
                     }
+
+                    // Calculate amout cards
+                    for (i in 0 until changeable_obj_list_y.size) {
+                        amout_cards = amout_cards + 1
+                    }
+
+                    // Calculate id of last obj
+                    for (i in 0 until changeable_obj_list_y.size) {
+                        val obj = changeable_obj_list_y.get(i)
+                        val obj_name = resources.getResourceName(obj)
+                        if ("${amout_cards}" in obj_name) {
+                            id_of_last_object = obj
+                        }
+                    }
+
+
+                    // Scroll logic
+                    for (i in 0 until changeable_obj_list_y.size) {
+                        val obj = changeable_obj_list_y.get(i)
+                        val parent_obj_heigth = findViewById<View>(find_in_view_hierarchy_help(obj_hierarchy.get(0), obj).first).height
+                        // Scroll up
+                        if (y > y_start) {
+                            Log.d("up", margin_start_and_end.toString())
+                            if (findViewById<View>(id_of_first_object).y+diffrent >= margin_start_and_end) {
+                                if ((findViewById<View>(id_of_last_object) .y+diffrent >= (parent_obj_heigth - margin_start_and_end - findViewById<View>(id_of_last_object).height)) == false) {
+                                    for (o in 0 until changeable_obj_list_y.size) {
+                                        val obj2 = changeable_obj_list_y.get(o)
+                                        val obj2_name = resources.getResourceName(obj2)
+                                        findViewById<View>(id_of_first_object).y=margin_start_and_end.toFloat()
+                                        if (("1" in obj2_name) == false) {
+                                            try {
+                                                var q = 0
+                                                val k = obj2_name.get(obj2_name.lastIndex).toString().toInt()
+                                                for (j in 0 until k-1) {
+                                                    q = q + findViewById<View>(changeable_obj_list_y.get(j)).height
+                                                    q = q + findViewById<View>(changeable_obj_list_y.get(j)).marginTop
+                                                }
+                                                findViewById<View>(obj2).y = (margin_start_and_end + q).toFloat()
+                                            }
+                                            catch (e: Exception) {
+                                                Log.d("ERROR", "ITEM ${obj2_name} DON'T HAVE positionNumber IN HIS ID")
+                                            }
+                                        }
+                                    }
+                                }
+                                y_start = y
+                                break
+                            }
+                            else {
+                                for (u in 0 until changeable_obj_list_y.size) {
+                                    val obj3 = changeable_obj_list_y.get(u)
+                                    findViewById<View>(obj3).y=findViewById<View>(obj3).y+diffrent
+                                }
+                                y_start = y
+                                break
+                            }
+                        }
+                        // Scroll down
+                        else if (y < y_start) {
+                            Log.d("down", margin_start_and_end.toString())
+                            if (findViewById<View>(id_of_last_object).y+diffrent <= parent_obj_heigth - margin_start_and_end - findViewById<View>(id_of_last_object).height) {
+                                if ((findViewById<View>(id_of_first_object).y+diffrent <= margin_start_and_end) == false) {
+                                    for (o in 0 until changeable_obj_list_y.size) {
+                                        val obj4 = changeable_obj_list_y.get(o)
+                                        val obj4_name = resources.getResourceName(obj4)
+                                        findViewById<View>(id_of_last_object).y=parent_obj_heigth-margin_start_and_end-findViewById<View>(id_of_last_object).height.toFloat()
+                                        if (("${amout_cards}" in obj4_name) == false) {
+                                            try {
+                                                val k = obj4_name.get(obj4_name.lastIndex).toString().toInt()
+                                                var q = 0.0f
+                                                var q1 = 0.0f
+                                                for (j in 1 until amout_cards-k+2) {
+                                                    q = q + findViewById<View>(changeable_obj_list_x.get(amout_cards-j+1-1)).height
+                                                }
+                                                for (j in 0 until amout_cards-k) {
+                                                    q1 = q1 + findViewById<View>(changeable_obj_list_x.get(amout_cards-j)).marginTop
+                                                }
+                                                findViewById<View>(obj4).y=(parent_obj_heigth - margin_start_and_end - q - q1).toFloat()
+                                            }
+                                            catch (e: Exception) {
+                                                Log.d("ERROR", "ITEM ${obj4_name} DON'T HAVE positionNumber IN HIS ID")
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            else {
+                                for (o in 0 until changeable_obj_list_y.size) {
+                                    val obj5 = changeable_obj_list_y.get(o)
+                                    findViewById<View>(obj5).y=findViewById<View>(obj5).y+diffrent
+                                }
+                            }
+                        }
+                    }
+
 
                 }
             }
@@ -586,4 +716,16 @@ class MainActivity : AppCompatActivity() {
         return res
     }
 
+    fun get_nearest_scrolly_obj (obj: Int): MutableList<Int> {
+        var res = mutableListOf<Int>()
+        var parent_obj = find_in_view_hierarchy_help(obj_hierarchy.get(0),obj).first
+        var parent_obj_name = resources.getResourceName(parent_obj)
+        while ("scrolly" in parent_obj_name == false) {
+            parent_obj = find_in_view_hierarchy_help(obj_hierarchy.get(0), parent_obj).first
+            parent_obj_name = resources.getResourceName(parent_obj)
+        }
+        res = find_in_view_hierarchy_help(obj_hierarchy.get(0), parent_obj).second
+        Log.d("FUUUUUUNNNNNNN", parent_obj.toString() + "     " + parent_obj_name.toString() + "    res    " + res.toString())
+        return res
+    }
 }
