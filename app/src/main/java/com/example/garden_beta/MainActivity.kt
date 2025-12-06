@@ -119,53 +119,6 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
                 }
-
-//                for (i in 0 until ids.size){
-//                    val obj = ids.get(i)
-//                    val obj_name = resources.getResourceName(obj).toString()
-//                    // Calculate and set margin for buttons
-//                    if ("button" in obj_name) {
-//                        for (o in 0 until white_list_buttons_mg_start.size) {
-//                            if (white_list_buttons_mg_start.get(o) in obj_name) {
-//                                findViewById<View>(obj).layoutParams=set_margin(findViewById<View>(obj).layoutParams as ConstraintLayout.LayoutParams, findViewById<View>(obj).marginStart.toFloat(), base_screen_width.toFloat(), screen_width.toFloat(), "start")
-//                                white_list_buttons_mg_start.set(o, " ")
-//                            }
-//                        }
-//
-//                        for (j in 0 until white_list_buttons_mg_end.size) {
-//                            if (white_list_buttons_mg_end.get(j) in obj_name) {
-//                                findViewById<View>(obj).layoutParams=set_margin(findViewById<View>(obj).layoutParams as ConstraintLayout.LayoutParams, findViewById<View>(obj).marginEnd.toFloat(), base_screen_width.toFloat(), screen_width.toFloat(), "end")
-//                                white_list_buttons_mg_end.set(j," ")
-//                            }
-//                        }
-//
-//                    }
-//                    // Calculate and set margins and width and height for carousel and his elements
-//                    if ("carousel" in obj_name) {
-//                        if ((("text" in obj_name) == false) && (("card" in obj_name) == false)) {
-//                            findViewById<View>(obj).layoutParams=set_margin(findViewById<View>(obj).layoutParams as ConstraintLayout.LayoutParams, findViewById<View>(obj).marginTop.toFloat(), base_screen_width.toFloat(), screen_width.toFloat(), "top")
-//                        }
-//                        if ("text" in obj_name) {
-//                            findViewById<View>(obj).layoutParams=set_margin(findViewById<View>(obj).layoutParams as ConstraintLayout.LayoutParams, findViewById<View>(obj).marginStart.toFloat(), base_screen_width.toFloat(), screen_width.toFloat(), "start")
-//                        }
-//                        if ("card" in obj_name) {
-//
-//                            if (("anime" in obj_name) && (("image" in obj_name) == false)){
-//                                if ("1" in obj_name) {
-//                                    findViewById<View>(obj).layoutParams=set_margin(findViewById<View>(obj).layoutParams as ConstraintLayout.LayoutParams, findViewById<View>(obj).marginStart.toFloat(), base_screen_width.toFloat(), screen_width.toFloat(), "start")
-//                                }
-//                                findViewById<View>(obj).layoutParams=findViewById<View>(obj).layoutParams.apply { width=anime_carousel_card_scale_calc(findViewById<View>(obj).width.toFloat(), screen_width.toFloat()).first; height=anime_carousel_card_scale_calc(findViewById<View>(obj).width.toFloat(), screen_width.toFloat()).second }
-//                            }
-//
-//                            if (("music" in obj_name) && (("image" in obj_name) == false)){
-//                                if ("1" in obj_name) {
-//                                    findViewById<View>(obj).layoutParams=set_margin(findViewById<View>(obj).layoutParams as ConstraintLayout.LayoutParams, findViewById<View>(obj).marginStart.toFloat(), base_screen_width.toFloat(), screen_width.toFloat(), "start")
-//                                }
-//                                findViewById<View>(obj).layoutParams=findViewById<View>(obj).layoutParams.apply { width=music_carousel_card_scale_calc(findViewById<View>(obj).width.toFloat(),screen_width.toFloat()).first; height=music_carousel_card_scale_calc(findViewById<View>(obj).width.toFloat(),screen_width.toFloat()).second }
-//                            }
-//                        }
-//                    }
-//                }
             }
             already_changed = true
         }
