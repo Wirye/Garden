@@ -14,6 +14,7 @@ import kotlin.math.round
 import android.util.Log
 import android.view.MotionEvent
 import androidx.annotation.RequiresApi
+import androidx.core.view.marginBottom
 import androidx.core.view.marginEnd
 import kotlin.math.abs
 
@@ -30,12 +31,23 @@ class MainActivity : AppCompatActivity() {
     private var screen_width = 0
     private var screen_height = 0
 
+    private var white_list_buttons_mg_start = mutableListOf<String>("home", "settings")
+    private var white_list_buttons_mg_end = mutableListOf<String>("search", "download", "account")
+
     data class view_hierarchy (
         val obj: Int,
         val base_obj_list: MutableList<MutableList<view_hierarchy>>,
         val scrollx_obj_list: MutableList<MutableList<view_hierarchy>>,
         val scrolly_obj_list: MutableList<MutableList<view_hierarchy>>,
     )
+
+    data class list_of_obj_need_to_scale_optimizate_format (
+        val obj: Int,
+        val what_change: String,
+        val consider_others: Boolean,
+    )
+
+    private var list_of_obj_need_to_scale_optimizate = mutableListOf<list_of_obj_need_to_scale_optimizate_format>()
 
 
     @RequiresApi(Build.VERSION_CODES.R)
@@ -53,7 +65,7 @@ class MainActivity : AppCompatActivity() {
             screen_width = binding.main.width
             screen_height = binding.main.height
 
-            // scale optimization
+            // Ids and obj_hierarchy lists init and scale optimization
             if (already_changed == false) {
 
                 ids = get_all_view_ids(binding.main, ids)
@@ -64,66 +76,96 @@ class MainActivity : AppCompatActivity() {
                 for (i in 0 until ids.size) {
                     Log.d("id", resources.getResourceName(ids.get(i)).toString())
                 }
-                Log.d("status bar", binding.main.y.toString())
-//                for (i in 0 until ids.size) {
-                Log.d("CHECK FUN FIND_IN_HIERARCHY", find_in_view_hierarchy_help(obj_hierarchy.get(0), 2131296797).first.toString() +"     " + find_in_view_hierarchy_help(obj_hierarchy.get(0), 2131296797).second.toString() +"     " + find_in_view_hierarchy_help(obj_hierarchy.get(0), 2131296797).third.toString())
+
+
+                // IMPORTANT! List of obj that need to scale optimization
+                list_of_obj_need_to_scale_optimizate = mutableListOf<list_of_obj_need_to_scale_optimizate_format>(
+                    list_of_obj_need_to_scale_optimizate_format(binding.activityMainHomeButton.id, "margin_start", false),
+                    list_of_obj_need_to_scale_optimizate_format(binding.activityMainSettingsButton.id, "margin_start", false),
+                    list_of_obj_need_to_scale_optimizate_format(binding.activityMainSearchButton.id, "margin_end", false),
+                    list_of_obj_need_to_scale_optimizate_format(binding.activityMainDownloadButton.id, "margin_end",false),
+                    list_of_obj_need_to_scale_optimizate_format(binding.activityMainAccountButton.id, "margin_end",false),
+                    list_of_obj_need_to_scale_optimizate_format(binding.activityMainAnimeCarouselScrolly1.id,"margin_top", true),
+                    list_of_obj_need_to_scale_optimizate_format(binding.activityMainAnimeCarouselCardScrollx1.id,"margin_start", false),
+                    list_of_obj_need_to_scale_optimizate_format(binding.activityMainMusicCarouselCardScrollx1.id,"margin_start", false),
+                    list_of_obj_need_to_scale_optimizate_format(binding.activityMainAnimeCarouselCardScrollx1.id,"scale", true),
+                    list_of_obj_need_to_scale_optimizate_format(binding.activityMainMusicCarouselCardScrollx1.id,"scale", true),
+                    )
+
+                // Scale optimization
+                for (i in 0 until list_of_obj_need_to_scale_optimizate.size) {
+                    val obj = list_of_obj_need_to_scale_optimizate.get(i).obj
+                    val what_change = list_of_obj_need_to_scale_optimizate.get(i).what_change
+                    val consider_others = list_of_obj_need_to_scale_optimizate.get(i).consider_others
+                    if (consider_others == true) {
+                        val list_of_obj = find_in_view_hierarchy_help(obj_hierarchy.get(0), obj).second
+                        for (o in 0 until list_of_obj.size) {
+                            when(what_change) {
+                                "scale" ->findViewById<View>(list_of_obj.get(o)).layoutParams=findViewById<View>(list_of_obj.get(o)).layoutParams.apply { width=card_scale_calc(list_of_obj.get(o), screen_width.toFloat()).first; height= card_scale_calc(list_of_obj.get(o), screen_width.toFloat()).second}
+                                "margin_start" -> findViewById<View>(list_of_obj.get(o)).layoutParams=set_margin(findViewById<View>(list_of_obj.get(o)).layoutParams as ConstraintLayout.LayoutParams, findViewById<View>(list_of_obj.get(o)).marginStart.toFloat(), base_screen_width.toFloat(), screen_width.toFloat(), "start")
+                                "margin_end" -> findViewById<View>(list_of_obj.get(o)).layoutParams=set_margin(findViewById<View>(list_of_obj.get(o)).layoutParams as ConstraintLayout.LayoutParams, findViewById<View>(list_of_obj.get(o)).marginEnd.toFloat(), base_screen_width.toFloat(), screen_width.toFloat(), "end")
+                                "margin_top" -> findViewById<View>(list_of_obj.get(o)).layoutParams=set_margin(findViewById<View>(list_of_obj.get(o)).layoutParams as ConstraintLayout.LayoutParams, findViewById<View>(list_of_obj.get(o)).marginTop.toFloat(), base_screen_width.toFloat(), screen_width.toFloat(), "top")
+                                "margin_bottom" -> findViewById<View>(list_of_obj.get(o)).layoutParams=set_margin(findViewById<View>(list_of_obj.get(o)).layoutParams as ConstraintLayout.LayoutParams, findViewById<View>(list_of_obj.get(o)).marginBottom.toFloat(), base_screen_width.toFloat(), screen_width.toFloat(), "bottom")
+                            }
+                        }
+                    }
+                    else {
+                        when(what_change) {
+                            "scale" ->findViewById<View>(obj).layoutParams=findViewById<View>(obj).layoutParams.apply { width=card_scale_calc(obj, screen_width.toFloat()).first; height= card_scale_calc(obj, screen_width.toFloat()).second}
+                            "margin_start" -> findViewById<View>(obj).layoutParams=set_margin(findViewById<View>(obj).layoutParams as ConstraintLayout.LayoutParams, findViewById<View>(obj).marginStart.toFloat(), base_screen_width.toFloat(), screen_width.toFloat(), "start")
+                            "margin_end" -> findViewById<View>(obj).layoutParams=set_margin(findViewById<View>(obj).layoutParams as ConstraintLayout.LayoutParams, findViewById<View>(obj).marginEnd.toFloat(), base_screen_width.toFloat(), screen_width.toFloat(), "end")
+                            "margin_top" -> findViewById<View>(obj).layoutParams=set_margin(findViewById<View>(obj).layoutParams as ConstraintLayout.LayoutParams, findViewById<View>(obj).marginTop.toFloat(), base_screen_width.toFloat(), screen_width.toFloat(), "top")
+                            "margin_bottom" -> findViewById<View>(obj).layoutParams=set_margin(findViewById<View>(obj).layoutParams as ConstraintLayout.LayoutParams, findViewById<View>(obj).marginBottom.toFloat(), base_screen_width.toFloat(), screen_width.toFloat(), "bottom")
+                        }
+                    }
+                }
+
+//                for (i in 0 until ids.size){
+//                    val obj = ids.get(i)
+//                    val obj_name = resources.getResourceName(obj).toString()
+//                    // Calculate and set margin for buttons
+//                    if ("button" in obj_name) {
+//                        for (o in 0 until white_list_buttons_mg_start.size) {
+//                            if (white_list_buttons_mg_start.get(o) in obj_name) {
+//                                findViewById<View>(obj).layoutParams=set_margin(findViewById<View>(obj).layoutParams as ConstraintLayout.LayoutParams, findViewById<View>(obj).marginStart.toFloat(), base_screen_width.toFloat(), screen_width.toFloat(), "start")
+//                                white_list_buttons_mg_start.set(o, " ")
+//                            }
+//                        }
+//
+//                        for (j in 0 until white_list_buttons_mg_end.size) {
+//                            if (white_list_buttons_mg_end.get(j) in obj_name) {
+//                                findViewById<View>(obj).layoutParams=set_margin(findViewById<View>(obj).layoutParams as ConstraintLayout.LayoutParams, findViewById<View>(obj).marginEnd.toFloat(), base_screen_width.toFloat(), screen_width.toFloat(), "end")
+//                                white_list_buttons_mg_end.set(j," ")
+//                            }
+//                        }
+//
+//                    }
+//                    // Calculate and set margins and width and height for carousel and his elements
+//                    if ("carousel" in obj_name) {
+//                        if ((("text" in obj_name) == false) && (("card" in obj_name) == false)) {
+//                            findViewById<View>(obj).layoutParams=set_margin(findViewById<View>(obj).layoutParams as ConstraintLayout.LayoutParams, findViewById<View>(obj).marginTop.toFloat(), base_screen_width.toFloat(), screen_width.toFloat(), "top")
+//                        }
+//                        if ("text" in obj_name) {
+//                            findViewById<View>(obj).layoutParams=set_margin(findViewById<View>(obj).layoutParams as ConstraintLayout.LayoutParams, findViewById<View>(obj).marginStart.toFloat(), base_screen_width.toFloat(), screen_width.toFloat(), "start")
+//                        }
+//                        if ("card" in obj_name) {
+//
+//                            if (("anime" in obj_name) && (("image" in obj_name) == false)){
+//                                if ("1" in obj_name) {
+//                                    findViewById<View>(obj).layoutParams=set_margin(findViewById<View>(obj).layoutParams as ConstraintLayout.LayoutParams, findViewById<View>(obj).marginStart.toFloat(), base_screen_width.toFloat(), screen_width.toFloat(), "start")
+//                                }
+//                                findViewById<View>(obj).layoutParams=findViewById<View>(obj).layoutParams.apply { width=anime_carousel_card_scale_calc(findViewById<View>(obj).width.toFloat(), screen_width.toFloat()).first; height=anime_carousel_card_scale_calc(findViewById<View>(obj).width.toFloat(), screen_width.toFloat()).second }
+//                            }
+//
+//                            if (("music" in obj_name) && (("image" in obj_name) == false)){
+//                                if ("1" in obj_name) {
+//                                    findViewById<View>(obj).layoutParams=set_margin(findViewById<View>(obj).layoutParams as ConstraintLayout.LayoutParams, findViewById<View>(obj).marginStart.toFloat(), base_screen_width.toFloat(), screen_width.toFloat(), "start")
+//                                }
+//                                findViewById<View>(obj).layoutParams=findViewById<View>(obj).layoutParams.apply { width=music_carousel_card_scale_calc(findViewById<View>(obj).width.toFloat(),screen_width.toFloat()).first; height=music_carousel_card_scale_calc(findViewById<View>(obj).width.toFloat(),screen_width.toFloat()).second }
+//                            }
+//                        }
+//                    }
 //                }
-
-                for (i in 0 until ids.size){
-                    val obj = ids.get(i)
-                    val obj_name = resources.getResourceName(obj).toString()
-                    if ("button" in obj_name) {
-                        var white_list = mutableListOf<String>("home", "settings")
-                        var white_list_2 = mutableListOf<String>("search", "download", "account")
-                        for (o in 0 until white_list.size) {
-                            if (white_list.get(o) in obj_name) {
-                                findViewById<View>(obj).layoutParams=set_margin(findViewById<View>(obj).layoutParams as ConstraintLayout.LayoutParams, findViewById<View>(obj).marginStart.toFloat(), base_screen_width.toFloat(), screen_width.toFloat(), "start")
-                                white_list.set(o, " ")
-                            }
-                        }
-
-                        for (j in 0 until white_list_2.size) {
-                            if (white_list_2.get(j) in obj_name) {
-                                findViewById<View>(obj).layoutParams=set_margin(findViewById<View>(obj).layoutParams as ConstraintLayout.LayoutParams, findViewById<View>(obj).marginEnd.toFloat(), base_screen_width.toFloat(), screen_width.toFloat(), "end")
-                                white_list_2.set(j," ")
-                            }
-                        }
-
-                    }
-                    if ("carousel" in obj_name) {
-                        if ((("text" in obj_name) == false) && (("card" in obj_name) == false)) {
-                            findViewById<View>(obj).layoutParams=set_margin(findViewById<View>(obj).layoutParams as ConstraintLayout.LayoutParams, findViewById<View>(obj).marginTop.toFloat(), base_screen_width.toFloat(), screen_width.toFloat(), "top")
-                        }
-                        if ("text" in obj_name) {
-                            findViewById<View>(obj).layoutParams=set_margin(findViewById<View>(obj).layoutParams as ConstraintLayout.LayoutParams, findViewById<View>(obj).marginStart.toFloat(), base_screen_width.toFloat(), screen_width.toFloat(), "start")
-                        }
-                        if ("card" in obj_name) {
-
-                            if (("anime" in obj_name) && (("image" in obj_name) == false)){
-                                if ("1" in obj_name) {
-                                    findViewById<View>(obj).layoutParams=set_margin(findViewById<View>(obj).layoutParams as ConstraintLayout.LayoutParams, findViewById<View>(obj).marginStart.toFloat(), base_screen_width.toFloat(), screen_width.toFloat(), "start")
-                                }
-                                findViewById<View>(obj).layoutParams=findViewById<View>(obj).layoutParams.apply { width=anime_carousel_card_scale_calc(findViewById<View>(obj).width.toFloat(), screen_width.toFloat()).first; height=anime_carousel_card_scale_calc(findViewById<View>(obj).width.toFloat(), screen_width.toFloat()).second }
-                            }
-
-                            if (("music" in obj_name) && (("image" in obj_name) == false)){
-                                if ("1" in obj_name) {
-                                    findViewById<View>(obj).layoutParams=set_margin(findViewById<View>(obj).layoutParams as ConstraintLayout.LayoutParams, findViewById<View>(obj).marginStart.toFloat(), base_screen_width.toFloat(), screen_width.toFloat(), "start")
-                                }
-                                findViewById<View>(obj).layoutParams=findViewById<View>(obj).layoutParams.apply { width=music_carousel_card_scale_calc(findViewById<View>(obj).width.toFloat(),screen_width.toFloat()).first; height=music_carousel_card_scale_calc(findViewById<View>(obj).width.toFloat(),screen_width.toFloat()).second }
-                            }
-                        }
-                    }
-                    // Make list of scrollable objects
-                    if ((("carousel" in obj_name) && ("card" in obj_name) && (("image") in obj_name) == false) || (("carousel" in obj_name) && (("card" in obj_name) == false) && (("text" in obj_name) == false))) {
-                        list_of_scrollable_obj.add(obj)
-                    }
-                }
-                for (i in 0 until list_of_scrollable_obj.size) {
-                    val obj = list_of_scrollable_obj.get(i)
-                    val obj_name = resources.getResourceName(obj)
-                    Log.d("scrollable_objects", obj_name)
-                }
             }
             already_changed = true
         }
@@ -430,8 +472,6 @@ class MainActivity : AppCompatActivity() {
                             }
                         }
                     }
-
-
                 }
             }
         }
@@ -474,6 +514,36 @@ class MainActivity : AppCompatActivity() {
         val amout_cards = round((screen_width-(margin + (margin - 30)))/base_card_width)
         val res = (((screen_width-(margin + (margin - 30)))/amout_cards)-30).toInt()
         val res2 = round((res * 1.4288)).toInt()
+        return Pair(res,res2)
+    }
+
+    fun card_scale_calc(obj: Int, screen_width: Float): Pair<Int, Int> {
+        // Calculate margin
+        var margin = findViewById<View>(obj).marginStart
+        var q = find_in_view_hierarchy_help(obj_hierarchy.get(0), obj).second
+        if (q.size > 1) {
+            for (i in 0 until q.size) {
+                val objj = q.get(i)
+                val objj_name = resources.getResourceName(objj)
+                if ("1" in objj_name) {
+                    margin = findViewById<View>(objj).marginStart
+                }
+            }
+        }
+        // Calculate new width and height
+        val base_card_width = findViewById<View>(obj).width
+        val base_card_heigth = findViewById<View>(obj).height
+        var amout_cards = 0.0f
+        var res = 0
+        if (base_card_width >= 840) {
+            amout_cards = round(((screen_width-((margin*3)+margin-30))/base_card_width))
+            res = (((screen_width-((margin*3)+margin-30))/amout_cards)-30).toInt()
+        }
+        else {
+            amout_cards = round((screen_width-(margin + (margin - 30)))/base_card_width)
+            res = (((screen_width-(margin + (margin - 30)))/amout_cards)-30).toInt()
+        }
+        val res2 = round((res.toFloat() * (base_card_heigth.toFloat() / base_card_width.toFloat()))).toInt()
         return Pair(res,res2)
     }
 
