@@ -26,16 +26,12 @@ class MainActivity : AppCompatActivity() {
 
     private var ids =  mutableListOf<Int>()
     private var obj_hierarchy = mutableListOf<view_hierarchy>()
-    private var list_of_scrollable_obj = mutableListOf<Int>()
 
     private var margins_from_rootview = mutableListOf<margins_from_rootview_format>()
 
 
     private var screen_width = 0
     private var screen_height = 0
-
-    private var white_list_buttons_mg_start = mutableListOf<String>("home", "settings")
-    private var white_list_buttons_mg_end = mutableListOf<String>("search", "download", "account")
 
     data class view_hierarchy (
         val obj: Int,
@@ -96,8 +92,8 @@ class MainActivity : AppCompatActivity() {
                     list_of_obj_need_to_scale_optimizate_format(binding.activityMainDownloadButton.id, "margin_end",false),
                     list_of_obj_need_to_scale_optimizate_format(binding.activityMainAccountButton.id, "margin_end",false),
                     list_of_obj_need_to_scale_optimizate_format(binding.activityMainAnimeCarouselScrolly1.id,"margin_top", true),
-//                    list_of_obj_need_to_scale_optimizate_format(binding.activityMainAnimeCarouselCardScrollx1.id,"margin_start", false),
-//                    list_of_obj_need_to_scale_optimizate_format(binding.activityMainMusicCarouselCardScrollx1.id,"margin_start", false),
+                    list_of_obj_need_to_scale_optimizate_format(binding.activityMainAnimeCarouselCardScrollx1.id,"margin_start", false),
+                    list_of_obj_need_to_scale_optimizate_format(binding.activityMainMusicCarouselCardScrollx1.id,"margin_start", false),
                     list_of_obj_need_to_scale_optimizate_format(binding.activityMainAnimeCarouselCardScrollx1.id,"scale", true),
                     list_of_obj_need_to_scale_optimizate_format(binding.activityMainMusicCarouselCardScrollx1.id,"scale", true),
                 )
@@ -129,18 +125,17 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
                 }
-                already_changed = true
-            }
-            if (already_changed_2 == false) {
-                for (i in 0 until ids.size) {
-                    val obj = ids.get(i)
-                    val obj_margin_start_and_end = get_x_start(obj, findViewById<View>(obj).marginStart.toFloat()).toInt()
-                    val margin_top_and_bottom = get_y_start(obj, findViewById<View>(obj).marginTop.toFloat()).toInt()
-                    val mgser = findViewById<View>(obj).marginStart
-                    val mgtbr = findViewById<View>(obj).marginTop
-                    margins_from_rootview.add(margins_from_rootview_format(obj, obj_margin_start_and_end,  margin_top_and_bottom))
+                // Wait for changes
+                binding.root.post {
+                    // Get new x and y (margins from rootview)
+                    for (i in 0 until ids.size) {
+                        val obj = ids.get(i)
+                        val x = get_x_start(obj, findViewById<View>(obj).x)
+                        val y = get_y_start(obj, findViewById<View>(obj).y)
+                        margins_from_rootview.add(margins_from_rootview_format(obj, x.toInt(), y.toInt()))
+                    }
                 }
-                already_changed_2 = true
+                already_changed = true
             }
         }
     }
@@ -188,6 +183,13 @@ class MainActivity : AppCompatActivity() {
                 }
                 touched = true
             }
+
+            for (o in 0 until changeable_obj_list_x.size) {
+                Log.d("XLIST", resources.getResourceName(changeable_obj_list_x.get(o)))
+            }
+            for (o in 0 until changeable_obj_list_y.size) {
+                Log.d("YLIST", resources.getResourceName(changeable_obj_list_y.get(o)))
+            }
             // Scroll
             var sensivity = 0.8f
             if (is_touchable_obj_touched == true) {
@@ -232,7 +234,13 @@ class MainActivity : AppCompatActivity() {
 
                     // Calculate amout of objects
                     for (i in 0 until changeable_obj_list_x.size) {
-                        amout_cards = amout_cards + 1
+                        try {
+                            val k = resources.getResourceName(changeable_obj_list_x.get(i)).get(resources.getResourceName(changeable_obj_list_x.get(i)).lastIndex).toString().toInt()
+                            amout_cards = amout_cards + 1
+                        }
+                        catch (e: NumberFormatException) {
+                            Log.d("ERROR", "ITEM ${resources.getResourceName(changeable_obj_list_x.get(i))} DON'T HAVE positionNumber IN HIS ID")
+                        }
                     }
 
                     // Calculate id of last object
@@ -278,7 +286,7 @@ class MainActivity : AppCompatActivity() {
                                                 }
                                                 findViewById<View>(obj6).x=(margin_start_and_end+q).toFloat()
                                             }
-                                            catch (e: IndexOutOfBoundsException) {
+                                            catch (e: Exception) {
                                                 Log.d("ERROR", "ITEM ${obj_name6} DON'T HAVE positionNumber IN HIS ID")
                                             }
                                         }
@@ -376,13 +384,24 @@ class MainActivity : AppCompatActivity() {
                         val obj_name = resources.getResourceName(obj)
                         if ("1" in obj_name) {
                             id_of_first_object = obj
-                            margin_start_and_end = findViewById<View>(obj).marginTop
+                            for (o in 0 until margins_from_rootview.size) {
+                                val obj2 = margins_from_rootview.get(o)
+                                if (obj2.obj == obj) {
+                                    margin_start_and_end = obj2.margin_top_and_bottom.toInt()
+                                }
+                            }
                         }
                     }
 
                     // Calculate amout cards
                     for (i in 0 until changeable_obj_list_y.size) {
-                        amout_cards = amout_cards + 1
+                        try {
+                            val k = resources.getResourceName(changeable_obj_list_y.get(i)).get(resources.getResourceName(changeable_obj_list_y.get(i)).lastIndex).toString().toInt()
+                            amout_cards = amout_cards + 1
+                        }
+                        catch (e: NumberFormatException) {
+                            Log.d("ERROR", "ITEM ${resources.getResourceName(changeable_obj_list_x.get(i))} DON'T HAVE positionNumber IN HIS ID")
+                        }
                     }
 
                     // Calculate id of last obj
@@ -641,6 +660,31 @@ class MainActivity : AppCompatActivity() {
             for (o in 0 until objects.size) {
                 if ((objects.get(o) in touched_objects) == false) {
                     touched_objects.add(objects.get(o))
+                }
+            }
+        }
+        var obj_with_positionNumber = 0
+        val ids_of_obj_without_positionNumber = mutableListOf<Int>()
+        for (i in 0 until touched_objects.size) {
+            val obj = touched_objects.get(i)
+            val obj_name = resources.getResourceName(obj)
+            try {
+                val k = obj_name.get(obj_name.lastIndex).toString().toInt()
+                if (k != -1) {
+                    obj_with_positionNumber = obj_with_positionNumber + 1
+                }
+            }
+            catch (e: Exception) {
+                   ids_of_obj_without_positionNumber.add(obj)
+            }
+        }
+        if ((obj_with_positionNumber > 0) && (ids_of_obj_without_positionNumber.isNotEmpty())) {
+            for (i in 0 until touched_objects.size) {
+                if (i < touched_objects.size) {
+                    val obj = touched_objects.get(i)
+                    if (obj in ids_of_obj_without_positionNumber) {
+                        touched_objects.removeAt(touched_objects.indexOf(obj))
+                    }
                 }
             }
         }
