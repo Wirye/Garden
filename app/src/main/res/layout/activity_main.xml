@@ -9,61 +9,13 @@
     android:background="@drawable/activity_main_background_gradient"
     android:fitsSystemWindows="true">
 
-    <ImageView
-        android:id="@+id/activity_main_nav_header"
-        android:layout_width="match_parent"
-        android:layout_height="200px"
-        android:src="@drawable/activity_main_nav_header_background"
-        app:layout_constraintStart_toStartOf="@id/main"
-        app:layout_constraintEnd_toEndOf="@id/main"
-        app:layout_constraintTop_toTopOf="@id/main"/>
-
-    <ImageButton
-        android:id="@+id/activity_main_settings_button"
-        android:layout_width="100px"
-        android:layout_height="100px"
-        android:layout_marginStart="50px"
-        android:adjustViewBounds="true"
-        android:background="@android:color/transparent"
-        android:scaleType="fitXY"
-        app:layout_constraintStart_toStartOf="@id/activity_main_nav_header"
-        app:layout_constraintTop_toTopOf="@id/activity_main_nav_header"
-        app:layout_constraintBottom_toBottomOf="@id/activity_main_nav_header"
-        android:src="@drawable/settings_ico" />
-
-
-    <ImageButton
-        android:id="@+id/activity_main_search_button"
-        android:layout_width="100px"
-        android:layout_height="100px"
-        android:layout_marginEnd="50px"
-        android:adjustViewBounds="true"
-        android:background="@android:color/transparent"
-        android:scaleType="fitXY"
-        app:layout_constraintEnd_toStartOf="@id/activity_main_account_button"
-        app:layout_constraintTop_toTopOf="@id/activity_main_nav_header"
-        app:layout_constraintBottom_toBottomOf="@id/activity_main_nav_header"
-        android:src="@drawable/search_ico" />
-
-    <ImageButton
-        android:id="@+id/activity_main_account_button"
-        android:layout_width="84px"
-        android:layout_height="84px"
-        android:layout_marginEnd="50px"
-        android:adjustViewBounds="true"
-        android:background="@android:color/transparent"
-        android:scaleType="fitXY"
-        app:layout_constraintEnd_toEndOf="@id/activity_main_nav_header"
-        app:layout_constraintTop_toTopOf="@id/activity_main_nav_header"
-        app:layout_constraintBottom_toBottomOf="@id/activity_main_nav_header"
-        android:src="@drawable/avatar_shape" />
 
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/activity_main_anime_carousel_scrolly_1"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="110px"
+        android:layout_marginTop="80px"
         app:layout_constraintTop_toBottomOf="@id/activity_main_nav_header"
         app:layout_constraintStart_toStartOf="@id/main">
 
@@ -187,7 +139,7 @@
         android:id="@+id/activity_main_music_carousel_scrolly_2"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="110px"
+        android:layout_marginTop="80px"
         app:layout_constraintTop_toBottomOf="@id/activity_main_anime_carousel_scrolly_1"
         app:layout_constraintStart_toStartOf="@id/main">
 
@@ -302,15 +254,76 @@
 
 
 
-    <ImageView
+
+
+
+
+
+
+
+
+
+
+
+    <ImageButton
+        android:id="@+id/activity_main_nav_header"
+        android:layout_width="match_parent"
+        android:layout_height="200px"
+        android:background="@android:color/transparent"
+        android:src="@drawable/activity_main_nav_header_background"
+        app:layout_constraintStart_toStartOf="@id/main"
+        app:layout_constraintEnd_toEndOf="@id/main"
+        app:layout_constraintTop_toTopOf="@id/main"/>
+
+    <ImageButton
+        android:id="@+id/activity_main_settings_button"
+        android:layout_width="100px"
+        android:layout_height="100px"
+        android:layout_marginStart="50px"
+        android:adjustViewBounds="true"
+        android:background="@android:color/transparent"
+        android:scaleType="fitXY"
+        app:layout_constraintStart_toStartOf="@id/activity_main_nav_header"
+        app:layout_constraintTop_toTopOf="@id/activity_main_nav_header"
+        app:layout_constraintBottom_toBottomOf="@id/activity_main_nav_header"
+        android:src="@drawable/settings_ico" />
+
+
+    <ImageButton
+        android:id="@+id/activity_main_search_button"
+        android:layout_width="100px"
+        android:layout_height="100px"
+        android:layout_marginEnd="50px"
+        android:adjustViewBounds="true"
+        android:background="@android:color/transparent"
+        android:scaleType="fitXY"
+        app:layout_constraintEnd_toStartOf="@id/activity_main_account_button"
+        app:layout_constraintTop_toTopOf="@id/activity_main_nav_header"
+        app:layout_constraintBottom_toBottomOf="@id/activity_main_nav_header"
+        android:src="@drawable/search_ico" />
+
+    <ImageButton
+        android:id="@+id/activity_main_account_button"
+        android:layout_width="84px"
+        android:layout_height="84px"
+        android:layout_marginEnd="50px"
+        android:adjustViewBounds="true"
+        android:background="@android:color/transparent"
+        android:scaleType="fitXY"
+        app:layout_constraintEnd_toEndOf="@id/activity_main_nav_header"
+        app:layout_constraintTop_toTopOf="@id/activity_main_nav_header"
+        app:layout_constraintBottom_toBottomOf="@id/activity_main_nav_header"
+        android:src="@drawable/avatar_shape" />
+
+    <ImageButton
         android:id="@+id/activity_main_nav_footer"
         android:layout_width="match_parent"
         android:layout_height="200px"
+        android:background="@android:color/transparent"
         android:src="@drawable/activity_main_nav_header_background"
         app:layout_constraintStart_toStartOf="@id/main"
         app:layout_constraintEnd_toEndOf="@id/main"
         app:layout_constraintBottom_toBottomOf="@id/main"/>
-
 
     <ImageButton
         android:id="@+id/activity_main_home_button"
@@ -325,7 +338,6 @@
         app:layout_constraintBottom_toBottomOf="@id/activity_main_nav_footer"
         android:src="@drawable/home_ico_fill" />
 
-
     <ImageButton
         android:id="@+id/activity_main_anime_button"
         android:layout_width="75px"
@@ -338,7 +350,6 @@
         app:layout_constraintTop_toTopOf="@id/activity_main_nav_footer"
         app:layout_constraintBottom_toBottomOf="@id/activity_main_nav_footer"
         android:src="@drawable/anime_ico" />
-
 
     <ImageButton
         android:id="@+id/activity_main_manga_button"
@@ -353,7 +364,6 @@
         app:layout_constraintBottom_toBottomOf="@id/activity_main_nav_footer"
         android:src="@drawable/manga_ico" />
 
-
     <ImageButton
         android:id="@+id/activity_main_music_button"
         android:layout_width="72px"
@@ -367,7 +377,6 @@
         app:layout_constraintBottom_toBottomOf="@id/activity_main_nav_footer"
         android:src="@drawable/music_ico" />
 
-
     <ImageButton
         android:id="@+id/activity_main_download_button"
         android:layout_width="72px"
@@ -380,8 +389,6 @@
         app:layout_constraintTop_toTopOf="@id/activity_main_nav_footer"
         app:layout_constraintBottom_toBottomOf="@id/activity_main_nav_footer"
         android:src="@drawable/download_ico" />
-
-
 
 
 </androidx.constraintlayout.widget.ConstraintLayout>
