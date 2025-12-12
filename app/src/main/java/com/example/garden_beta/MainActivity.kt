@@ -26,10 +26,7 @@ class MainActivity : AppCompatActivity() {
 
     private var ids =  mutableListOf<Int>()
     private var obj_hierarchy = mutableListOf<view_hierarchy>()
-
-    private var margins_from_rootview = mutableListOf<margins_from_rootview_format>()
-
-
+    private var real_margins = mutableListOf<real_margins_format>()
     private var screen_width = 0
     private var screen_height = 0
 
@@ -46,7 +43,7 @@ class MainActivity : AppCompatActivity() {
         val consider_others: Boolean,
     )
 
-    data class margins_from_rootview_format (
+    data class real_margins_format (
         val obj: Int,
         val margin_start_and_end: Int,
         val margin_top_and_bottom: Int,
@@ -54,35 +51,29 @@ class MainActivity : AppCompatActivity() {
 
     private var list_of_obj_need_to_scale_optimizate = mutableListOf<list_of_obj_need_to_scale_optimizate_format>()
 
-
     @RequiresApi(Build.VERSION_CODES.R)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
-
         val base_screen_width = 1200
         val base_screen_height = 2652
         var already_changed = false
-        var already_changed_2 = false
 
         binding.root.viewTreeObserver.addOnGlobalLayoutListener {
             screen_width = binding.main.width
             screen_height = binding.main.height
-
             // Ids and obj_hierarchy lists init and scale optimization
             if (already_changed == false) {
-
                 ids = get_all_view_ids(binding.main, ids)
                 obj_hierarchy = initialize_all_view_hierarchy(findViewById<View>(ids.get(0)))
-
+                // Show needed information
                 Log.d("all ids", ids.toString())
                 Log.d("hierarchy", obj_hierarchy.toString())
                 for (i in 0 until ids.size) {
                     Log.d("id", resources.getResourceName(ids.get(i)).toString())
                 }
-
 
                 // IMPORTANT! List of obj that need to scale optimization
                 list_of_obj_need_to_scale_optimizate = mutableListOf<list_of_obj_need_to_scale_optimizate_format>(
@@ -92,10 +83,9 @@ class MainActivity : AppCompatActivity() {
                     list_of_obj_need_to_scale_optimizate_format(binding.activityMainDownloadButton.id, "margin_end",false),
                     list_of_obj_need_to_scale_optimizate_format(binding.activityMainAccountButton.id, "margin_end",false),
                     list_of_obj_need_to_scale_optimizate_format(binding.activityMainAnimeCarouselScrolly1.id,"margin_top", true),
-                    list_of_obj_need_to_scale_optimizate_format(binding.activityMainAnimeCarouselCardScrollx1.id,"margin_start", false),
-                    list_of_obj_need_to_scale_optimizate_format(binding.activityMainMusicCarouselCardScrollx1.id,"margin_start", false),
                     list_of_obj_need_to_scale_optimizate_format(binding.activityMainAnimeCarouselCardScrollx1.id,"scale", true),
                     list_of_obj_need_to_scale_optimizate_format(binding.activityMainMusicCarouselCardScrollx1.id,"scale", true),
+                    list_of_obj_need_to_scale_optimizate_format(binding.activityMainAnimeCarouselScrolly1.id,"viewgroup_scale", true),
                 )
 
                 // Scale optimization
@@ -130,9 +120,28 @@ class MainActivity : AppCompatActivity() {
                     // Get new x and y (margins from rootview)
                     for (i in 0 until ids.size) {
                         val obj = ids.get(i)
-                        val x = get_x_start(obj, findViewById<View>(obj).x)
-                        val y = get_y_start(obj, findViewById<View>(obj).y)
-                        margins_from_rootview.add(margins_from_rootview_format(obj, x.toInt(), y.toInt()))
+                        val x = findViewById<View>(obj).x
+                        val y = findViewById<View>(obj).y
+                        real_margins.add(real_margins_format(obj, x.toInt(), y.toInt()))
+                    }
+                    // Scale optimization for view groups
+                    for (i in 0 until list_of_obj_need_to_scale_optimizate.size) {
+                        val obj = list_of_obj_need_to_scale_optimizate.get(i).obj
+                        val what_change = list_of_obj_need_to_scale_optimizate.get(i).what_change
+                        val consider_others = list_of_obj_need_to_scale_optimizate.get(i).consider_others
+                        if (consider_others == true) {
+                            val list_of_obj = find_in_view_hierarchy_help(obj_hierarchy.get(0), obj).second
+                            for (o in 0 until list_of_obj.size) {
+                                when(what_change) {
+                                    "viewgroup_scale" -> findViewById<View>(list_of_obj.get(o)).layoutParams=findViewById<View>(list_of_obj.get(o)).layoutParams.apply { height=viewgroup_scale_calc(list_of_obj.get(o)) }
+                                }
+                            }
+                        }
+                        else {
+                            when(what_change) {
+                                "viewgroup_scale" -> findViewById<View>(obj).layoutParams=findViewById<View>(obj).layoutParams.apply { height=viewgroup_scale_calc(obj) }
+                            }
+                        }
                     }
                 }
                 already_changed = true
@@ -141,25 +150,20 @@ class MainActivity : AppCompatActivity() {
     }
 
     private var touched = false
-    private var cursor_cords = mutableListOf<Pair<Float, Float>>()
     private var x_start = 0.0f
     private var y_start = 0.0f
     private var is_touchable_obj_touched = false
-
     private var scroll_direction = ""
-
     private var changeable_obj_list = mutableListOf<Int>()
     private var changeable_obj_list_x = mutableListOf<Int>()
     private var changeable_obj_list_y = mutableListOf<Int>()
-
     private var obj_type = ""
-
     private var all_carusels_geted = false
-
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
         val x = event.x
         val y = event.y
+        // If event -> gesture
         if (event.action == 2) {
             if (touched == false) {
                 x_start = x
@@ -183,20 +187,13 @@ class MainActivity : AppCompatActivity() {
                 }
                 touched = true
             }
-
-            for (o in 0 until changeable_obj_list_x.size) {
-                Log.d("XLIST", resources.getResourceName(changeable_obj_list_x.get(o)))
-            }
-            for (o in 0 until changeable_obj_list_y.size) {
-                Log.d("YLIST", resources.getResourceName(changeable_obj_list_y.get(o)))
-            }
             // Scroll
             var sensivity = 0.8f
             if (is_touchable_obj_touched == true) {
                 scroll(x, y, sensivity, changeable_obj_list_x, changeable_obj_list_y)
             }
         }
-
+        // If event -> Nothing
         if (event.action == 1) {
             scroll_direction=""
             touched = false
@@ -209,14 +206,12 @@ class MainActivity : AppCompatActivity() {
             all_carusels_geted = false
             obj_type = ""
         }
-
+        // If event -> Click
         if (event.action == 0) {
 
         }
-
         return super.onTouchEvent(event)
     }
-
 
     fun pr(object_value: Float, base_screen_value: Float, screen_value: Float): Float {
         val res = screen_value * (object_value/base_screen_value)
@@ -232,14 +227,6 @@ class MainActivity : AppCompatActivity() {
 
         }
         return obj
-    }
-
-    fun anime_carousel_card_scale_calc(base_card_width: Float, screen_width: Float): Pair<Int, Int> {
-        val margin = binding.activityMainAnimeCarouselCardScrollx1.marginStart
-        val amout_cards = round((screen_width-(margin + (margin - 30)))/base_card_width)
-        val res = (((screen_width-(margin + (margin - 30)))/amout_cards)-30).toInt()
-        val res2 = round((res * 1.4288)).toInt()
-        return Pair(res,res2)
     }
 
     fun card_scale_calc(obj: Int, screen_width: Float): Pair<Int, Int> {
@@ -272,17 +259,25 @@ class MainActivity : AppCompatActivity() {
         return Pair(res,res2)
     }
 
-    fun music_carousel_card_scale_calc(base_card_width: Float, screen_width: Float): Pair<Int, Int> {
-        val margin = binding.activityMainMusicCarouselCardScrollx1.marginStart
-        val amout_cards = round(((screen_width-((margin*3)+margin-30))/base_card_width)).toInt()
-        val res = (((screen_width-((margin*3)+margin-30))/amout_cards)-30).toInt()
-        val res2 = res
-        return Pair(res,res2)
-    }
-
-    // It's just exists
-    fun element_size_calc(base_value: Float, base_screen_value: Float, screen_value: Float): Float {
-        val res = pr(base_value,base_screen_value,screen_value) * base_value
+    fun viewgroup_scale_calc(obj: Int): Int {
+        val viewgroup = findViewById<View>(obj)
+        var res = -1
+        if (viewgroup is ViewGroup) {
+            var child_with_lowest_y = -1
+            var lowest_y = 0
+            for (i in 0 until viewgroup.childCount) {
+                val child = viewgroup.getChildAt(i)
+                val child_y = child.y
+                if (child_y > lowest_y) {
+                    child_with_lowest_y = child.id
+                    lowest_y = child_y.toInt()
+                }
+            }
+            if (child_with_lowest_y != -1) {
+                val child_with_lowest_y_obj = findViewById<View>(child_with_lowest_y)
+                res = lowest_y + child_with_lowest_y_obj.height
+            }
+        }
         return res
     }
 
@@ -309,13 +304,11 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
-
         return res
     }
 
     fun what_element(x: Float, y: Float): Pair<MutableList<Int>, String> {
         val touched_objects = mutableListOf<Int>(-1)
-
         // Create touched_objects list with touched objects
         for (i in 0 until ids.size) {
             val obj = ids.get(i)
@@ -324,7 +317,6 @@ class MainActivity : AppCompatActivity() {
             var y_start = get_y_start(obj,findViewById<View>(obj).y)
             var width = findViewById<View>(obj).width.toFloat()
             var height = findViewById<View>(obj).height.toFloat()
-
             // add touched object to touched_objects list
             if ((x in x_start..x_start+width) && (y in y_start..y_start+height) && (("image" in obj_name) == false)) {
                 if (-1 in touched_objects) {
@@ -333,7 +325,6 @@ class MainActivity : AppCompatActivity() {
                 touched_objects.add(obj)
             }
         }
-
         val obj_need_to_remove = mutableListOf<Int>() // keep id of object that need to remove
         for (i in 0 until touched_objects.size) {
             val fun_return =  find_in_view_hierarchy_help(obj_hierarchy.get(0), touched_objects.get(i))
@@ -343,7 +334,6 @@ class MainActivity : AppCompatActivity() {
                 obj_need_to_remove.add(touched_objects.indexOf(parent_obj_for_finding_obj))
             }
         }
-
         // Remove objects contained in obj_need_to_remove list
         var k = 0 // need to get id correctly
         for (i in 0 until obj_need_to_remove.size) {
@@ -352,7 +342,6 @@ class MainActivity : AppCompatActivity() {
                 k = k + 1
             }
         }
-
         // Recreate touched_objects list with correct objects
         for (i in 0 until touched_objects.size) {
             val objects = find_in_view_hierarchy_help(obj_hierarchy.get(0), touched_objects.get(i)).second
@@ -458,7 +447,6 @@ class MainActivity : AppCompatActivity() {
         var finding_obj_list = mutableListOf<Int>()
         var what_type = ""
 
-
         // Here checks for all obj attributes (NEEDS IN UPDATE, WHEN NEW ATTRIBUTE ADDED)
 
         // base obj (obj without attributes)
@@ -507,7 +495,6 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
-
         // scrolly obj (may be scrolled by y)
         if (parent_obj.scrolly_obj_list.isNotEmpty()) {
             for (i in 0 until parent_obj.scrolly_obj_list.size) {
@@ -553,11 +540,9 @@ class MainActivity : AppCompatActivity() {
         // Get scroll direction
         if ((scroll_direction == "") && ((x != x_start) || (y != y_start))==true) {
             if ((abs(x-x_start) / (abs(y-y_start))) < 1.8f) {
-                Log.d("y", (abs(x-x_start).toString() + "   " +(abs(y-y_start).toString() + "  x  " + x.toString() + "  y  " + y.toString())))
                 scroll_direction = "y"
             }
             else {
-                Log.d("x", (abs((x-x_start)).toString() + "   " +(abs((y-y_start)).toString() + "  x  " + x.toString() + "  y  " + y.toString())))
                 scroll_direction="x"
             }
         }
@@ -587,8 +572,8 @@ class MainActivity : AppCompatActivity() {
             val obj_name1 = resources.getResourceName(obj1)
             if ("1" in obj_name1) {
                 id_of_first_object = obj1
-                for (o in 0 until margins_from_rootview.size) {
-                    val obj2 = margins_from_rootview.get(o)
+                for (o in 0 until real_margins.size) {
+                    val obj2 = real_margins.get(o)
                     if (obj2.obj == obj1) {
                         if (scroll_direction == "x") {
                             margin_start_and_end = obj2.margin_start_and_end.toInt()
@@ -707,10 +692,12 @@ class MainActivity : AppCompatActivity() {
                                     }
                                     // Set object position
                                     if (scroll_direction == "x") {
-                                        findViewById<View>(obj6).x=(margin_start_and_end+q)
+                                        val objj = findViewById<View>(obj6)
+                                        objj.x=(margin_start_and_end+q)
                                     }
                                     else if (scroll_direction == "y") {
-                                        findViewById<View>(obj6).y=(margin_start_and_end+q)
+                                        val objj = findViewById<View>(obj6)
+                                        objj.y=(margin_start_and_end+q)
                                     }
                                 }
                                 catch (e: Exception) {
@@ -730,13 +717,13 @@ class MainActivity : AppCompatActivity() {
                 // If we can scroll further
                 else {
                     for (i in 0 until changeable_obj_list.size) {
-                        val obj4 = changeable_obj_list.get(i)
+                        val obj4 = findViewById<View>(changeable_obj_list.get(i))
                         // Set object position
                         if (scroll_direction == "x") {
-                            findViewById<View>(obj4).x=findViewById<View>(obj4).x+diffrent
+                            obj4.x=obj4.x+diffrent
                         }
                         else if (scroll_direction == "y") {
-                            findViewById<View>(obj4).y=findViewById<View>(obj4).y+diffrent
+                            obj4.y=obj4.y+diffrent
                         }
                     }
                     if (scroll_direction == "x") {
@@ -802,10 +789,12 @@ class MainActivity : AppCompatActivity() {
                                     }
                                     // Set object position
                                     if (scroll_direction == "x") {
-                                        findViewById<View>(obj7).x=parent_obj_size - margin_start_and_end - q - q1
+                                        val objj = findViewById<View>(obj7)
+                                        objj.x=parent_obj_size - margin_start_and_end - q - q1
                                     }
                                     else if (scroll_direction == "y") {
-                                        findViewById<View>(obj7).y=parent_obj_size - margin_start_and_end - q - q1
+                                        val objj = findViewById<View>(obj7)
+                                        objj.y=parent_obj_size - margin_start_and_end - q - q1
                                     }
                                 }
                                 catch (e: IndexOutOfBoundsException) {
@@ -825,14 +814,13 @@ class MainActivity : AppCompatActivity() {
                 // If we can scroll further
                 else {
                     for (i in 0 until changeable_obj_list.size) {
-                        val obj5 = changeable_obj_list.get(i)
-                        val obj_name5 = resources.getResourceName(obj5)
+                        val obj5 = findViewById<View>(changeable_obj_list.get(i))
                         // Set object position
                         if (scroll_direction == "x") {
-                            findViewById<View>(obj5).x=findViewById<View>(obj5).x+diffrent
+                            obj5.x=obj5.x+diffrent
                         }
                         else if (scroll_direction == "y") {
-                            findViewById<View>(obj5).y=findViewById<View>(obj5).y+diffrent
+                            obj5.y=obj5.y+diffrent
                         }
                     }
                     if (scroll_direction == "x") {
