@@ -188,7 +188,7 @@ class MainActivity : AppCompatActivity() {
                 touched = true
             }
             // Scroll
-            var sensivity = 0.8f
+            val sensivity = 0.8f
             if (is_touchable_obj_touched == true) {
                 scroll(x, y, sensivity, changeable_obj_list_x, changeable_obj_list_y)
             }
@@ -232,7 +232,7 @@ class MainActivity : AppCompatActivity() {
     fun card_scale_calc(obj: Int, screen_width: Float): Pair<Int, Int> {
         // Calculate margin
         var margin = findViewById<View>(obj).marginStart
-        var q = find_in_view_hierarchy_help(obj_hierarchy.get(0), obj).second
+        val q = find_in_view_hierarchy_help(obj_hierarchy.get(0), obj).second
         if (q.size > 1) {
             for (i in 0 until q.size) {
                 val objj = q.get(i)
@@ -313,10 +313,10 @@ class MainActivity : AppCompatActivity() {
         for (i in 0 until ids.size) {
             val obj = ids.get(i)
             val obj_name = resources.getResourceName(obj).toString()
-            var x_start = get_x_start(obj,findViewById<View>(obj).x)
-            var y_start = get_y_start(obj,findViewById<View>(obj).y)
-            var width = findViewById<View>(obj).width.toFloat()
-            var height = findViewById<View>(obj).height.toFloat()
+            val x_start = get_x_start(obj,findViewById<View>(obj).x)
+            val y_start = get_y_start(obj,findViewById<View>(obj).y)
+            val width = findViewById<View>(obj).width.toFloat()
+            val height = findViewById<View>(obj).height.toFloat()
             // add touched object to touched_objects list
             if ((x in x_start..x_start+width) && (y in y_start..y_start+height) && (("image" in obj_name) == false)) {
                 if (-1 in touched_objects) {
@@ -423,8 +423,6 @@ class MainActivity : AppCompatActivity() {
 
         if (rootView is ViewGroup) {
             for (i in 0 until rootView.childCount) {
-                val obj = rootView.getChildAt(i).id
-                val obj_name = resources.getResourceName(obj)
                 val child_view_hierarchy = initialize_view_hierarchy(rootView.getChildAt(i))
 
                 if ("scrollx" in resources.getResourceName(rootView.getChildAt(i).id)) {
@@ -576,10 +574,10 @@ class MainActivity : AppCompatActivity() {
                     val obj2 = real_margins.get(o)
                     if (obj2.obj == obj1) {
                         if (scroll_direction == "x") {
-                            margin_start_and_end = obj2.margin_start_and_end.toInt()
+                            margin_start_and_end = obj2.margin_start_and_end
                         }
                         else if (scroll_direction == "y") {
-                            margin_start_and_end = obj2.margin_top_and_bottom.toInt()
+                            margin_start_and_end = obj2.margin_top_and_bottom
                         }
                     }
                 }
