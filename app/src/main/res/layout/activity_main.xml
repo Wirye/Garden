@@ -257,14 +257,6 @@
 
 
 
-
-
-
-
-
-
-
-
     <ImageButton
         android:id="@+id/activity_main_nav_header"
         android:layout_width="match_parent"
