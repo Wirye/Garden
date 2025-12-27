@@ -7,28 +7,43 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
-import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.view.marginStart
 import androidx.core.view.marginTop
 import com.example.garden_beta.databinding.ActivityMainBinding
 import kotlin.math.round
 import android.util.Log
 import android.view.MotionEvent
+import android.view.VelocityTracker
 import androidx.annotation.RequiresApi
+import androidx.core.view.VelocityTrackerCompat.addMovement
+import androidx.core.view.VelocityTrackerCompat.computeCurrentVelocity
+import androidx.core.view.VelocityTrackerCompat.getXVelocity
+import androidx.core.view.VelocityTrackerCompat.getYVelocity
 import androidx.core.view.marginBottom
 import androidx.core.view.marginEnd
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.CoroutineName
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlin.math.abs
 
-
 class MainActivity : AppCompatActivity() {
-
     private lateinit var binding: ActivityMainBinding
-
     private var ids =  mutableListOf<Int>()
     private var obj_hierarchy = mutableListOf<view_hierarchy>()
     private var real_margins = mutableListOf<real_margins_format>()
+    private var animationJob: Job? = null
     private var screen_width = 0
     private var screen_height = 0
+    private var kounter = 0f
 
     data class view_hierarchy (
         val obj: Int,
@@ -43,15 +58,35 @@ class MainActivity : AppCompatActivity() {
         val consider_others: Boolean,
     )
 
+    data class list_of_motion_layouts_is_carousels_format (
+        val obj: Int,
+        val axis: String,
+    )
+
     data class real_margins_format (
         val obj: Int,
         val margin_start_and_end: Int,
         val margin_top_and_bottom: Int,
     )
 
-    private var list_of_obj_need_to_scale_optimizate = mutableListOf<list_of_obj_need_to_scale_optimizate_format>()
+    data class inerp_format (
+        val speed_by_x: Float,
+        val speed_by_y: Float,
+        val changeable_obj_list_x: MutableList<Int>,
+        val changeable_obj_list_y: MutableList<Int>,
+    )
 
-    @RequiresApi(Build.VERSION_CODES.R)
+    private var list_of_obj_need_to_scale_optimizate = mutableListOf<list_of_obj_need_to_scale_optimizate_format>()
+    private var list_of_motion_layouts_is_carousels = mutableListOf<list_of_motion_layouts_is_carousels_format>()
+
+    val fonprocess = CoroutineScope(
+        SupervisorJob() +
+                Dispatchers.Default +
+                CoroutineName("FonProcess") +
+                CoroutineExceptionHandler { _, expection ->
+                    Log.d("ERROR", "Coroutine was stopped: ${expection.message}")
+                }
+    )
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -68,6 +103,7 @@ class MainActivity : AppCompatActivity() {
             if (already_changed == false) {
                 ids = get_all_view_ids(binding.main, ids)
                 obj_hierarchy = initialize_all_view_hierarchy(findViewById<View>(ids.get(0)))
+
                 // Show needed information
                 Log.d("all ids", ids.toString())
                 Log.d("hierarchy", obj_hierarchy.toString())
@@ -88,6 +124,11 @@ class MainActivity : AppCompatActivity() {
                     list_of_obj_need_to_scale_optimizate_format(binding.activityMainAnimeCarouselScrolly1.id,"viewgroup_scale", true),
                 )
 
+                // IMPORTANT!
+                list_of_motion_layouts_is_carousels = mutableListOf<list_of_motion_layouts_is_carousels_format>(
+                    list_of_motion_layouts_is_carousels_format(binding.activityMainAnimeCarouselScrolly1.id, "x")
+                )
+
                 // Scale optimization
                 for (i in 0 until list_of_obj_need_to_scale_optimizate.size) {
                     val obj = list_of_obj_need_to_scale_optimizate.get(i).obj
@@ -98,20 +139,20 @@ class MainActivity : AppCompatActivity() {
                         for (o in 0 until list_of_obj.size) {
                             when(what_change) {
                                 "scale" ->findViewById<View>(list_of_obj.get(o)).layoutParams=findViewById<View>(list_of_obj.get(o)).layoutParams.apply { width=card_scale_calc(list_of_obj.get(o), screen_width.toFloat()).first; height= card_scale_calc(list_of_obj.get(o), screen_width.toFloat()).second}
-                                "margin_start" -> findViewById<View>(list_of_obj.get(o)).layoutParams=set_margin(findViewById<View>(list_of_obj.get(o)).layoutParams as ConstraintLayout.LayoutParams, findViewById<View>(list_of_obj.get(o)).marginStart.toFloat(), base_screen_width.toFloat(), screen_width.toFloat(), "start")
-                                "margin_end" -> findViewById<View>(list_of_obj.get(o)).layoutParams=set_margin(findViewById<View>(list_of_obj.get(o)).layoutParams as ConstraintLayout.LayoutParams, findViewById<View>(list_of_obj.get(o)).marginEnd.toFloat(), base_screen_width.toFloat(), screen_width.toFloat(), "end")
-                                "margin_top" -> findViewById<View>(list_of_obj.get(o)).layoutParams=set_margin(findViewById<View>(list_of_obj.get(o)).layoutParams as ConstraintLayout.LayoutParams, findViewById<View>(list_of_obj.get(o)).marginTop.toFloat(), base_screen_width.toFloat(), screen_width.toFloat(), "top")
-                                "margin_bottom" -> findViewById<View>(list_of_obj.get(o)).layoutParams=set_margin(findViewById<View>(list_of_obj.get(o)).layoutParams as ConstraintLayout.LayoutParams, findViewById<View>(list_of_obj.get(o)).marginBottom.toFloat(), base_screen_width.toFloat(), screen_width.toFloat(), "bottom")
+                                "margin_start" -> findViewById<View>(list_of_obj.get(o)).layoutParams=set_margin(findViewById<View>(list_of_obj.get(o)).layoutParams as ViewGroup.MarginLayoutParams, findViewById<View>(list_of_obj.get(o)).marginStart.toFloat(), base_screen_width.toFloat(), screen_width.toFloat(), "start")
+                                "margin_end" -> findViewById<View>(list_of_obj.get(o)).layoutParams=set_margin(findViewById<View>(list_of_obj.get(o)).layoutParams as ViewGroup.MarginLayoutParams, findViewById<View>(list_of_obj.get(o)).marginEnd.toFloat(), base_screen_width.toFloat(), screen_width.toFloat(), "end")
+                                "margin_top" -> findViewById<View>(list_of_obj.get(o)).layoutParams=set_margin(findViewById<View>(list_of_obj.get(o)).layoutParams as ViewGroup.MarginLayoutParams, findViewById<View>(list_of_obj.get(o)).marginTop.toFloat(), base_screen_width.toFloat(), screen_width.toFloat(), "top")
+                                "margin_bottom" -> findViewById<View>(list_of_obj.get(o)).layoutParams=set_margin(findViewById<View>(list_of_obj.get(o)).layoutParams as ViewGroup.MarginLayoutParams, findViewById<View>(list_of_obj.get(o)).marginBottom.toFloat(), base_screen_width.toFloat(), screen_width.toFloat(), "bottom")
                             }
                         }
                     }
                     else {
                         when(what_change) {
                             "scale" ->findViewById<View>(obj).layoutParams=findViewById<View>(obj).layoutParams.apply { width=card_scale_calc(obj, screen_width.toFloat()).first; height= card_scale_calc(obj, screen_width.toFloat()).second}
-                            "margin_start" -> findViewById<View>(obj).layoutParams=set_margin(findViewById<View>(obj).layoutParams as ConstraintLayout.LayoutParams, findViewById<View>(obj).marginStart.toFloat(), base_screen_width.toFloat(), screen_width.toFloat(), "start")
-                            "margin_end" -> findViewById<View>(obj).layoutParams=set_margin(findViewById<View>(obj).layoutParams as ConstraintLayout.LayoutParams, findViewById<View>(obj).marginEnd.toFloat(), base_screen_width.toFloat(), screen_width.toFloat(), "end")
-                            "margin_top" -> findViewById<View>(obj).layoutParams=set_margin(findViewById<View>(obj).layoutParams as ConstraintLayout.LayoutParams, findViewById<View>(obj).marginTop.toFloat(), base_screen_width.toFloat(), screen_width.toFloat(), "top")
-                            "margin_bottom" -> findViewById<View>(obj).layoutParams=set_margin(findViewById<View>(obj).layoutParams as ConstraintLayout.LayoutParams, findViewById<View>(obj).marginBottom.toFloat(), base_screen_width.toFloat(), screen_width.toFloat(), "bottom")
+                            "margin_start" -> findViewById<View>(obj).layoutParams=set_margin(findViewById<View>(obj).layoutParams as ViewGroup.MarginLayoutParams, findViewById<View>(obj).marginStart.toFloat(), base_screen_width.toFloat(), screen_width.toFloat(), "start")
+                            "margin_end" -> findViewById<View>(obj).layoutParams=set_margin(findViewById<View>(obj).layoutParams as ViewGroup.MarginLayoutParams, findViewById<View>(obj).marginEnd.toFloat(), base_screen_width.toFloat(), screen_width.toFloat(), "end")
+                            "margin_top" -> findViewById<View>(obj).layoutParams=set_margin(findViewById<View>(obj).layoutParams as ViewGroup.MarginLayoutParams, findViewById<View>(obj).marginTop.toFloat(), base_screen_width.toFloat(), screen_width.toFloat(), "top")
+                            "margin_bottom" -> findViewById<View>(obj).layoutParams=set_margin(findViewById<View>(obj).layoutParams as ViewGroup.MarginLayoutParams, findViewById<View>(obj).marginBottom.toFloat(), base_screen_width.toFloat(), screen_width.toFloat(), "bottom")
                         }
                     }
                 }
@@ -149,6 +190,48 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    fun inerp_after_scroll_start() {
+        animationJob?.cancel()
+        animationJob = fonprocess.launch {
+            try {
+                var velo = 0f
+                val k = 0.98f // коэфицент трения
+                if (inerp.speed_by_x != 0f) {
+                    velo = inerp.speed_by_x
+                }
+                else {
+                    velo = inerp.speed_by_y
+                }
+                while (velo > 5f || velo < -5f) {
+                    if (inerp.changeable_obj_list_x.isNotEmpty()) {
+                        scroll(((x_start+velo)), y_start, inerp.changeable_obj_list_x, inerp.changeable_obj_list_y)
+                    }
+                    else {
+                        scroll(x_start, ((y_start+velo)), inerp.changeable_obj_list_x, inerp.changeable_obj_list_y)
+                    }
+                    velo = velo * k
+                    delay(16)
+                }
+            } catch (e: CancellationException) {
+                Log.d("STOPED", "STOPED")
+                scroll_direction = ""
+            }
+            catch (e: Exception) {
+                Log.d("ERROR", "???")
+                scroll_direction = ""
+            }
+            finally {
+                Log.d("STOPED", "FINNALY")
+                scroll_direction = ""
+            }
+        }
+    }
+
+    fun inerp_after_scroll_stop() {
+        animationJob?.cancel()
+        kounter = 0f
+    }
+
     private var touched = false
     private var x_start = 0.0f
     private var y_start = 0.0f
@@ -159,13 +242,20 @@ class MainActivity : AppCompatActivity() {
     private var changeable_obj_list_y = mutableListOf<Int>()
     private var obj_type = ""
     private var all_carusels_geted = false
+    private var inerp = inerp_format(0f,0f, mutableListOf<Int>(), mutableListOf<Int>())
+    private var mVelocityTracker: VelocityTracker? = null
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
+        inerp_after_scroll_stop()
         val x = event.x
         val y = event.y
-        // If event -> gesture
-        if (event.action == 2) {
-            if (touched == false) {
+        var scroll_direction = ""
+        when(event.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                inerp_after_scroll_stop()
+                mVelocityTracker?.clear()
+                mVelocityTracker = mVelocityTracker ?: VelocityTracker.obtain()
+                mVelocityTracker?.addMovement(event)
                 x_start = x
                 y_start = y
                 is_touchable_obj_touched = true
@@ -185,32 +275,42 @@ class MainActivity : AppCompatActivity() {
                         changeable_obj_list_y.add(obj_hierarchy.get(0).scrolly_obj_list.get(i).get(0).obj)
                     }
                 }
-                touched = true
             }
-            // Scroll
-            val sensivity = 0.8f
-            if (is_touchable_obj_touched == true) {
-                scroll(x, y, sensivity, changeable_obj_list_x, changeable_obj_list_y)
+            MotionEvent.ACTION_MOVE -> {
+                inerp_after_scroll_stop()
+                val pointerId = event.getPointerId(event.actionIndex)
+                addMovement(mVelocityTracker!!, event)
+                computeCurrentVelocity(mVelocityTracker!!,10)
+                scroll_direction = scroll(x, y, changeable_obj_list_x, changeable_obj_list_y)
+                if (scroll_direction == "x") {
+                    inerp = inerp_format((mVelocityTracker!!.getXVelocity(pointerId)), 0f, changeable_obj_list_x, mutableListOf<Int>())
+                }
+                else if (scroll_direction == "y") {
+                    if (changeable_obj_list_y.isNotEmpty()) {
+                        inerp = inerp_format(0f, (mVelocityTracker!!.getYVelocity(pointerId)), mutableListOf<Int>(), changeable_obj_list_y)
+                    }
+                    else if (changeable_obj_list_x.isNotEmpty()) {
+                        inerp = inerp_format(0f, (mVelocityTracker!!.getYVelocity(pointerId)), mutableListOf<Int>(), get_nearest_scrolly_obj(changeable_obj_list_x.get(0)))
+                    }
+                }
+            }
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                inerp_after_scroll_start()
+                mVelocityTracker?.recycle()
+                mVelocityTracker = null
+                scroll_direction=""
+                touched = false
+                x_start = 0.0f
+                y_start = 0.0f
+                is_touchable_obj_touched = false
+                changeable_obj_list = mutableListOf<Int>()
+                changeable_obj_list_x = mutableListOf<Int>()
+                changeable_obj_list_y = mutableListOf<Int>()
+                all_carusels_geted = false
+                obj_type = ""
             }
         }
-        // If event -> Nothing
-        if (event.action == 1) {
-            scroll_direction=""
-            touched = false
-            x_start = 0.0f
-            y_start = 0.0f
-            is_touchable_obj_touched = false
-            changeable_obj_list = mutableListOf<Int>()
-            changeable_obj_list_x = mutableListOf<Int>()
-            changeable_obj_list_y = mutableListOf<Int>()
-            all_carusels_geted = false
-            obj_type = ""
-        }
-        // If event -> Click
-        if (event.action == 0) {
-
-        }
-        return super.onTouchEvent(event)
+        return true
     }
 
     fun pr(object_value: Float, base_screen_value: Float, screen_value: Float): Float {
@@ -218,13 +318,12 @@ class MainActivity : AppCompatActivity() {
         return res
     }
 
-    fun set_margin(obj: ConstraintLayout.LayoutParams, object_value: Float, base_screen_value: Float, screen_value: Float, where_margin: String): ConstraintLayout.LayoutParams {
+    fun set_margin(obj: ViewGroup.MarginLayoutParams, object_value: Float, base_screen_value: Float, screen_value: Float, where_margin: String): ViewGroup.MarginLayoutParams {
         when(where_margin){
             "start" -> obj.marginStart=pr(object_value, base_screen_value, screen_value).toInt()
             "end" -> obj.marginEnd=pr(object_value, base_screen_value, screen_value).toInt()
             "top" -> obj.setMargins(0,pr(object_value, base_screen_value, screen_value).toInt(), 0, 0)
             "bottom" -> obj.setMargins(0,0, 0, pr(object_value, base_screen_value, screen_value).toInt())
-
         }
         return obj
     }
@@ -363,7 +462,7 @@ class MainActivity : AppCompatActivity() {
                 }
             }
             catch (e: Exception) {
-                   ids_of_obj_without_positionNumber.add(obj)
+                ids_of_obj_without_positionNumber.add(obj)
             }
         }
         if ((obj_with_positionNumber > 0) && (ids_of_obj_without_positionNumber.isNotEmpty())) {
@@ -534,7 +633,7 @@ class MainActivity : AppCompatActivity() {
         return res
     }
 
-    fun scroll(x: Float, y: Float, sensivity: Float, changeable_obj_list_x: MutableList<Int>, changeable_obj_list_y: MutableList<Int>) {
+    fun scroll(x: Float, y: Float, changeable_obj_list_x: MutableList<Int>, changeable_obj_list_y: MutableList<Int>): String {
         // Get scroll direction
         if ((scroll_direction == "") && ((x != x_start) || (y != y_start))==true) {
             if ((abs(x-x_start) / (abs(y-y_start))) < 1.8f) {
@@ -545,6 +644,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
         // Calculate diffrent value and set changeable_obj_list
+        val sensivity = 0.5f
         var changeable_obj_list = mutableListOf<Int>()
         var diffrent = 0.0f
         var id_of_first_object = 0
@@ -831,5 +931,6 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+        return scroll_direction
     }
 }
