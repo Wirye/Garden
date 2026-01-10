@@ -52,7 +52,7 @@ class scroll(rootView: Int, activity: AppCompatActivity, pages: pages, ids: Muta
     var yStart = 0f
     var scrollDirection = ""
     var inerp = inerpFormat(0f,0f,mutableListOf<Int>(), mutableListOf<Int>())
-    private var realMargins = workingWithView.realMarginsCreate(ids)
+    private var realMargins = mutableListOf<realMarginsFormat>()
     fun realMarginsInScrollClassUpdate(realMarginsNew: MutableList<realMarginsFormat>) {
         realMargins = realMarginsNew
     }
@@ -156,6 +156,7 @@ class scroll(rootView: Int, activity: AppCompatActivity, pages: pages, ids: Muta
             if (idOfLastObject == 0) {
                 Log.d("ERROR", "No last object, need to check ids!")
             }
+            Log.d("List", "${changeableObjList}")
 
             var parentObjSize = 0
             // Scroll logic

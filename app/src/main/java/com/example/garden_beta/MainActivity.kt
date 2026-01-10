@@ -99,7 +99,11 @@ class MainActivity : AppCompatActivity() {
                 binding.root.post {
                     binding.main.requestLayout()
                     binding.main.post {
-                        realMargins = workingWithView.realMarginsCreate(ids)
+                        realMargins = workingWithView.getRealMarginsState("home")
+                        if (realMargins.isEmpty()) {
+                            workingWithView.realMarginsCreateState(ids, "home")
+                        }
+                        realMargins = workingWithView.getRealMarginsState("home")
                         scroll.realMarginsInScrollClassUpdate(realMargins)
                     }
                 }
@@ -113,7 +117,11 @@ class MainActivity : AppCompatActivity() {
             binding.main.post {
                 binding.main.requestLayout()
                 binding.main.post {
-                    realMargins = workingWithView.realMarginsCreate(ids)
+                    realMargins = workingWithView.getRealMarginsState("anime")
+                    if (realMargins.isEmpty()) {
+                        workingWithView.realMarginsCreateState(ids, "anime")
+                    }
+                    realMargins = workingWithView.getRealMarginsState("anime")
                     scroll.realMarginsInScrollClassUpdate(realMargins)
                 }
             }
@@ -125,7 +133,11 @@ class MainActivity : AppCompatActivity() {
             binding.main.post {
                 binding.main.requestLayout()
                 binding.main.post {
-                    realMargins = workingWithView.realMarginsCreate(ids)
+                    realMargins = workingWithView.getRealMarginsState("home")
+                    if (realMargins.isEmpty()) {
+                        workingWithView.realMarginsCreateState(ids, "home")
+                    }
+                    realMargins = workingWithView.getRealMarginsState("home")
                     scroll.realMarginsInScrollClassUpdate(realMargins)
                 }
             }

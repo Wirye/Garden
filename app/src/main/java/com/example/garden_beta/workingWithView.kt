@@ -25,15 +25,19 @@ data class realMarginsFormat (
     val marginTopAndBottom: Int,
 )
 
+data class realMarginsStateFormat(
+    val state: String,
+    val realMargins: MutableList<realMarginsFormat>
+)
+
 class workingWithView(activity: AppCompatActivity, hierarchy: hierarchy) {
     val activity = activity
     val resources = activity.resources
     val hierarchy = hierarchy(activity)
     val objHierarchy = hierarchy.initializeAllViewHierarchy(activity.findViewById<View>(R.id.main))
-
     val objectsSizeList = mutableListOf<objectsSizeFormat>()
-
-    fun realMarginsCreate(ids: MutableList<Int>): MutableList<realMarginsFormat> {
+    val realMarginsStates = mutableListOf<realMarginsStateFormat>()
+    fun realMarginsCreateState(ids: MutableList<Int>, state: String) {
         // Get new x and y (margins from rootview)
         val realMargins = mutableListOf<realMarginsFormat>()
         for (i in 0 until ids.size) {
@@ -42,13 +46,15 @@ class workingWithView(activity: AppCompatActivity, hierarchy: hierarchy) {
             val y = activity.findViewById<View>(obj).y
             realMargins.add(realMarginsFormat(obj, x.toInt(), y.toInt()))
         }
-        return realMargins
+        realMarginsStates.add(realMarginsStateFormat(state, realMargins))
     }
-    fun realMarginsUpdate(obj: Int, marginStartAndEndNew: Int, marginEndAndBottomNew: Int, realMargins: MutableList<realMarginsFormat>): MutableList<realMarginsFormat> {
-        val res = realMargins
-        for (i in 0 until res.size) {
-            if (res[i].obj == obj) {
-                res[i] = realMarginsFormat(obj, marginStartAndEndNew, marginEndAndBottomNew)
+
+    fun getRealMarginsState(state: String): MutableList<realMarginsFormat> {
+        var res = mutableListOf<realMarginsFormat>()
+        for (i in 0 until realMarginsStates.size) {
+            val obj = realMarginsStates[i]
+            if (obj.state == state) {
+                res = obj.realMargins
             }
         }
         return res
@@ -168,7 +174,7 @@ class workingWithView(activity: AppCompatActivity, hierarchy: hierarchy) {
         var amountCards = 0.0f
         var res = 0
         if (baseCardWidth >= 840) {
-            amountCards = round(((screenWidth-((margin)+margin-30))/baseCardWidth))
+            amountCards = round(((screenWidth-((margin*3)+margin-30))/baseCardWidth))
             res = (((screenWidth-((margin*3)+margin-30))/amountCards)-30).toInt()
         }
         else {
