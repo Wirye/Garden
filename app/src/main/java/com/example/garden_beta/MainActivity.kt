@@ -77,6 +77,8 @@ class MainActivity : AppCompatActivity() {
                     listOfObjNeedToScaleOptimizateFormat(binding.activityMainAnimeHomepageCarouselScrolly1.id,"margin_top", true),
                     listOfObjNeedToScaleOptimizateFormat(binding.activityMainAnimeCarouselCardScrollx1.id,"scale", true),
                     listOfObjNeedToScaleOptimizateFormat(binding.activityMainMusicCarouselCardScrollx1.id,"scale", true),
+                    listOfObjNeedToScaleOptimizateFormat(binding.activityMainMangaCarouselCardScrollx1.id,"scale", true),
+                    listOfObjNeedToScaleOptimizateFormat(binding.activityMainContinuewatchingCarouselCardScrollx1.id,"scale", true),
                     listOfObjNeedToScaleOptimizateFormat(binding.activityMainAnimeHomepageCarouselScrolly1.id,"viewgroup_scale", true),
                 )
                 workingWithView = workingWithView(this, hierarchy)
@@ -107,6 +109,7 @@ class MainActivity : AppCompatActivity() {
                         scroll.realMarginsInScrollClassUpdate(realMargins)
                     }
                 }
+                Log.d("CHECK", "${hierarchy.findInViewHierarchyHelp(objHierarchy[0], binding.activityMainAllCarouselCard1.id)}")
                 alreadyChanged = true
             }
         }
@@ -162,7 +165,6 @@ class MainActivity : AppCompatActivity() {
         var scrollDirection = ""
         when(event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
-                Log.d("ACTOON_DOWN", "")
                 clickListener = true
                 scroll.inerp_after_scroll_stop()
                 mVelocityTracker?.clear()
@@ -198,7 +200,6 @@ class MainActivity : AppCompatActivity() {
                 changeableObjListY = pages.sortObjListByPage(changeableObjListY)
             }
             MotionEvent.ACTION_MOVE -> {
-                Log.d("ACTION_MOVE", "")
                 clickListener = false
                 scroll.inerp_after_scroll_stop()
                 val pointerId = event.getPointerId(event.actionIndex)
@@ -228,7 +229,6 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
                 }
-                Log.d("ACTION_CANCEL", "")
                 scroll.UpdateInerp(inerp)
                 scroll.inerp_after_scroll_start()
                 inerp = inerpFormat(0f,0f,mutableListOf<Int>(), mutableListOf<Int>())

@@ -72,7 +72,9 @@ class hierarchy(activity: AppCompatActivity) {
                 val a = parentObj.baseObjList[i][0]
                 if (a.obj == findingObj) {
                     parentObjId = parentObj.obj
-                    findingObjList = mutableListOf<Int>(a.obj)
+                    for (o in 0 until parentObj.baseObjList.size) {
+                        findingObjList.add(parentObj.baseObjList[o][0].obj)
+                    }
                     whatType = ""
                 }
                 else {

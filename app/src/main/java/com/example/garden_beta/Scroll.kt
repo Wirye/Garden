@@ -70,7 +70,7 @@ class scroll(rootView: Int, activity: AppCompatActivity, pages: pages, ids: Muta
     fun scroll(x: Float, y: Float, changeableObjListX: MutableList<Int>, changeableObjListY: MutableList<Int>): String {
         // Get scroll direction
         if ((scrollDirection == "") && ((x != xStart) || (y != yStart))==true) {
-            if ((abs(x-xStart) / (abs(y-yStart))) < 1.8f) {
+            if ((abs(x-xStart) / (abs(y-yStart))) < 1.6f) {
                 scrollDirection = "y"
             }
             else {
@@ -78,7 +78,7 @@ class scroll(rootView: Int, activity: AppCompatActivity, pages: pages, ids: Muta
             }
         }
         // Calculate diffrent value and set changeable_obj_list
-        val sensivity = 0.5f
+        val sensivity = 0.8f
         var changeableObjList = mutableListOf<Int>()
         var diffrent = 0.0f
         var idOfFirstObject = 0
@@ -156,7 +156,6 @@ class scroll(rootView: Int, activity: AppCompatActivity, pages: pages, ids: Muta
             if (idOfLastObject == 0) {
                 Log.d("ERROR", "No last object, need to check ids!")
             }
-            Log.d("List", "${changeableObjList}")
 
             var parentObjSize = 0
             // Scroll logic
@@ -203,8 +202,8 @@ class scroll(rootView: Int, activity: AppCompatActivity, pages: pages, ids: Muta
             if (scrollToRightOrUp) {
                 // If we can't scroll further
                 if ((firstObjCoord+diffrent >= marginStartAndEnd)) {
-                    if (((lastObjCoord+diffrent) > (parentObjSize - marginStartAndEnd - lastObjSize)) == false) {
-                        startState(changeableObjList, scrollDirection, marginStartAndEnd, idOfFirstObject)
+                    if (lastObjCoord.toInt() != (parentObjSize - marginStartAndEnd - lastObjSize)) {
+                        setObjectsCoords(changeableObjList, (marginStartAndEnd - firstObjCoord), scrollDirection)
                     }
                     if (scrollDirection == "x") {
                         xStart = x
@@ -212,19 +211,11 @@ class scroll(rootView: Int, activity: AppCompatActivity, pages: pages, ids: Muta
                     else if (scrollDirection == "y") {
                         yStart = y
                     }
+                    inerp_after_scroll_stop()
                 }
                 // If we can scroll further
                 else {
-                    for (i in 0 until changeableObjList.size) {
-                        val obj4 = activity.findViewById<View>(changeableObjList[i])
-                        // Set object position
-                        if (scrollDirection == "x") {
-                            obj4.x=obj4.x+diffrent
-                        }
-                        else if (scrollDirection == "y") {
-                            obj4.y=obj4.y+diffrent
-                        }
-                    }
+                    setObjectsCoords(changeableObjList, diffrent, scrollDirection)
                     if (scrollDirection == "x") {
                         xStart = x
                     }
@@ -238,8 +229,8 @@ class scroll(rootView: Int, activity: AppCompatActivity, pages: pages, ids: Muta
             else if (scrollToLeftOrBottom) {
                 // If we can't scroll further
                 if ((lastObjCoord+diffrent) <= (parentObjSize - marginStartAndEnd - lastObjSize)) {
-                    if (((firstObjCoord)+diffrent < marginStartAndEnd) == false) {
-                        endState(changeableObjList, scrollDirection, marginStartAndEnd, idOfLastObject, parentObjSize, lastObjSize, amountCards)
+                    if (firstObjCoord.toInt() != marginStartAndEnd) {
+                        setObjectsCoords(changeableObjList, ((parentObjSize - marginStartAndEnd - lastObjSize) - lastObjCoord), scrollDirection)
                     }
                     if (scrollDirection == "x") {
                         xStart = x
@@ -247,19 +238,11 @@ class scroll(rootView: Int, activity: AppCompatActivity, pages: pages, ids: Muta
                     else if (scrollDirection == "y") {
                         yStart = y
                     }
+                    inerp_after_scroll_stop()
                 }
                 // If we can scroll further
                 else {
-                    for (i in 0 until changeableObjList.size) {
-                        val obj5 = activity.findViewById<View>(changeableObjList[i])
-                        // Set object position
-                        if (scrollDirection == "x") {
-                            obj5.x=obj5.x+diffrent
-                        }
-                        else if (scrollDirection == "y") {
-                            obj5.y=obj5.y+diffrent
-                        }
-                    }
+                    setObjectsCoords(changeableObjList, diffrent, scrollDirection)
                     if (scrollDirection == "x") {
                         xStart = x
                     }
@@ -271,130 +254,6 @@ class scroll(rootView: Int, activity: AppCompatActivity, pages: pages, ids: Muta
         }
         return scrollDirection
     }
-
-    fun startState(changeableObjList: MutableList<Int>, scrollDirection: String, marginStartAndEnd: Int, idOfFirstObject: Int ) {
-        for (o in 0 until changeableObjList.size) {
-            val obj = changeableObjList[o]
-            val objName = resources.getResourceName(obj)
-            // Change first object coord
-            if (scrollDirection == "x") {
-                activity.findViewById<View>(idOfFirstObject).x=marginStartAndEnd.toFloat()
-            }
-            else if (scrollDirection == "y") {
-                activity.findViewById<View>(idOfFirstObject).y=marginStartAndEnd.toFloat()
-            }
-            // Change other objects coord
-            if (("1" in objName) == false) {
-                try {
-                    val positionId = objName[objName.lastIndex].toString().toInt()
-                    var q = 0.0f
-                    for (j in 0 until positionId-1) {
-                        // Calculate other objects sizes and margins (needed to calculate object position)
-                        for (p in 0 until changeableObjList.size) {
-                            val positionId2 = resources.getResourceName(changeableObjList[p])[resources.getResourceName(changeableObjList[p]).lastIndex].toString().toInt()
-                            if (positionId2 == j + 1) {
-                                if (scrollDirection == "x") {
-                                    q = q + activity.findViewById<View>(changeableObjList[p]).width
-                                    if (positionId2 == 1) {
-                                        q = q + activity.findViewById<View>(obj).marginStart
-                                    }
-                                    else {
-                                        q = q + activity.findViewById<View>(changeableObjList[p]).marginStart
-                                    }
-                                }
-                                else if (scrollDirection == "y") {
-                                    q = q + activity.findViewById<View>(changeableObjList[p]).height
-                                    if (positionId2 == 1) {
-                                        q = q + activity.findViewById<View>(obj).marginTop
-                                    }
-                                    else {
-                                        q = q + activity.findViewById<View>(changeableObjList[p]).marginTop
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    // Set object position
-                    if (scrollDirection == "x") {
-                        val objj = activity.findViewById<View>(obj)
-                        objj.x=(marginStartAndEnd+q)
-                    }
-                    else if (scrollDirection == "y") {
-                        val objj = activity.findViewById<View>(obj)
-                        objj.y=(marginStartAndEnd+q)
-                    }
-                }
-                catch (e: Exception) {
-                    Log.d("ERROR", "ITEM ${objName} DON'T HAVE positionNumber IN HIS ID")
-                }
-            }
-        }
-    }
-
-    fun  endState(changeableObjList: MutableList<Int>, scrollDirection: String, marginStartAndEnd: Int, idOfLastObject: Int, parentObjSize: Int, lastObjSize: Int, amoutCards: Int ) {
-        for (o in 0 until changeableObjList.size) {
-            val obj = changeableObjList[o]
-            val objName = resources.getResourceName(obj)
-            // Change last object coord
-            if (scrollDirection == "x") {
-                activity.findViewById<View>(idOfLastObject).x=(parentObjSize - marginStartAndEnd - lastObjSize).toFloat()
-            }
-            else if (scrollDirection =="y") {
-                activity.findViewById<View>(idOfLastObject).y=(parentObjSize - marginStartAndEnd - lastObjSize).toFloat()
-            }
-            // Change other objects coord
-            if (("${amoutCards}" in objName) == false) {
-                try {
-                    val positionId = objName[objName.lastIndex].toString().toInt()
-                    var q = 0.0f
-                    var q1 = 0.0f
-                    // Calculate other objects sizes (needed to calculate object position)
-                    for (j in 1 until amoutCards-positionId+2) {
-                        for (p in 0 until changeableObjList.size) {
-                            val obj8 = changeableObjList[p]
-                            val positionId2 = resources.getResourceName(obj8)[resources.getResourceName(obj8).lastIndex].toString().toInt()
-                            if (positionId2 == amoutCards-j+1-1+1) {
-                                if (scrollDirection == "x") {
-                                    q = q + activity.findViewById<View>(obj8).width
-                                }
-                                else if (scrollDirection == "y") {
-                                    q = q + activity.findViewById<View>(obj8).height
-                                }
-                            }
-                        }
-                    }
-                    // Calculate other objects margins (needed to calculate object position)
-                    for (j in 1 until amoutCards-positionId+1) {
-                        for (p in 0 until changeableObjList.size) {
-                            val obj8 = changeableObjList[p]
-                            val positionId2 = resources.getResourceName(obj8)[resources.getResourceName(obj8).lastIndex].toString().toInt()
-                            if (positionId2 == amoutCards-j+1) {
-                                if (scrollDirection == "x") {
-                                    q1 = q1 + activity.findViewById<View>(obj8).marginStart
-                                }
-                                else if (scrollDirection == "y") {
-                                    q1 = q1 + activity.findViewById<View>(obj8).marginTop
-                                }
-                            }
-                        }
-                    }
-                    // Set object position
-                    if (scrollDirection == "x") {
-                        val objj = activity.findViewById<View>(obj)
-                        objj.x=parentObjSize - marginStartAndEnd - q - q1
-                    }
-                    else if (scrollDirection == "y") {
-                        val objj = activity.findViewById<View>(obj)
-                        objj.y=parentObjSize - marginStartAndEnd - q - q1
-                    }
-                }
-                catch (e: IndexOutOfBoundsException) {
-                    Log.d("ERROR", "ITEM ${objName} DON'T HAVE positionNumber IN HIS ID")
-                }
-            }
-        }
-    }
-
     fun get_nearest_scrolly_obj (obj: Int): MutableList<Int> {
         var res = mutableListOf<Int>()
         if (obj != R.id.main) {
@@ -464,5 +323,17 @@ class scroll(rootView: Int, activity: AppCompatActivity, pages: pages, ids: Muta
     fun inerp_after_scroll_stop() {
         scrollInertiaJob?.cancel()
     }
-}
 
+    fun setObjectsCoords(changeableObjList: MutableList<Int>, diffrent: Float, scrollDirection: String) {
+        for (i in 0 until changeableObjList.size) {
+            val obj4 = activity.findViewById<View>(changeableObjList[i])
+            // Set object position
+            if (scrollDirection == "x") {
+                obj4.x=obj4.x+diffrent
+            }
+            else if (scrollDirection == "y") {
+                obj4.y=obj4.y+diffrent
+            }
+        }
+    }
+}
