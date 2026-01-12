@@ -109,7 +109,6 @@ class MainActivity : AppCompatActivity() {
                         scroll.realMarginsInScrollClassUpdate(realMargins)
                     }
                 }
-                Log.d("CHECK", "${hierarchy.findInViewHierarchyHelp(objHierarchy[0], binding.activityMainAllCarouselCard1.id)}")
                 alreadyChanged = true
             }
         }
