@@ -1,5 +1,6 @@
 package com.example.garden_beta
 
+import android.util.Log
 import android.view.View
 import android.view.ViewGroup
 import androidx.appcompat.app.AppCompatActivity
@@ -156,32 +157,42 @@ class workingWithView(activity: AppCompatActivity, hierarchy: hierarchy) {
     }
 
     fun cardScaleCalc(obj: Int, screenWidth: Float): Pair<Int, Int> {
-        // Calculate margin
-        var margin = findInObjectsSizeList(obj).marginStart
+        var margin = activity.findViewById<View>(obj).marginStart
+        // Calculate marginStartAndEnd
+        var marginStartAndEnd = findInObjectsSizeList(obj).marginStart
+        var baseFirstCardWidth = findInObjectsSizeList(obj).width
         val q = hierarchy.findInViewHierarchyHelp(objHierarchy[0], obj).second
         if (q.size > 1) {
             for (i in 0 until q.size) {
                 val objj = q[i]
                 val objjName = resources.getResourceName(objj)
                 if ("1" in objjName) {
+                    marginStartAndEnd = findInObjectsSizeList(objj).marginStart
+                    baseFirstCardWidth = findInObjectsSizeList(objj).width
+                }
+                // If obj is first obj, we get margin of second obj
+                if ("1" in resources.getResourceName(obj) && ("2" in objjName)) {
                     margin = findInObjectsSizeList(objj).marginStart
                 }
             }
         }
+
         // Calculate new width and height
+        // RES - width
+        // RES2 - height
         val baseCardWidth = findInObjectsSizeList(obj).width
-        val baseCardHeigth = findInObjectsSizeList(obj).height
+        val baseCardHeight = findInObjectsSizeList(obj).height
         var amountCards = 0.0f
         var res = 0
         if (baseCardWidth >= 840) {
-            amountCards = round(((screenWidth-((margin*3)+margin-30))/baseCardWidth))
-            res = (((screenWidth-((margin*3)+margin-30))/amountCards)-30).toInt()
+            amountCards = round(((screenWidth-((marginStartAndEnd*3)+marginStartAndEnd-margin))/baseFirstCardWidth))
+            res = round(((screenWidth - (marginStartAndEnd*3) - (margin * (amountCards-1))) / amountCards)).toInt()
         }
         else {
-            amountCards = round((screenWidth-(margin + (margin - 30)))/baseCardWidth)
-            res = (((screenWidth-(margin + (margin - 30)))/amountCards)-30).toInt()
+            amountCards = round((screenWidth-(marginStartAndEnd + (marginStartAndEnd - margin)))/baseFirstCardWidth)
+            res = round(((screenWidth - (marginStartAndEnd*2) - (margin * (amountCards-1))) / amountCards)).toInt()
         }
-        val res2 = round((res.toFloat() * (baseCardHeigth.toFloat() / baseCardWidth.toFloat()))).toInt()
+        val res2 = round((res.toFloat() * (baseCardHeight.toFloat() / baseCardWidth.toFloat()))).toInt()
         return Pair(res,res2)
     }
 
@@ -191,18 +202,22 @@ class workingWithView(activity: AppCompatActivity, hierarchy: hierarchy) {
         if (viewgroup is ViewGroup) {
             var childWithLowestY = -1
             var lowestY = 0
+            var objsWithLowestYHeight = 0
             for (i in 0 until viewgroup.childCount) {
                 val child = viewgroup.getChildAt(i)
                 val childY = child.y
-                if (childY > lowestY) {
+                val childHeight = child.height
+                if (childY+childHeight > lowestY+objsWithLowestYHeight) {
                     childWithLowestY = child.id
                     lowestY = childY.toInt()
+                    objsWithLowestYHeight = childHeight
                 }
             }
             if (childWithLowestY != -1) {
-                res = lowestY + activity.findViewById<View>(childWithLowestY).height
+                res = lowestY + objsWithLowestYHeight
             }
         }
         return res
     }
+
 }
