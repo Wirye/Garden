@@ -85,99 +85,34 @@ class pages(activity: AppCompatActivity) {
             }
         }
     }
-    fun switchPageTo (page: String) {
-        when(page) {
-            "home" -> {
-                for (i in 0 until homePageObjects.size) { activity.findViewById<View>(homePageObjects[i]).visibility = View.VISIBLE }
-                for (i in 0 until animePageObjects.size) { activity.findViewById<View>(animePageObjects[i]).visibility = View.GONE }
-                for (i in 0 until mangaPageObjects.size) { activity.findViewById<View>(mangaPageObjects[i]).visibility = View.GONE }
-                for (i in 0 until musicPageObjects.size) { activity.findViewById<View>(musicPageObjects[i]).visibility = View.GONE }
-                for (i in 0 until downloadPageObjects.size) { activity.findViewById<View>(downloadPageObjects[i]).visibility = View.GONE }
-                for (i in 0 until settingsPageObjects.size) { activity.findViewById<View>(settingsPageObjects[i]).visibility = View.GONE }
-                for (i in 0 until searchPageObjects.size) { activity.findViewById<View>(searchPageObjects[i]).visibility = View.GONE }
-                for (i in 0 until accountPageObjects.size) { activity.findViewById<View>(accountPageObjects[i]).visibility = View.GONE }
-                currentPage = "home"
-            }
-            "anime" -> {
-                for (i in 0 until homePageObjects.size) { activity.findViewById<View>(homePageObjects[i]).visibility = View.GONE }
-                for (i in 0 until animePageObjects.size) { activity.findViewById<View>(animePageObjects[i]).visibility = View.VISIBLE }
-                for (i in 0 until mangaPageObjects.size) { activity.findViewById<View>(mangaPageObjects[i]).visibility = View.GONE }
-                for (i in 0 until musicPageObjects.size) { activity.findViewById<View>(musicPageObjects[i]).visibility = View.GONE }
-                for (i in 0 until downloadPageObjects.size) { activity.findViewById<View>(downloadPageObjects[i]).visibility = View.GONE }
-                for (i in 0 until settingsPageObjects.size) { activity.findViewById<View>(settingsPageObjects[i]).visibility = View.GONE }
-                for (i in 0 until searchPageObjects.size) { activity.findViewById<View>(searchPageObjects[i]).visibility = View.GONE }
-                for (i in 0 until accountPageObjects.size) { activity.findViewById<View>(accountPageObjects[i]).visibility = View.GONE }
-                currentPage = "anime"
-            }
-            "manga" -> {
-                for (i in 0 until homePageObjects.size) { activity.findViewById<View>(homePageObjects[i]).visibility = View.GONE }
-                for (i in 0 until animePageObjects.size) { activity.findViewById<View>(animePageObjects[i]).visibility = View.GONE }
-                for (i in 0 until mangaPageObjects.size) { activity.findViewById<View>(mangaPageObjects[i]).visibility = View.VISIBLE }
-                for (i in 0 until musicPageObjects.size) { activity.findViewById<View>(musicPageObjects[i]).visibility = View.GONE }
-                for (i in 0 until downloadPageObjects.size) { activity.findViewById<View>(downloadPageObjects[i]).visibility = View.GONE }
-                for (i in 0 until settingsPageObjects.size) { activity.findViewById<View>(settingsPageObjects[i]).visibility = View.GONE }
-                for (i in 0 until searchPageObjects.size) { activity.findViewById<View>(searchPageObjects[i]).visibility = View.GONE }
-                for (i in 0 until accountPageObjects.size) { activity.findViewById<View>(accountPageObjects[i]).visibility = View.GONE }
-                currentPage = "manga"
-            }
-            "music" -> {
-                for (i in 0 until homePageObjects.size) { activity.findViewById<View>(homePageObjects[i]).visibility = View.GONE }
-                for (i in 0 until animePageObjects.size) { activity.findViewById<View>(animePageObjects[i]).visibility = View.GONE }
-                for (i in 0 until mangaPageObjects.size) { activity.findViewById<View>(mangaPageObjects[i]).visibility = View.GONE }
-                for (i in 0 until musicPageObjects.size) { activity.findViewById<View>(musicPageObjects[i]).visibility = View.VISIBLE }
-                for (i in 0 until downloadPageObjects.size) { activity.findViewById<View>(downloadPageObjects[i]).visibility = View.GONE }
-                for (i in 0 until settingsPageObjects.size) { activity.findViewById<View>(settingsPageObjects[i]).visibility = View.GONE }
-                for (i in 0 until searchPageObjects.size) { activity.findViewById<View>(searchPageObjects[i]).visibility = View.GONE }
-                for (i in 0 until accountPageObjects.size) { activity.findViewById<View>(accountPageObjects[i]).visibility = View.GONE }
-                currentPage = "music"
-            }
-            "download" -> {
-                for (i in 0 until homePageObjects.size) { activity.findViewById<View>(homePageObjects[i]).visibility = View.GONE }
-                for (i in 0 until animePageObjects.size) { activity.findViewById<View>(animePageObjects[i]).visibility = View.GONE }
-                for (i in 0 until mangaPageObjects.size) { activity.findViewById<View>(mangaPageObjects[i]).visibility = View.GONE }
-                for (i in 0 until musicPageObjects.size) { activity.findViewById<View>(musicPageObjects[i]).visibility = View.GONE }
-                for (i in 0 until downloadPageObjects.size) { activity.findViewById<View>(downloadPageObjects[i]).visibility = View.VISIBLE }
-                for (i in 0 until settingsPageObjects.size) { activity.findViewById<View>(settingsPageObjects[i]).visibility = View.GONE }
-                for (i in 0 until searchPageObjects.size) { activity.findViewById<View>(searchPageObjects[i]).visibility = View.GONE }
-                for (i in 0 until accountPageObjects.size) { activity.findViewById<View>(accountPageObjects[i]).visibility = View.GONE }
-                currentPage = "download"
-            }
-            "settings" -> {
-                for (i in 0 until homePageObjects.size) { activity.findViewById<View>(homePageObjects[i]).visibility = View.GONE }
-                for (i in 0 until animePageObjects.size) { activity.findViewById<View>(animePageObjects[i]).visibility = View.GONE }
-                for (i in 0 until mangaPageObjects.size) { activity.findViewById<View>(mangaPageObjects[i]).visibility = View.GONE }
-                for (i in 0 until musicPageObjects.size) { activity.findViewById<View>(musicPageObjects[i]).visibility = View.GONE }
-                for (i in 0 until downloadPageObjects.size) { activity.findViewById<View>(downloadPageObjects[i]).visibility = View.GONE }
-                for (i in 0 until settingsPageObjects.size) { activity.findViewById<View>(settingsPageObjects[i]).visibility = View.VISIBLE }
-                for (i in 0 until searchPageObjects.size) { activity.findViewById<View>(searchPageObjects[i]).visibility = View.GONE }
-                for (i in 0 until accountPageObjects.size) { activity.findViewById<View>(accountPageObjects[i]).visibility = View.GONE }
-                currentPage = "settings"
-            }
-            "search" -> {
-                for (i in 0 until homePageObjects.size) { activity.findViewById<View>(homePageObjects[i]).visibility = View.GONE }
-                for (i in 0 until animePageObjects.size) { activity.findViewById<View>(animePageObjects[i]).visibility = View.GONE }
-                for (i in 0 until mangaPageObjects.size) { activity.findViewById<View>(mangaPageObjects[i]).visibility = View.GONE }
-                for (i in 0 until musicPageObjects.size) { activity.findViewById<View>(musicPageObjects[i]).visibility = View.GONE }
-                for (i in 0 until downloadPageObjects.size) { activity.findViewById<View>(downloadPageObjects[i]).visibility = View.GONE }
-                for (i in 0 until settingsPageObjects.size) { activity.findViewById<View>(settingsPageObjects[i]).visibility = View.GONE }
-                for (i in 0 until searchPageObjects.size) { activity.findViewById<View>(searchPageObjects[i]).visibility = View.VISIBLE }
-                for (i in 0 until accountPageObjects.size) { activity.findViewById<View>(accountPageObjects[i]).visibility = View.GONE }
-                currentPage = "search"
-            }
-            "account" -> {
-                for (i in 0 until homePageObjects.size) { activity.findViewById<View>(homePageObjects[i]).visibility = View.GONE }
-                for (i in 0 until animePageObjects.size) { activity.findViewById<View>(animePageObjects[i]).visibility = View.GONE }
-                for (i in 0 until mangaPageObjects.size) { activity.findViewById<View>(mangaPageObjects[i]).visibility = View.GONE }
-                for (i in 0 until musicPageObjects.size) { activity.findViewById<View>(musicPageObjects[i]).visibility = View.GONE }
-                for (i in 0 until downloadPageObjects.size) { activity.findViewById<View>(downloadPageObjects[i]).visibility = View.GONE }
-                for (i in 0 until settingsPageObjects.size) { activity.findViewById<View>(settingsPageObjects[i]).visibility = View.GONE }
-                for (i in 0 until searchPageObjects.size) { activity.findViewById<View>(searchPageObjects[i]).visibility = View.GONE }
-                for (i in 0 until accountPageObjects.size) { activity.findViewById<View>(accountPageObjects[i]).visibility = View.VISIBLE }
-                currentPage = "account"
-            }
-        }
-    }
 
+    fun switchPageTo(page: String) {
+        var listOfObjectsNeededToShow = mutableListOf<Int>()
+        val listOfObjectsNeededToHide = (homePageObjects + animePageObjects + mangaPageObjects + musicPageObjects + downloadPageObjects + settingsPageObjects + searchPageObjects + accountPageObjects) as MutableList<Int>
+        when (page) {
+            "home" -> { listOfObjectsNeededToShow = homePageObjects }
+            "anime" -> { listOfObjectsNeededToShow = animePageObjects }
+            "manga" -> { listOfObjectsNeededToShow = mangaPageObjects }
+            "music" -> { listOfObjectsNeededToShow = musicPageObjects }
+            "download" -> { listOfObjectsNeededToShow = downloadPageObjects }
+            "settings" -> { listOfObjectsNeededToShow = settingsPageObjects }
+            "search" -> { listOfObjectsNeededToShow = searchPageObjects }
+            "account" -> { listOfObjectsNeededToShow = accountPageObjects }
+        }
+        activity.findViewById<View>(R.id.main).post {
+            for (obj in listOfObjectsNeededToHide) {
+                activity.findViewById<View>(obj).visibility = View.GONE
+            }
+            activity.findViewById<View>(R.id.main).requestLayout()
+        }
+        activity.findViewById<View>(R.id.main).post {
+            for (obj in listOfObjectsNeededToShow) {
+                activity.findViewById<View>(obj).visibility = View.VISIBLE
+            }
+            activity.findViewById<View>(R.id.main).requestLayout()
+        }
+        currentPage = page
+    }
     fun whatPage(obj: Int): String {
         var res = ""
         if (obj in homePageObjects) {
@@ -203,7 +138,7 @@ class pages(activity: AppCompatActivity) {
         for (i in 0 until objList.size) {
             val obj = objList[i]
             val objPage = whatPage(obj)
-            if (objPage == currentPage) {
+            if (objPage == currentPage || obj == R.id.main) {
                 res.add(obj)
             }
         }

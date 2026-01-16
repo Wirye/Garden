@@ -30,6 +30,28 @@
             app:layout_constraintTop_toTopOf="@id/activity_main_anime_homepage_carousel_scrolly_1"
             app:layout_constraintStart_toStartOf="@id/activity_main_anime_homepage_carousel_scrolly_1" />
 
+        <ImageView
+            android:id="@+id/activity_main_anime_carousel_editbutton"
+            android:layout_width="72px"
+            android:layout_height="72px"
+            android:scaleType="fitXY"
+            android:src="@drawable/edit_ico"
+            android:layout_marginStart="10px"
+            app:layout_constraintStart_toEndOf="@id/activity_main_anime_carousel_text"
+            app:layout_constraintBottom_toBottomOf="@id/activity_main_anime_carousel_text"
+            app:layout_constraintTop_toTopOf="@id/activity_main_anime_homepage_carousel_scrolly_1"/>
+
+        <ImageView
+            android:id="@+id/activity_main_anime_carousel_addbutton"
+            android:layout_width="72px"
+            android:layout_height="72px"
+            android:scaleType="fitXY"
+            android:src="@drawable/add_ico"
+            android:layout_marginStart="10px"
+            app:layout_constraintStart_toEndOf="@id/activity_main_anime_carousel_editbutton"
+            app:layout_constraintBottom_toBottomOf="@id/activity_main_anime_carousel_text"
+            app:layout_constraintTop_toTopOf="@id/activity_main_anime_homepage_carousel_scrolly_1"/>
+
         <androidx.cardview.widget.CardView
             android:id="@+id/activity_main_anime_carousel_card_scrollx_1"
             android:layout_width="520px"
@@ -131,7 +153,6 @@
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/activity_main_music_homepage_carousel_scrolly_2"
         android:layout_width="match_parent"
@@ -151,6 +172,28 @@
             android:textColor="@color/white"
             app:layout_constraintTop_toTopOf="@id/activity_main_music_homepage_carousel_scrolly_2"
             app:layout_constraintStart_toStartOf="@id/activity_main_music_homepage_carousel_scrolly_2"/>
+
+        <ImageView
+            android:id="@+id/activity_main_music_carousel_editbutton"
+            android:layout_width="72px"
+            android:layout_height="72px"
+            android:scaleType="fitXY"
+            android:src="@drawable/edit_ico"
+            android:layout_marginStart="10px"
+            app:layout_constraintStart_toEndOf="@id/activity_main_music_carousel_text"
+            app:layout_constraintBottom_toBottomOf="@id/activity_main_music_carousel_text"
+            app:layout_constraintTop_toTopOf="@id/activity_main_music_homepage_carousel_scrolly_2"/>
+
+        <ImageView
+            android:id="@+id/activity_main_music_carousel_addbutton"
+            android:layout_width="72px"
+            android:layout_height="72px"
+            android:scaleType="fitXY"
+            android:src="@drawable/add_ico"
+            android:layout_marginStart="10px"
+            app:layout_constraintStart_toEndOf="@id/activity_main_music_carousel_editbutton"
+            app:layout_constraintBottom_toBottomOf="@id/activity_main_music_carousel_text"
+            app:layout_constraintTop_toTopOf="@id/activity_main_music_homepage_carousel_scrolly_2"/>
 
         <androidx.cardview.widget.CardView
             android:id="@+id/activity_main_music_carousel_card_scrollx_1"
@@ -247,7 +290,6 @@
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/activity_main_manga_homepage_carousel_scrolly_3"
         android:layout_width="match_parent"
@@ -267,6 +309,28 @@
             android:textColor="@color/white"
             app:layout_constraintTop_toTopOf="@id/activity_main_manga_homepage_carousel_scrolly_3"
             app:layout_constraintStart_toStartOf="@id/activity_main_manga_homepage_carousel_scrolly_3" />
+
+        <ImageView
+            android:id="@+id/activity_main_manga_carousel_editbutton"
+            android:layout_width="72px"
+            android:layout_height="72px"
+            android:scaleType="fitXY"
+            android:src="@drawable/edit_ico"
+            android:layout_marginStart="10px"
+            app:layout_constraintStart_toEndOf="@id/activity_main_manga_carousel_text"
+            app:layout_constraintBottom_toBottomOf="@id/activity_main_manga_carousel_text"
+            app:layout_constraintTop_toTopOf="@id/activity_main_manga_homepage_carousel_scrolly_3"/>
+
+        <ImageView
+            android:id="@+id/activity_main_manga_carousel_addbutton"
+            android:layout_width="72px"
+            android:layout_height="72px"
+            android:scaleType="fitXY"
+            android:src="@drawable/add_ico"
+            android:layout_marginStart="10px"
+            app:layout_constraintStart_toEndOf="@id/activity_main_manga_carousel_editbutton"
+            app:layout_constraintBottom_toBottomOf="@id/activity_main_manga_carousel_text"
+            app:layout_constraintTop_toTopOf="@id/activity_main_manga_homepage_carousel_scrolly_3"/>
 
         <androidx.cardview.widget.CardView
             android:id="@+id/activity_main_manga_carousel_card_scrollx_1"
@@ -391,11 +455,23 @@
 
         <ImageView
             android:id="@+id/activity_main_continuewatching_carousel_editbutton"
-            android:layout_width="75px"
-            android:layout_height="75px"
+            android:layout_width="72px"
+            android:layout_height="72px"
             android:scaleType="fitXY"
             android:src="@drawable/edit_ico"
+            android:layout_marginStart="10px"
             app:layout_constraintStart_toEndOf="@id/activity_main_continuewatching_carousel_text"
+            app:layout_constraintBottom_toBottomOf="@id/activity_main_continuewatching_carousel_text"
+            app:layout_constraintTop_toTopOf="@id/activity_main_continuewatching_animepage_carousel_scrolly_1"/>
+
+        <ImageView
+            android:id="@+id/activity_main_continuewatching_carousel_addbutton"
+            android:layout_width="72px"
+            android:layout_height="72px"
+            android:scaleType="fitXY"
+            android:src="@drawable/add_ico"
+            android:layout_marginStart="10px"
+            app:layout_constraintStart_toEndOf="@id/activity_main_continuewatching_carousel_editbutton"
             app:layout_constraintBottom_toBottomOf="@id/activity_main_continuewatching_carousel_text"
             app:layout_constraintTop_toTopOf="@id/activity_main_continuewatching_animepage_carousel_scrolly_1"/>
 
@@ -500,10 +576,411 @@
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/activity_main_didntWatch_animepage_carousel_scrolly_2"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="80px"
+        app:layout_constraintTop_toBottomOf="@id/activity_main_continuewatching_animepage_carousel_scrolly_1"
+        app:layout_constraintStart_toStartOf="@id/main">
+
+        <TextView
+            android:id="@+id/activity_main_didntWatch_carousel_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="50px"
+            android:text="Не смотрели"
+            android:fontFamily="@font/nunito_medium"
+            android:textSize="64px"
+            android:textColor="@color/white"
+            app:layout_constraintTop_toTopOf="@id/activity_main_didntWatch_animepage_carousel_scrolly_2"
+            app:layout_constraintStart_toStartOf="@id/activity_main_didntWatch_animepage_carousel_scrolly_2" />
+
+        <ImageView
+            android:id="@+id/activity_main_didntWatch_carousel_editbutton"
+            android:layout_width="72px"
+            android:layout_height="72px"
+            android:scaleType="fitXY"
+            android:src="@drawable/edit_ico"
+            android:layout_marginStart="10px"
+            app:layout_constraintStart_toEndOf="@id/activity_main_didntWatch_carousel_text"
+            app:layout_constraintBottom_toBottomOf="@id/activity_main_didntWatch_carousel_text"
+            app:layout_constraintTop_toTopOf="@id/activity_main_didntWatch_animepage_carousel_scrolly_2"/>
+
+        <ImageView
+            android:id="@+id/activity_main_didntWatch_carousel_addbutton"
+            android:layout_width="72px"
+            android:layout_height="72px"
+            android:scaleType="fitXY"
+            android:src="@drawable/add_ico"
+            android:layout_marginStart="10px"
+            app:layout_constraintStart_toEndOf="@id/activity_main_didntWatch_carousel_editbutton"
+            app:layout_constraintBottom_toBottomOf="@id/activity_main_didntWatch_carousel_text"
+            app:layout_constraintTop_toTopOf="@id/activity_main_didntWatch_animepage_carousel_scrolly_2"/>
+
+        <androidx.cardview.widget.CardView
+            android:id="@+id/activity_main_didntWatch_carousel_card_scrollx_1"
+            android:layout_width="520px"
+            android:layout_height="743px"
+            android:layout_marginStart="50px"
+            android:layout_marginTop="15px"
+            app:cardCornerRadius="5dp"
+            app:layout_constraintTop_toBottomOf="@id/activity_main_didntWatch_carousel_text"
+            app:layout_constraintStart_toStartOf="@id/activity_main_didntWatch_animepage_carousel_scrolly_2">
+
+            <ImageView
+                android:id="@+id/activity_main_didntWatch_carousel_card_1_image"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:adjustViewBounds="true"
+                android:src="@drawable/anime_1" />
+
+        </androidx.cardview.widget.CardView>
 
 
+        <androidx.cardview.widget.CardView
+            android:id="@+id/activity_main_didntWatch_carousel_card_scrollx_2"
+            android:layout_width="520px"
+            android:layout_height="743px"
+            android:layout_marginStart="10dp"
+            android:layout_marginTop="15px"
+            app:cardCornerRadius="5dp"
+            app:layout_constraintTop_toBottomOf="@id/activity_main_didntWatch_carousel_text"
+            app:layout_constraintStart_toEndOf="@id/activity_main_didntWatch_carousel_card_scrollx_1">
+
+            <ImageView
+                android:id="@+id/activity_main_didntWatch_carousel_card_2_image"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:adjustViewBounds="true"
+                android:src="@drawable/anime_1" />
+
+        </androidx.cardview.widget.CardView>
 
 
+        <androidx.cardview.widget.CardView
+            android:id="@+id/activity_main_didntWatch_carousel_card_scrollx_3"
+            android:layout_width="520px"
+            android:layout_height="743px"
+            android:layout_marginStart="10dp"
+            android:layout_marginTop="15px"
+            app:cardCornerRadius="5dp"
+            app:layout_constraintTop_toBottomOf="@id/activity_main_didntWatch_carousel_text"
+            app:layout_constraintStart_toEndOf="@id/activity_main_didntWatch_carousel_card_scrollx_2">
+
+            <ImageView
+                android:id="@+id/activity_main_didntWatch_carousel_card_3_image"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:adjustViewBounds="true"
+                android:src="@drawable/anime_1" />
+
+        </androidx.cardview.widget.CardView>
+
+
+        <androidx.cardview.widget.CardView
+            android:id="@+id/activity_main_didntWatch_carousel_card_scrollx_4"
+            android:layout_width="520px"
+            android:layout_height="743px"
+            android:layout_marginStart="10dp"
+            android:layout_marginTop="15px"
+            app:cardCornerRadius="5dp"
+            app:layout_constraintTop_toBottomOf="@id/activity_main_didntWatch_carousel_text"
+            app:layout_constraintStart_toEndOf="@id/activity_main_didntWatch_carousel_card_scrollx_3">
+
+            <ImageView
+                android:id="@+id/activity_main_didntWatch_carousel_card_4_image"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:adjustViewBounds="true"
+                android:src="@drawable/anime_1" />
+
+        </androidx.cardview.widget.CardView>
+
+
+        <androidx.cardview.widget.CardView
+            android:id="@+id/activity_main_didntWatch_carousel_card_scrollx_5"
+            android:layout_width="520px"
+            android:layout_height="743px"
+            android:layout_marginStart="10dp"
+            android:layout_marginTop="15px"
+            app:cardCornerRadius="5dp"
+            app:layout_constraintTop_toBottomOf="@id/activity_main_didntWatch_carousel_text"
+            app:layout_constraintStart_toEndOf="@id/activity_main_didntWatch_carousel_card_scrollx_4">
+
+            <ImageView
+                android:id="@+id/activity_main_didntWatch_carousel_card_5_image"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:adjustViewBounds="true"
+                android:src="@drawable/anime_1" />
+
+        </androidx.cardview.widget.CardView>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/activity_main_favorites_animepage_carousel_scrolly_3"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="80px"
+        app:layout_constraintTop_toBottomOf="@id/activity_main_didntWatch_animepage_carousel_scrolly_2"
+        app:layout_constraintStart_toStartOf="@id/main">
+
+        <TextView
+            android:id="@+id/activity_main_favorites_carousel_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="50px"
+            android:text="Избранное"
+            android:fontFamily="@font/nunito_medium"
+            android:textSize="64px"
+            android:textColor="@color/white"
+            app:layout_constraintTop_toTopOf="@id/activity_main_favorites_animepage_carousel_scrolly_3"
+            app:layout_constraintStart_toStartOf="@id/activity_main_favorites_animepage_carousel_scrolly_3" />
+
+        <ImageView
+            android:id="@+id/activity_main_favorites_carousel_editbutton"
+            android:layout_width="72px"
+            android:layout_height="72px"
+            android:scaleType="fitXY"
+            android:src="@drawable/edit_ico"
+            android:layout_marginStart="10px"
+            app:layout_constraintStart_toEndOf="@id/activity_main_favorites_carousel_text"
+            app:layout_constraintBottom_toBottomOf="@id/activity_main_favorites_carousel_text"
+            app:layout_constraintTop_toTopOf="@id/activity_main_favorites_animepage_carousel_scrolly_3"/>
+
+        <ImageView
+            android:id="@+id/activity_main_favorites_carousel_addbutton"
+            android:layout_width="72px"
+            android:layout_height="72px"
+            android:scaleType="fitXY"
+            android:src="@drawable/add_ico"
+            android:layout_marginStart="10px"
+            app:layout_constraintStart_toEndOf="@id/activity_main_favorites_carousel_editbutton"
+            app:layout_constraintBottom_toBottomOf="@id/activity_main_favorites_carousel_text"
+            app:layout_constraintTop_toTopOf="@id/activity_main_favorites_animepage_carousel_scrolly_3"/>
+
+        <androidx.cardview.widget.CardView
+            android:id="@+id/activity_main_favorites_carousel_card_scrollx_1"
+            android:layout_width="520px"
+            android:layout_height="743px"
+            android:layout_marginStart="50px"
+            android:layout_marginTop="15px"
+            app:cardCornerRadius="5dp"
+            app:layout_constraintTop_toBottomOf="@id/activity_main_favorites_carousel_text"
+            app:layout_constraintStart_toStartOf="@id/activity_main_favorites_animepage_carousel_scrolly_3">
+
+            <ImageView
+                android:id="@+id/activity_main_favorites_carousel_card_1_image"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:adjustViewBounds="true"
+                android:src="@drawable/anime_1" />
+
+        </androidx.cardview.widget.CardView>
+
+
+        <androidx.cardview.widget.CardView
+            android:id="@+id/activity_main_favorites_carousel_card_scrollx_2"
+            android:layout_width="520px"
+            android:layout_height="743px"
+            android:layout_marginStart="10dp"
+            android:layout_marginTop="15px"
+            app:cardCornerRadius="5dp"
+            app:layout_constraintTop_toBottomOf="@id/activity_main_favorites_carousel_text"
+            app:layout_constraintStart_toEndOf="@id/activity_main_favorites_carousel_card_scrollx_1">
+
+            <ImageView
+                android:id="@+id/activity_main_favorites_carousel_card_2_image"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:adjustViewBounds="true"
+                android:src="@drawable/anime_1" />
+
+        </androidx.cardview.widget.CardView>
+
+
+        <androidx.cardview.widget.CardView
+            android:id="@+id/activity_main_favorites_carousel_card_scrollx_3"
+            android:layout_width="520px"
+            android:layout_height="743px"
+            android:layout_marginStart="10dp"
+            android:layout_marginTop="15px"
+            app:cardCornerRadius="5dp"
+            app:layout_constraintTop_toBottomOf="@id/activity_main_favorites_carousel_text"
+            app:layout_constraintStart_toEndOf="@id/activity_main_favorites_carousel_card_scrollx_2">
+
+            <ImageView
+                android:id="@+id/activity_main_favorites_carousel_card_3_image"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:adjustViewBounds="true"
+                android:src="@drawable/anime_1" />
+
+        </androidx.cardview.widget.CardView>
+
+
+        <androidx.cardview.widget.CardView
+            android:id="@+id/activity_main_favorites_carousel_card_scrollx_4"
+            android:layout_width="520px"
+            android:layout_height="743px"
+            android:layout_marginStart="10dp"
+            android:layout_marginTop="15px"
+            app:cardCornerRadius="5dp"
+            app:layout_constraintTop_toBottomOf="@id/activity_main_favorites_carousel_text"
+            app:layout_constraintStart_toEndOf="@id/activity_main_favorites_carousel_card_scrollx_3">
+
+            <ImageView
+                android:id="@+id/activity_main_favorites_carousel_card_4_image"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:adjustViewBounds="true"
+                android:src="@drawable/anime_1" />
+
+        </androidx.cardview.widget.CardView>
+
+
+        <androidx.cardview.widget.CardView
+            android:id="@+id/activity_main_favorites_carousel_card_scrollx_5"
+            android:layout_width="520px"
+            android:layout_height="743px"
+            android:layout_marginStart="10dp"
+            android:layout_marginTop="15px"
+            app:cardCornerRadius="5dp"
+            app:layout_constraintTop_toBottomOf="@id/activity_main_favorites_carousel_text"
+            app:layout_constraintStart_toEndOf="@id/activity_main_favorites_carousel_card_scrollx_4">
+
+            <ImageView
+                android:id="@+id/activity_main_favorites_carousel_card_5_image"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:adjustViewBounds="true"
+                android:src="@drawable/anime_1" />
+
+        </androidx.cardview.widget.CardView>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/activity_main_all_animepage_scrolly4"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="80px"
+        app:layout_constraintStart_toStartOf="@id/main"
+        app:layout_constraintTop_toBottomOf="@id/activity_main_favorites_animepage_carousel_scrolly_3">
+
+        <TextView
+            android:id="@+id/activity_main_all_carousel_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="50px"
+            android:text="Скачанное"
+            android:fontFamily="@font/nunito_medium"
+            android:textSize="64px"
+            android:textColor="@color/white"
+            app:layout_constraintTop_toTopOf="@id/activity_main_all_animepage_scrolly4"
+            app:layout_constraintStart_toStartOf="@id/activity_main_all_animepage_scrolly4" />
+
+        <ImageView
+            android:id="@+id/activity_main_all_carousel_editbutton"
+            android:layout_width="72px"
+            android:layout_height="72px"
+            android:scaleType="fitXY"
+            android:src="@drawable/edit_ico"
+            android:layout_marginStart="10px"
+            app:layout_constraintStart_toEndOf="@id/activity_main_all_carousel_text"
+            app:layout_constraintBottom_toBottomOf="@id/activity_main_all_carousel_text"
+            app:layout_constraintTop_toTopOf="@id/activity_main_all_animepage_scrolly4"/>
+
+        <ImageView
+            android:id="@+id/activity_main_all_carousel_addbutton"
+            android:layout_width="72px"
+            android:layout_height="72px"
+            android:scaleType="fitXY"
+            android:src="@drawable/add_ico"
+            android:layout_marginStart="10px"
+            app:layout_constraintStart_toEndOf="@id/activity_main_all_carousel_editbutton"
+            app:layout_constraintBottom_toBottomOf="@id/activity_main_all_carousel_text"
+            app:layout_constraintTop_toTopOf="@id/activity_main_all_animepage_scrolly4"/>
+
+        <androidx.cardview.widget.CardView
+            android:id="@+id/activity_main_all_carousel_card_1"
+            android:layout_width="520px"
+            android:layout_height="743px"
+            android:layout_marginStart="50px"
+            android:layout_marginTop="15px"
+            app:cardCornerRadius="5dp"
+            app:layout_constraintTop_toBottomOf="@id/activity_main_all_carousel_text"
+            app:layout_constraintStart_toStartOf="@id/activity_main_all_animepage_scrolly4">
+
+            <ImageView
+                android:id="@+id/activity_main_all_carousel_card_1_image"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:adjustViewBounds="true"
+                android:src="@drawable/anime_1" />
+
+        </androidx.cardview.widget.CardView>
+
+        <androidx.cardview.widget.CardView
+            android:id="@+id/activity_main_all_carousel_card_2"
+            android:layout_width="520px"
+            android:layout_height="743px"
+            android:layout_marginStart="10dp"
+            android:layout_marginTop="15px"
+            app:cardCornerRadius="5dp"
+            app:layout_constraintTop_toBottomOf="@id/activity_main_all_carousel_text"
+            app:layout_constraintStart_toEndOf="@id/activity_main_all_carousel_card_1">
+
+            <ImageView
+                android:id="@+id/activity_main_all_carousel_card_2_image"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:adjustViewBounds="true"
+                android:src="@drawable/anime_1" />
+
+        </androidx.cardview.widget.CardView>
+
+        <androidx.cardview.widget.CardView
+            android:id="@+id/activity_main_all_carousel_card_3"
+            android:layout_width="520px"
+            android:layout_height="743px"
+            android:layout_marginStart="50px"
+            android:layout_marginTop="15px"
+            app:cardCornerRadius="5dp"
+            app:layout_constraintTop_toBottomOf="@id/activity_main_all_carousel_card_1"
+            app:layout_constraintStart_toStartOf="parent">
+
+            <ImageView
+                android:id="@+id/activity_main_all_carousel_card_3_image"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:adjustViewBounds="true"
+                android:src="@drawable/anime_1" />
+
+        </androidx.cardview.widget.CardView>
+
+        <androidx.cardview.widget.CardView
+            android:id="@+id/activity_main_all_carousel_card_4"
+            android:layout_width="520px"
+            android:layout_height="743px"
+            android:layout_marginStart="10dp"
+            android:layout_marginTop="15px"
+            app:cardCornerRadius="5dp"
+            app:layout_constraintTop_toBottomOf="@id/activity_main_all_carousel_card_1"
+            app:layout_constraintStart_toEndOf="@id/activity_main_all_carousel_card_3">
+
+            <ImageView
+                android:id="@+id/activity_main_all_carousel_card_4_image"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:adjustViewBounds="true"
+                android:src="@drawable/anime_1" />
+
+        </androidx.cardview.widget.CardView>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
 
     <ImageButton
@@ -568,8 +1045,8 @@
 
     <ImageButton
         android:id="@+id/activity_main_home_button"
-        android:layout_width="100px"
-        android:layout_height="100px"
+        android:layout_width="80px"
+        android:layout_height="80px"
         android:layout_marginStart="50px"
         android:adjustViewBounds="true"
         android:background="@android:color/transparent"
@@ -577,12 +1054,12 @@
         app:layout_constraintStart_toStartOf="@id/activity_main_nav_footer"
         app:layout_constraintTop_toTopOf="@id/activity_main_nav_footer"
         app:layout_constraintBottom_toBottomOf="@id/activity_main_nav_footer"
-        android:src="@drawable/home_ico_fill" />
+        android:src="@drawable/home_ico" />
 
     <ImageButton
         android:id="@+id/activity_main_anime_button"
-        android:layout_width="75px"
-        android:layout_height="75px"
+        android:layout_width="80px"
+        android:layout_height="80px"
         android:adjustViewBounds="true"
         android:background="@android:color/transparent"
         android:scaleType="fitXY"

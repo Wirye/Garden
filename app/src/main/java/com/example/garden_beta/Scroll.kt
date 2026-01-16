@@ -265,6 +265,19 @@ class scroll(rootView: Int, activity: AppCompatActivity, pages: pages, ids: Muta
             }
             res = hierarchy.findInViewHierarchyHelp(objHierarchy[0], parentObj).second
         }
+        else {
+            val objView = activity.findViewById<View>(obj)
+            if (objView is ViewGroup) {
+                for (i in 0 until objView.childCount) {
+                    val child = objView.getChildAt(i)
+                    val childName = resources.getResourceName(child.id)
+                    if ("scrolly" in childName) {
+                        res = hierarchy.findInViewHierarchyHelp(objHierarchy[0], child.id).second
+                        break
+                    }
+                }
+            }
+        }
         return res
     }
 

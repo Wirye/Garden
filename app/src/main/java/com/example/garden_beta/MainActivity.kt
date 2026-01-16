@@ -27,9 +27,11 @@ class MainActivity : AppCompatActivity() {
     private var clickableObjectsList = mutableListOf<Int>()
     private var screenWidth = 0
     private var screenHeight = 0
+    // "mode" is needed for scale optimization -> cardScaleCalc. In other cases set it to ""
     data class listOfObjNeedToScaleOptimizateFormat (
         val obj: Int,
         val whatChange: String,
+        val mode: String,
         val considerOthers: Boolean,
     )
     private var homePageObjects = mutableListOf<Int>()
@@ -69,17 +71,20 @@ class MainActivity : AppCompatActivity() {
 
                 // IMPORTANT! List of obj that need to scale optimization
                 listOfObjNeedToScaleOptimizate = mutableListOf<listOfObjNeedToScaleOptimizateFormat>(
-                    listOfObjNeedToScaleOptimizateFormat(binding.activityMainHomeButton.id, "margin_start", false),
-                    listOfObjNeedToScaleOptimizateFormat(binding.activityMainSettingsButton.id, "margin_start", false),
-                    listOfObjNeedToScaleOptimizateFormat(binding.activityMainSearchButton.id, "margin_end", false),
-                    listOfObjNeedToScaleOptimizateFormat(binding.activityMainDownloadButton.id, "margin_end",false),
-                    listOfObjNeedToScaleOptimizateFormat(binding.activityMainAccountButton.id, "margin_end",false),
-                    listOfObjNeedToScaleOptimizateFormat(binding.activityMainAnimeHomepageCarouselScrolly1.id,"margin_top", true),
-                    listOfObjNeedToScaleOptimizateFormat(binding.activityMainAnimeCarouselCardScrollx1.id,"scale", true),
-                    listOfObjNeedToScaleOptimizateFormat(binding.activityMainMusicCarouselCardScrollx1.id,"scale", true),
-                    listOfObjNeedToScaleOptimizateFormat(binding.activityMainMangaCarouselCardScrollx1.id,"scale", true),
-                    listOfObjNeedToScaleOptimizateFormat(binding.activityMainContinuewatchingCarouselCardScrollx1.id,"scale", true),
-                    listOfObjNeedToScaleOptimizateFormat(binding.activityMainAnimeHomepageCarouselScrolly1.id,"viewgroup_scale", true),
+                    listOfObjNeedToScaleOptimizateFormat(binding.activityMainHomeButton.id, "margin_start", "",false),
+                    listOfObjNeedToScaleOptimizateFormat(binding.activityMainSettingsButton.id, "margin_start", "",false),
+                    listOfObjNeedToScaleOptimizateFormat(binding.activityMainSearchButton.id, "margin_end", "",false),
+                    listOfObjNeedToScaleOptimizateFormat(binding.activityMainDownloadButton.id, "margin_end","",false),
+                    listOfObjNeedToScaleOptimizateFormat(binding.activityMainAccountButton.id, "margin_end","",false),
+                    listOfObjNeedToScaleOptimizateFormat(binding.activityMainAnimeHomepageCarouselScrolly1.id,"margin_top", "",true),
+                    listOfObjNeedToScaleOptimizateFormat(binding.activityMainAnimeCarouselCardScrollx1.id,"scale", "limited",true),
+                    listOfObjNeedToScaleOptimizateFormat(binding.activityMainMusicCarouselCardScrollx1.id,"scale", "limited",true),
+                    listOfObjNeedToScaleOptimizateFormat(binding.activityMainMangaCarouselCardScrollx1.id,"scale", "limited",true),
+                    listOfObjNeedToScaleOptimizateFormat(binding.activityMainContinuewatchingCarouselCardScrollx1.id,"scale", "limited",true),
+                    listOfObjNeedToScaleOptimizateFormat(binding.activityMainDidntWatchCarouselCardScrollx1.id,"scale", "limited",true),
+                    listOfObjNeedToScaleOptimizateFormat(binding.activityMainFavoritesCarouselCardScrollx1.id,"scale", "limited",true),
+                    listOfObjNeedToScaleOptimizateFormat(binding.activityMainAllCarouselCard1.id,"scale", "very limited",false),
+                    listOfObjNeedToScaleOptimizateFormat(binding.activityMainAnimeHomepageCarouselScrolly1.id,"viewgroup_scale", "",true),
                 )
                 workingWithView = workingWithView(this, hierarchy)
 

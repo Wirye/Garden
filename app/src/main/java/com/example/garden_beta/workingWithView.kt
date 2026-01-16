@@ -4,11 +4,13 @@ import android.util.Log
 import android.view.View
 import android.view.ViewGroup
 import androidx.appcompat.app.AppCompatActivity
+import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.view.marginBottom
 import androidx.core.view.marginEnd
 import androidx.core.view.marginStart
 import androidx.core.view.marginTop
 import com.example.garden_beta.MainActivity.listOfObjNeedToScaleOptimizateFormat
+import kotlin.math.min
 import kotlin.math.round
 
 data class objectsSizeFormat (
@@ -90,12 +92,18 @@ class workingWithView(activity: AppCompatActivity, hierarchy: hierarchy) {
             val obj = listOfObjNeedToScaleOptimizate[i].obj
             val whatChange = listOfObjNeedToScaleOptimizate[i].whatChange
             val considerOthers = listOfObjNeedToScaleOptimizate[i].considerOthers
+            val mode = listOfObjNeedToScaleOptimizate[i].mode
             if (considerOthers) {
                 val listOfObj = hierarchy.findInViewHierarchyHelp(objHierarchy[0], obj).second
                 for (o in 0 until listOfObj.size) {
                     when(whatChange) {
                         "scale" -> {
-                            activity.findViewById<View>(listOfObj[o]).layoutParams=activity.findViewById<View>(listOfObj[o]).layoutParams.apply { width=cardScaleCalc(listOfObj[o], screenWidth.toFloat()).first; height= cardScaleCalc(listOfObj[o], screenWidth.toFloat()).second}
+                            if (mode == "limited") {
+                                activity.findViewById<View>(listOfObj[o]).layoutParams=activity.findViewById<View>(listOfObj[o]).layoutParams.apply { width=cardScaleCalc(listOfObj[o], screenWidth.toFloat(), "limited").first; height= cardScaleCalc(listOfObj[o], screenWidth.toFloat(), "limited").second}
+                            }
+                            else if (mode == "very limited") {
+                                cardScaleCalc(listOfObj[o], screenWidth.toFloat(), "very limited")
+                            }
                         }
                         "margin_start" -> activity.findViewById<View>(listOfObj[o]).layoutParams=setMargin(activity.findViewById<View>(listOfObj[o]).layoutParams as ViewGroup.MarginLayoutParams, findInObjectsSizeList(listOfObj[o]).marginStart.toFloat(), baseScreenWidth.toFloat(), screenWidth.toFloat(), "start")
                         "margin_end" -> activity.findViewById<View>(listOfObj[o]).layoutParams=setMargin(activity.findViewById<View>(listOfObj[o]).layoutParams as ViewGroup.MarginLayoutParams, findInObjectsSizeList(listOfObj[o]).marginEnd.toFloat(), baseScreenWidth.toFloat(), screenWidth.toFloat(), "end")
@@ -107,7 +115,12 @@ class workingWithView(activity: AppCompatActivity, hierarchy: hierarchy) {
             else {
                 when(whatChange) {
                     "scale" -> {
-                        activity.findViewById<View>(obj).layoutParams=activity.findViewById<View>(obj).layoutParams.apply { width=cardScaleCalc(obj, screenWidth.toFloat()).first; height= cardScaleCalc(obj, screenWidth.toFloat()).second}
+                        if (mode == "limited") {
+                            activity.findViewById<View>(obj).layoutParams=activity.findViewById<View>(obj).layoutParams.apply { width=cardScaleCalc(obj, screenWidth.toFloat(), "limited").first; height= cardScaleCalc(obj, screenWidth.toFloat(), "limited").second}
+                        }
+                        else if (mode == "very limited") {
+                            cardScaleCalc(obj, screenWidth.toFloat(), "very limited")
+                        }
                     }
                     "margin_start" -> activity.findViewById<View>(obj).layoutParams=setMargin(activity.findViewById<View>(obj).layoutParams as ViewGroup.MarginLayoutParams, findInObjectsSizeList(obj).marginStart.toFloat(), baseScreenWidth.toFloat(), screenWidth.toFloat(), "start")
                     "margin_end" -> activity.findViewById<View>(obj).layoutParams=setMargin(activity.findViewById<View>(obj).layoutParams as ViewGroup.MarginLayoutParams, findInObjectsSizeList(obj).marginEnd.toFloat(), baseScreenWidth.toFloat(), screenWidth.toFloat(), "end")
@@ -156,15 +169,43 @@ class workingWithView(activity: AppCompatActivity, hierarchy: hierarchy) {
         return obj
     }
 
-    fun cardScaleCalc(obj: Int, screenWidth: Float): Pair<Int, Int> {
+    fun cardScaleCalc(obj: Int, screenWidth: Float, mode: String): Pair<Int, Int> {
+        // Modes:
+        // free - doesn't change objects relative (by other objects) size and doesn't change constraints
+        // limited - changes objects relative (by other objects) width (to fit they within certain limits) doesn't change constraints
+        // very limited changes objects relative (by other objects) width (to fit they within certain limits) and change constraints     (FOR "VERY LIMITED" MODE YOU SHOULDN'T CALL CONSIDER OTHERS!)
+        // to fit they within certain limits - place the calculated number of cards in the area in the middle of the screen width and less than it by marginStartAndEnd * 2
+        // change constraints - places objects as a table with amountCards columns and N rows (all margins start become = marginStartAndEnd (first card margin start))
+
+        var changeableObjList = mutableListOf<Int>()
         var margin = activity.findViewById<View>(obj).marginStart
         // Calculate marginStartAndEnd
         var marginStartAndEnd = findInObjectsSizeList(obj).marginStart
         var baseFirstCardWidth = findInObjectsSizeList(obj).width
         val q = hierarchy.findInViewHierarchyHelp(objHierarchy[0], obj).second
-        if (q.size > 1) {
-            for (i in 0 until q.size) {
-                val objj = q[i]
+        for (i in 0 until q.size) {
+            val obj = q[i]
+            val objName = resources.getResourceName(obj)
+            if ("card" in objName) {
+                changeableObjList.add(obj)
+            }
+        }
+        val newChangeableObjList = mutableListOf<Int>()
+        var a = 0
+        for (i in 0 until changeableObjList.size) {
+            a = a + 1
+            for (i in 0 until changeableObjList.size) {
+                val obj = changeableObjList[i]
+                val objName = resources.getResourceName(obj)
+                if ("${a}" in objName) {
+                    newChangeableObjList.add(obj)
+                }
+            }
+        }
+        changeableObjList = newChangeableObjList
+        if (changeableObjList.size > 1) {
+            for (i in 0 until changeableObjList.size) {
+                val objj = changeableObjList[i]
                 val objjName = resources.getResourceName(objj)
                 if ("1" in objjName) {
                     marginStartAndEnd = findInObjectsSizeList(objj).marginStart
@@ -184,15 +225,69 @@ class workingWithView(activity: AppCompatActivity, hierarchy: hierarchy) {
         val baseCardHeight = findInObjectsSizeList(obj).height
         var amountCards = 0.0f
         var res = 0
-        if (baseCardWidth >= 840) {
-            amountCards = round(((screenWidth-((marginStartAndEnd*3)+marginStartAndEnd-margin))/baseFirstCardWidth))
-            res = round(((screenWidth - (marginStartAndEnd*3) - (margin * (amountCards-1))) / amountCards)).toInt()
+        var res2 = 0
+        when(mode) {
+            "free" -> {
+                // Working in progress
+            }
+            "limited" -> {
+                // For big cards (like activity_main_music_homepage_carousel_scrolly_2 cards)
+                if (baseCardWidth >= 840) {
+                    amountCards = round(((screenWidth-((marginStartAndEnd*3)+marginStartAndEnd-margin))/baseFirstCardWidth))
+                    res = round(((screenWidth - (marginStartAndEnd*3) - (margin * (amountCards-1))) / amountCards)).toInt()
+                }
+                // For small or normal cards (like activity_main_anime_homepage_carousel_scrolly_1 cards)
+                else {
+                    amountCards = round((screenWidth-(marginStartAndEnd + (marginStartAndEnd - margin)))/baseFirstCardWidth)
+                    res = round(((screenWidth - (marginStartAndEnd*2) - (margin * (amountCards-1))) / amountCards)).toInt()
+                }
+                res2 = round((res.toFloat() * (baseCardHeight.toFloat() / baseCardWidth.toFloat()))).toInt()
+            }
+            "very limited" -> {
+                amountCards = round((screenWidth-(marginStartAndEnd))/baseFirstCardWidth)
+                res = round(((screenWidth - (marginStartAndEnd*2) - (marginStartAndEnd * (amountCards-1))) / amountCards)).toInt()
+                res2 = round((res.toFloat() * (baseCardHeight.toFloat() / baseCardWidth.toFloat()))).toInt()
+                var k = 0
+                for (i in 0 until changeableObjList.size) {
+                    val obj = changeableObjList[i]
+                    activity.findViewById<View>(obj).layoutParams = activity.findViewById<View>(obj).layoutParams.apply { width = res; height = res2 }
+                    var previousObject = 0
+                    if (i > 0) {
+                        previousObject = changeableObjList[i-1]
+                    }
+                    else {
+                        previousObject = hierarchy.findInViewHierarchyHelp(objHierarchy[0], obj).first
+                    }
+                    if (k < amountCards) {
+                        val objView = activity.findViewById<View>(obj)
+                        val params = objView.layoutParams as ConstraintLayout.LayoutParams
+
+                        if (activity.findViewById<View>(previousObject) != objView.parent) {
+                            params.startToStart = ConstraintLayout.LayoutParams.UNSET
+                            params.startToEnd = previousObject
+                            params.topToTop = previousObject
+                            params.topToBottom = ConstraintLayout.LayoutParams.UNSET
+                            params.setMargins(0, 0, 0 ,0)
+                        }
+                        params.marginStart = marginStartAndEnd
+                        objView.layoutParams = params
+                    }
+                    if (k == amountCards.toInt()) {
+                        val objView = activity.findViewById<View>(obj)
+                        val params = objView.layoutParams as ConstraintLayout.LayoutParams
+                        params.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
+                        params.startToEnd = ConstraintLayout.LayoutParams.UNSET
+                        params.topToTop = ConstraintLayout.LayoutParams.UNSET
+                        params.topToBottom = previousObject
+                        params.setMargins(0, marginStartAndEnd, 0 ,0)
+                        params.marginStart = marginStartAndEnd
+                        objView.layoutParams = params
+                        k = 0
+                    }
+                    k = k + 1
+                }
+            }
         }
-        else {
-            amountCards = round((screenWidth-(marginStartAndEnd + (marginStartAndEnd - margin)))/baseFirstCardWidth)
-            res = round(((screenWidth - (marginStartAndEnd*2) - (margin * (amountCards-1))) / amountCards)).toInt()
-        }
-        val res2 = round((res.toFloat() * (baseCardHeight.toFloat() / baseCardWidth.toFloat()))).toInt()
         return Pair(res,res2)
     }
 
@@ -219,5 +314,4 @@ class workingWithView(activity: AppCompatActivity, hierarchy: hierarchy) {
         }
         return res
     }
-
 }
