@@ -995,8 +995,8 @@
 
     <ImageButton
         android:id="@+id/activity_main_settings_button"
-        android:layout_width="100px"
-        android:layout_height="100px"
+        android:layout_width="84px"
+        android:layout_height="84px"
         android:layout_marginStart="50px"
         android:adjustViewBounds="true"
         android:background="@android:color/transparent"
@@ -1009,8 +1009,8 @@
 
     <ImageButton
         android:id="@+id/activity_main_search_button"
-        android:layout_width="100px"
-        android:layout_height="100px"
+        android:layout_width="80px"
+        android:layout_height="80px"
         android:layout_marginEnd="50px"
         android:adjustViewBounds="true"
         android:background="@android:color/transparent"
@@ -1022,8 +1022,8 @@
 
     <ImageButton
         android:id="@+id/activity_main_account_button"
-        android:layout_width="84px"
-        android:layout_height="84px"
+        android:layout_width="80px"
+        android:layout_height="80px"
         android:layout_marginEnd="50px"
         android:adjustViewBounds="true"
         android:background="@android:color/transparent"
@@ -1031,7 +1031,7 @@
         app:layout_constraintEnd_toEndOf="@id/activity_main_nav_header"
         app:layout_constraintTop_toTopOf="@id/activity_main_nav_header"
         app:layout_constraintBottom_toBottomOf="@id/activity_main_nav_header"
-        android:src="@drawable/avatar_shape" />
+        android:src="@drawable/account_ico" />
 
     <ImageButton
         android:id="@+id/activity_main_nav_footer"
@@ -1071,8 +1071,8 @@
 
     <ImageButton
         android:id="@+id/activity_main_manga_button"
-        android:layout_width="87px"
-        android:layout_height="87px"
+        android:layout_width="80px"
+        android:layout_height="80px"
         android:adjustViewBounds="true"
         android:background="@android:color/transparent"
         android:scaleType="fitXY"
@@ -1084,8 +1084,8 @@
 
     <ImageButton
         android:id="@+id/activity_main_music_button"
-        android:layout_width="72px"
-        android:layout_height="72px"
+        android:layout_width="80px"
+        android:layout_height="80px"
         android:adjustViewBounds="true"
         android:background="@android:color/transparent"
         android:scaleType="fitXY"
@@ -1097,8 +1097,8 @@
 
     <ImageButton
         android:id="@+id/activity_main_download_button"
-        android:layout_width="72px"
-        android:layout_height="72px"
+        android:layout_width="80px"
+        android:layout_height="80px"
         android:layout_marginEnd="50px"
         android:adjustViewBounds="true"
         android:background="@android:color/transparent"
