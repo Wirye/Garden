@@ -1,0 +1,300 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:id="@+id/main"
+    android:background="@drawable/activity_main_nav_header_background">
+
+
+<!--    <androidx.constraintlayout.widget.ConstraintLayout-->
+<!--        android:layout_width="400px"-->
+<!--        android:layout_height="700px"-->
+<!--        app:layout_constraintBottom_toBottomOf="parent"-->
+<!--        app:layout_constraintEnd_toEndOf="parent"-->
+<!--        app:layout_constraintStart_toStartOf="parent"-->
+<!--        app:layout_constraintTop_toTopOf="parent">-->
+
+<!--        <ImageView-->
+<!--            android:layout_width="match_parent"-->
+<!--            android:layout_height="match_parent"-->
+<!--            android:src="@drawable/placeholder"/>-->
+<!--    </androidx.constraintlayout.widget.ConstraintLayout>-->
+<!--    <androidx.constraintlayout.widget.ConstraintLayout-->
+<!--        android:id="@+id/xxx"-->
+<!--        android:layout_width="864px"-->
+<!--        android:layout_height="1600px"-->
+<!--        app:layout_constraintBottom_toBottomOf="parent"-->
+<!--        app:layout_constraintEnd_toEndOf="parent"-->
+<!--        app:layout_constraintStart_toStartOf="parent"-->
+<!--        app:layout_constraintTop_toTopOf="parent"-->
+<!--        android:background="@drawable/addbackground">-->
+
+<!--    </androidx.constraintlayout.widget.ConstraintLayout>-->
+
+<!--    <TextView-->
+<!--        android:id="@+id/text111"-->
+<!--        android:layout_width="864px"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        app:layout_constraintTop_toTopOf="@id/xxx"-->
+<!--        app:layout_constraintStart_toStartOf="@id/xxx"-->
+<!--        android:gravity="center"-->
+<!--        android:text="Новое аниме"-->
+<!--        android:textColor="@color/white"-->
+<!--        android:textAppearance="@font/google_sans_bold"-->
+<!--        android:textSize="40px"/>-->
+
+
+<!--    <androidx.constraintlayout.widget.ConstraintLayout-->
+<!--        android:id="@+id/ifq"-->
+<!--        android:layout_width="288px"-->
+<!--        android:layout_height="412px"-->
+<!--        app:layout_constraintStart_toStartOf="@id/xxx"-->
+<!--        app:layout_constraintTop_toBottomOf="@id/text111"-->
+<!--        android:layout_marginStart="29px"-->
+<!--        android:layout_marginTop="29px"-->
+
+<!--        android:background="@drawable/card_layout_obvodka">-->
+
+<!--        <ImageView-->
+<!--            android:layout_width="144px"-->
+<!--            android:layout_height="144px"-->
+<!--            android:src="@drawable/plus_ico"-->
+<!--            app:layout_constraintBottom_toBottomOf="parent"-->
+<!--            app:layout_constraintEnd_toEndOf="parent"-->
+<!--            app:layout_constraintStart_toStartOf="parent"-->
+<!--            app:layout_constraintTop_toTopOf="parent" />-->
+<!--    </androidx.constraintlayout.widget.ConstraintLayout>-->
+
+<!--    <EditText-->
+<!--        android:id="@+id/pp"-->
+<!--        android:layout_width="489px"-->
+<!--        android:layout_height="103px"-->
+<!--        app:layout_constraintStart_toEndOf="@id/ifq"-->
+<!--        app:layout_constraintTop_toTopOf="@id/ifq"-->
+<!--        android:layout_marginStart="29px"-->
+<!--        android:textColor="@color/white"-->
+<!--        android:textColorHint="#33707070"-->
+<!--        android:background="@drawable/text_input_layout_obvodka"-->
+<!--        android:hint="Введите название"-->
+<!--        android:textAppearance="@font/google_sans_medium"-->
+<!--        android:textSize="40px"-->
+<!--        android:paddingHorizontal="25px"-->
+<!--        android:maxLines="1"-->
+<!--        android:inputType="text">-->
+<!--    </EditText>-->
+
+<!--    <ImageView-->
+<!--        android:layout_width="11px"-->
+<!--        android:layout_height="40px"-->
+<!--        app:layout_constraintEnd_toEndOf="@id/xxx"-->
+<!--        app:layout_constraintTop_toTopOf="@id/text111"-->
+<!--        android:layout_marginTop="10px"-->
+<!--        android:layout_marginEnd="20px"-->
+<!--        android:src="@drawable/frame"-->
+<!--        android:scaleType="centerCrop"/>-->
+
+<!--    <EditText-->
+<!--        android:id="@+id/pp2"-->
+<!--        android:layout_width="326px"-->
+<!--        android:layout_height="103px"-->
+<!--        app:layout_constraintStart_toStartOf="@id/pp"-->
+<!--        app:layout_constraintTop_toBottomOf="@id/pp"-->
+<!--        android:layout_marginTop="29px"-->
+<!--        android:textColor="@color/white"-->
+<!--        android:textColorHint="#33707070"-->
+<!--        android:background="@drawable/text_input_layout_obvodka_author"-->
+<!--        android:hint="Автор"-->
+<!--        android:textAppearance="@font/google_sans_medium"-->
+<!--        android:textSize="40px"-->
+<!--        android:paddingHorizontal="25px"-->
+<!--        android:maxLines="1"-->
+<!--        android:inputType="text">-->
+<!--    </EditText>-->
+
+<!--    <ImageView-->
+<!--        android:id="@+id/find"-->
+<!--        android:layout_width="163px"-->
+<!--        android:layout_height="103px"-->
+<!--        app:layout_constraintStart_toEndOf="@id/pp2"-->
+<!--        app:layout_constraintTop_toTopOf="@id/pp2"-->
+<!--        android:background="@drawable/author_auto_button_obvodka"/>-->
+
+<!--    <ImageView-->
+<!--        android:layout_width="58px"-->
+<!--        android:layout_height="58px"-->
+<!--        app:layout_constraintStart_toStartOf="@id/find"-->
+<!--        app:layout_constraintEnd_toEndOf="@id/find"-->
+<!--        app:layout_constraintTop_toTopOf="@id/find"-->
+<!--        app:layout_constraintBottom_toBottomOf="@id/find"-->
+<!--        android:background="@drawable/search_ico"/>-->
+
+<!--    <ImageView-->
+<!--        android:id="@+id/eee"-->
+<!--        android:layout_width="58px"-->
+<!--        android:layout_height="58px"-->
+<!--        app:layout_constraintStart_toStartOf="@id/ifq"-->
+<!--        app:layout_constraintTop_toBottomOf="@id/ifq"-->
+<!--        android:background="@drawable/edit_ico"-->
+<!--        android:layout_marginTop="14px"/>-->
+
+<!--    <androidx.constraintlayout.widget.ConstraintLayout-->
+<!--        android:id="@+id/searchcon"-->
+<!--        android:layout_width="215px"-->
+<!--        android:layout_height="48px"-->
+<!--        app:layout_constraintStart_toEndOf="@id/eee"-->
+<!--        app:layout_constraintTop_toTopOf="@id/eee"-->
+<!--        app:layout_constraintBottom_toBottomOf="@id/eee"-->
+<!--        android:background="@drawable/obvodka"-->
+<!--        android:layout_marginStart="15px"/>-->
+
+<!--    <ImageView-->
+<!--        android:id="@+id/icco"-->
+<!--        android:layout_width="30px"-->
+<!--        android:layout_height="30px"-->
+<!--        app:layout_constraintTop_toTopOf="@id/searchcon"-->
+<!--        app:layout_constraintBottom_toBottomOf="@id/searchcon"-->
+<!--        app:layout_constraintStart_toStartOf="@id/searchcon"-->
+<!--        android:layout_marginStart="45px"-->
+<!--        android:background="@drawable/search_ico"/>-->
+
+<!--    <TextView-->
+<!--        android:layout_width="wrap_content"-->
+<!--        android:layout_height="30px"-->
+<!--        android:includeFontPadding="false"-->
+<!--        android:text="search"-->
+<!--        app:layout_constraintStart_toEndOf="@id/icco"-->
+<!--        app:layout_constraintTop_toTopOf="@id/icco"-->
+<!--        android:textColor="@color/white"-->
+<!--        android:textSize="25px"-->
+<!--        android:layout_marginStart="10px"/>-->
+
+<!--    <androidx.constraintlayout.widget.ConstraintLayout-->
+<!--        android:id="@+id/ooo1"-->
+<!--        android:layout_width="93px"-->
+<!--        android:layout_height="93px"-->
+<!--        app:layout_constraintStart_toStartOf="@id/pp2"-->
+<!--        app:layout_constraintTop_toBottomOf="@id/pp2"-->
+<!--        android:background="@drawable/card_layout_obvodka"-->
+<!--        android:layout_marginTop="20px">-->
+
+<!--        <ImageView-->
+<!--            android:layout_width="62px"-->
+<!--            android:layout_height="62px"-->
+<!--            android:background="@drawable/plus_ico"-->
+<!--            app:layout_constraintBottom_toBottomOf="parent"-->
+<!--            app:layout_constraintEnd_toEndOf="parent"-->
+<!--            app:layout_constraintStart_toStartOf="parent"-->
+<!--            app:layout_constraintTop_toTopOf="parent" />-->
+<!--    </androidx.constraintlayout.widget.ConstraintLayout>-->
+
+
+<!--    <EditText-->
+<!--        android:id="@+id/op"-->
+<!--        android:layout_width="806px"-->
+<!--        android:layout_height="280px"-->
+<!--        app:layout_constraintStart_toStartOf="@id/ifq"-->
+<!--        app:layout_constraintTop_toBottomOf="@id/eee"-->
+<!--        android:layout_marginTop="29px"-->
+<!--        android:textColor="@color/white"-->
+<!--        android:background="@drawable/text_input_layout_obvodka"-->
+<!--        android:hint="Введите описание"-->
+<!--        android:textColorHint="#33707070"-->
+<!--        android:textAppearance="@font/google_sans_medium"-->
+<!--        android:textSize="40px"-->
+<!--        android:paddingHorizontal="25px"-->
+<!--        android:paddingVertical="10px"-->
+<!--        android:gravity="top">-->
+<!--    </EditText>-->
+
+<!--    <TextView-->
+<!--        android:id="@+id/ep"-->
+<!--        android:layout_width="wrap_content"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:text="Эпизоды"-->
+<!--        android:textColor="@color/white"-->
+<!--        android:textAppearance="@font/google_sans_bold"-->
+<!--        app:layout_constraintStart_toStartOf="@id/op"-->
+<!--        app:layout_constraintTop_toBottomOf="@id/op"-->
+<!--        android:layout_marginTop="29px"-->
+<!--        android:textSize="50px"-->
+<!--        android:includeFontPadding="false"/>-->
+
+<!--    <androidx.constraintlayout.widget.ConstraintLayout-->
+<!--        android:id="@+id/addd2"-->
+<!--        android:layout_width="806px"-->
+<!--        android:layout_height="93px"-->
+<!--        app:layout_constraintStart_toStartOf="@id/ep"-->
+<!--        app:layout_constraintTop_toBottomOf="@id/ep"-->
+<!--        android:layout_marginTop="14px"-->
+<!--        android:background="@drawable/card_layout_obvodka">-->
+
+<!--        <ImageView-->
+<!--            android:layout_width="62px"-->
+<!--            android:layout_height="62px"-->
+<!--            app:layout_constraintBottom_toBottomOf="parent"-->
+<!--            app:layout_constraintEnd_toEndOf="parent"-->
+<!--            app:layout_constraintStart_toStartOf="parent"-->
+<!--            app:layout_constraintTop_toTopOf="parent"-->
+<!--            android:background="@drawable/plus_ico"/>-->
+
+<!--    </androidx.constraintlayout.widget.ConstraintLayout>-->
+
+<!--    <TextView-->
+<!--        android:layout_width="806px"-->
+<!--        android:layout_height="77px"-->
+<!--        app:layout_constraintStart_toStartOf="@id/ep"-->
+<!--        app:layout_constraintTop_toBottomOf="@id/addd2"-->
+<!--        android:text="Добавить"-->
+<!--        android:textColor="@color/white"-->
+<!--        android:gravity="center"-->
+<!--        android:textAppearance="@font/google_sans_bold"-->
+<!--        android:textSize="40px"-->
+<!--        android:background="@drawable/add_obvodka"-->
+<!--        android:layout_marginTop="29px"-->
+<!--        android:layout_marginBottom="29px"/>-->
+
+
+
+
+
+
+<!--    ТУТ КОНЕЦ   -->
+
+
+
+<!--    <ImageView-->
+<!--        android:id="@+id/ll"-->
+<!--        android:layout_width="45px"-->
+<!--        android:layout_height="45px"-->
+<!--        app:layout_constraintBottom_toBottomOf="parent"-->
+<!--        app:layout_constraintEnd_toEndOf="parent"-->
+<!--        app:layout_constraintStart_toStartOf="parent"-->
+<!--        app:layout_constraintTop_toTopOf="parent"-->
+<!--        android:background="@android:color/holo_red_light"/>-->
+
+<!--    <ImageView-->
+<!--        android:id="@+id/whi"-->
+<!--        android:layout_width="364px"-->
+<!--        android:layout_height="507px"-->
+<!--        android:layout_marginTop="50px"-->
+<!--        app:layout_constraintEnd_toEndOf="@id/ll"-->
+<!--        app:layout_constraintStart_toStartOf="@id/ll"-->
+<!--        app:layout_constraintTop_toTopOf="@id/ll"-->
+<!--        android:background="@android:color/white"/>-->
+<!--    <TextView-->
+<!--        android:id="@+id/pqpq"-->
+<!--        android:layout_width="wrap_content"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:text="a"-->
+<!--        android:textSize="50px"-->
+<!--        android:padding="0px"-->
+<!--        android:layout_margin="0px"-->
+<!--        app:layout_constraintStart_toStartOf="parent"-->
+<!--        app:layout_constraintBottom_toBottomOf="parent"-->
+<!--        app:layout_constraintTop_toTopOf="parent"-->
+<!--        app:layout_constraintEnd_toEndOf="parent"-->
+<!--        android:fontFamily="@font/google_sans_17pt_medium"/>-->
+
+</androidx.constraintlayout.widget.ConstraintLayout>

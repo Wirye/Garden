@@ -1,0 +1,45 @@
+<resources>
+    <string name="app_name">Garden</string>
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="withoutName">Без имени</string>
+    <string name="Drama">Драма</string>
+    <string name="Comedy">Комедия</string>
+    <string name="Romance">Романтика</string>
+    <string name="EverydayLife">Повседневность</string>
+    <string name="School">Школа</string>
+    <string name="Psychological">Психологическое</string>
+    <string name="Shonen">Сёнэн</string>
+    <string name="ActionMovie">Боевик</string>
+    <string name="MartialArts">Боевые искусства</string>
+    <string name="Action">Экшен</string>
+    <string name="Adventures">Приключения</string>
+    <string name="Shoujo">Сёдзё</string>
+    <string name="Fantasy">Фэнтези</string>
+    <string name="Isekai">Исекай</string>
+    <string name="ScienceFiction">Научная фантастика</string>
+    <string name="Cyberpunk">Киберпанк</string>
+    <string name="Fantastic">Фантастика</string>
+    <string name="Supernatural">Сверхъестественное</string>
+    <string name="PostApocalypse">Постапокалипсис</string>
+    <string name="Detective">Детектив</string>
+    <string name="Thriller">Триллер</string>
+    <string name="Horrors">Ужасы</string>
+    <string name="Mysticism">Мистика</string>
+    <string name="Etty">Этти</string>
+    <string name="Harem">Гарем</string>
+    <string name="showAll">Показать всё</string>
+    <string name="episodes">Эпизоды</string>
+    <string name="sezons">Сезоны</string>
+    <string name="Rock">Рок</string>
+    <string name="Jazz">Джаз</string>
+    <string name="LoFi">Лоу-фай</string>
+    <string name="Pop">Поп</string>
+    <string name="Classical">Классика</string>
+    <string name="Metal">Метал</string>
+    <string name="Electronic">Электроника</string>
+    <string name="HipHop">Хип-хоп</string>
+    <string name="Country">Кантри</string>
+    <string name="Ambient">Эмбиент</string>
+    <string name="Track">Трек</string>
+
+</resources>
