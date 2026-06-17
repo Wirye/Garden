@@ -136,7 +136,6 @@ import com.google.android.material.bottomsheet.BottomSheetBehavior
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.collections.isNotEmpty
-import com.example.garden.R
 
 var orientationOld = 0
 var orientationNow = 0
@@ -393,19 +392,17 @@ sealed class BottomSheetDialogElement {
     ) : BottomSheetDialogElement()
 
     data class SegmentedButton(
-        val tag: BsdButtonsTags,
         val icoId: Int,
         val text: String,
         val sizeType: SizeType,
-        val options: List<segmentedButtonOptions>,
+        val options: List<Pair<segmentedButtonOptions, BsdButtonsTags>>,
     ) : BottomSheetDialogElement()
 
     data class DropdownRow(
-        val tag: BsdButtonsTags,
         val text: String,
         val icoId: Int,
         val buttonIcoId: Int?,
-        val options: List<String>,
+        val options: List<Pair<String, BsdButtonsTags>>,
     ) : BottomSheetDialogElement()
 
     data class Slider(
@@ -419,6 +416,7 @@ sealed class BottomSheetDialogElement {
 data class segmentedButtonOptions(
     var text: String,
     var icoId: Int?,
+    var isActive: Boolean,
 )
 enum class pageTags {
     animePage, createAnimePage, genreChoice, videoPlayer
@@ -1515,7 +1513,7 @@ fun createBSDButton(textt: String, icoId: Int, showOpenPageArrow: Boolean, conte
     }
     return container
 }
-fun createM3Button(context: Context, width: Int, height: Int, textt: String, name: String, sizeType: SizeType, cornersMode: Int, icoId: Int? = null, pillMode: Boolean = false, dropDownMode: Boolean = false, wrapContentMode: Boolean = false, maxWidthh: Int? = null): createM3ButtonReturn {
+fun createM3Button(context: Context, width: Int, height: Int, textt: String, name: String, nameColor: Int, isActive: Boolean, sizeType: SizeType, cornersMode: Int, icoId: Int? = null, pillMode: Boolean = false, dropDownMode: Boolean = false, wrapContentMode: Boolean = false, maxWidthh: Int? = null): createM3ButtonReturn {
     val font = context.resources.getFont(R.font.google_sans_medium)
     val viewList = mutableListOf<View>()
     var widthToReturn = width
@@ -1546,7 +1544,7 @@ fun createM3Button(context: Context, width: Int, height: Int, textt: String, nam
             includeFontPadding = false
             typeface = font
             setTextSize(TypedValue.COMPLEX_UNIT_PX, getTextSizeByHeight(round(nameHeight.toFloat() / 2f).toInt(), font))
-            setTextColor("#D9FFFFFF".toColorInt())
+            setTextColor(nameColor)
             gravity = Gravity.CENTER
 
             measure(
@@ -1610,7 +1608,7 @@ fun createM3Button(context: Context, width: Int, height: Int, textt: String, nam
         background = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
             cornerRadii = radii
-            setColor("#80EADDFF".toColorInt())
+            setColor(if (!isActive) {"#80EADDFF".toColorInt()} else {"#E8DEF8".toColorInt()})
         }
 
         val newId = View.generateViewId()
@@ -1835,7 +1833,7 @@ fun createM3Button(context: Context, width: Int, height: Int, textt: String, nam
 
     return createM3ButtonReturn(container, viewList, widthToReturn)
 }
-fun createSegmentedButton(context: Context, width: Int, height: Int, options: List<segmentedButtonOptions>): ConstraintLayout {
+fun createSegmentedButton(context: Context, width: Int, height: Int, options: List<Pair<segmentedButtonOptions, BsdButtonsTags>>): ConstraintLayout {
     val buttonWidth = width / options.size
 
     val container = ConstraintLayout(context).apply {
@@ -1857,11 +1855,14 @@ fun createSegmentedButton(context: Context, width: Int, height: Int, options: Li
             context = context,
             width = buttonWidth,
             height = height,
-            textt = options[i].text,
-            icoId = options[i].icoId,
+            textt = options[i].first.text,
+            icoId = options[i].first.icoId,
             name = "",
             sizeType = SizeType.MEDIUM,
-            cornersMode = cornersMode)
+            cornersMode = cornersMode,
+            nameColor = "#FFFFFF".toColorInt(),
+            isActive = options[i].first.isActive
+        )
 
         val button = rt.container
         for (i in rt.childs) {
@@ -1893,7 +1894,7 @@ fun createSegmentedButton(context: Context, width: Int, height: Int, options: Li
         }
 
         button.layoutParams = layoutparams1
-        button.tag = "segmented_btn_$i" // Индивидуальный тег
+        button.tag = options[i].second
         button.id = View.generateViewId()
 
         container.addView(button)
@@ -2052,7 +2053,7 @@ fun createSliderRow(context: Context, width: Int, name: String, icoId: Int, stop
 
     return viewsToReturn
 }
-fun createDropdownRow(context: Context, width: Int, height: Int, titleText: String, icoId: Int, options: List<String>, onItemSelected: (String) -> Unit, buttonIcoId: Int? = null): ConstraintLayout {
+fun createDropdownRow(context: Context, width: Int, height: Int, titleText: String, icoId: Int, options: List<Pair<String, BsdButtonsTags>>, onItemSelected: (String, BsdButtonsTags) -> Unit, buttonIcoId: Int? = null): ConstraintLayout {
     val font = context.resources.getFont(R.font.google_sans_medium)
     val icoMarginLeft = round(width.toFloat() / 28.42f).toInt()
     val marginRight = round(icoMarginLeft.toFloat() * 1.42f).toInt()
@@ -2084,7 +2085,7 @@ fun createDropdownRow(context: Context, width: Int, height: Int, titleText: Stri
     }
     container.addView(ico)
 
-    val rt = createM3Button(context = context, width = buttonWidth, height = buttonHeight, textt = options[0], name = "", sizeType = SizeType.SMALL, cornersMode = 0, buttonIcoId, true, true, true, buttonWidth)
+    val rt = createM3Button(context = context, width = buttonWidth, height = buttonHeight, textt = options[0].first, name = "", sizeType = SizeType.SMALL, cornersMode = 0, icoId = buttonIcoId, pillMode = true, dropDownMode = true, wrapContentMode = true, maxWidthh = buttonWidth, isActive = true, nameColor = "#FFFFFF".toColorInt())
     val dropdownButton = rt.container
     for (i in rt.childs) {
         dropdownButton.addView(i)
@@ -2142,8 +2143,8 @@ fun createDropdownRow(context: Context, width: Int, height: Int, titleText: Stri
             val selected = options[position]
             // Находим TextView внутри кнопки и меняем текст
             val btnText = dropdownButton.findViewWithTag<TextView>("button_text")
-            btnText?.text = selected
-            val newChilds = createM3Button(context = context, width = buttonWidth, height = buttonHeight, textt = selected, name = "", sizeType = SizeType.SMALL, cornersMode = 0, buttonIcoId, true, true, true, buttonWidth)
+            btnText?.text = selected.first
+            val newChilds = createM3Button(context = context, width = buttonWidth, height = buttonHeight, textt = selected.first, name = "", sizeType = SizeType.SMALL, cornersMode = 0, icoId = buttonIcoId, pillMode = true, dropDownMode = true, wrapContentMode = true, maxWidthh = buttonWidth, isActive = true, nameColor = "#FFFFFF".toColorInt())
             dropdownButton.removeAllViews()
             val lp1 = dropdownButton.layoutParams as ConstraintLayout.LayoutParams
             lp1.width = newChilds.width
@@ -2151,7 +2152,7 @@ fun createDropdownRow(context: Context, width: Int, height: Int, titleText: Stri
             for (i in newChilds.childs) {
                 dropdownButton.addView(i)
             }
-            onItemSelected(selected) // Вызываем callback
+            onItemSelected(selected.first,selected.second) // Вызываем callback
             dismiss()
         }
     }
@@ -2162,7 +2163,7 @@ fun createDropdownRow(context: Context, width: Int, height: Int, titleText: Stri
 
     return container
 }
-fun createSegmentedButtonRow(context: Context, width: Int, height: Int, options: List<segmentedButtonOptions>, icoId: Int, textt: String): ConstraintLayout {
+fun createSegmentedButtonRow(context: Context, width: Int, height: Int, options: List<Pair<segmentedButtonOptions, BsdButtonsTags>>, icoId: Int, textt: String): ConstraintLayout {
     val font = context.resources.getFont(R.font.google_sans_medium)
     val icoSize = floor(height.toFloat() / 2f).toInt()
     val icoMarginLeft = round(width.toFloat() / 28.42f).toInt()
@@ -2323,7 +2324,7 @@ fun createSwitchButton(context: Context, isChecked: Boolean, width: Int, height:
 
         // Анимация передвижения ползунка
         val biasAnimator = ValueAnimator.ofFloat(startBias, endBias).apply {
-            duration = 250
+            duration = 100
             interpolator = AccelerateDecelerateInterpolator()
             addUpdateListener { animator ->
                 thumb.updateLayoutParams<ConstraintLayout.LayoutParams> {
@@ -2334,7 +2335,7 @@ fun createSwitchButton(context: Context, isChecked: Boolean, width: Int, height:
 
         // Анимация смены цвета фона
         val colorAnimator = ValueAnimator.ofObject(ArgbEvaluator(), startColor, endColor).apply {
-            duration = 250
+            duration = 100
             interpolator = AccelerateDecelerateInterpolator()
             addUpdateListener { animator ->
                 (track.background as GradientDrawable).setColor(animator.animatedValue as Int)
@@ -5630,9 +5631,26 @@ class bottomSheetDialogFactory(private val activity: Activity) {
                         textt = element.text
                     )
                     for (i in element.options.indices) {
-                        val segment = segmentedView.findViewWithTag<View>("segmented_btn_$i")
-                        segment?.setOnClickListener {
-                            callback(element.tag)
+                        val currentTag = element.options[i].second
+                        val segment = segmentedView.findViewWithTag<View>(currentTag)
+                        segment?.setOnClickListener { clickedSegment ->
+                            callback(currentTag)
+                            for (o in element.options.indices) {
+                                val segment1 = segmentedView.findViewWithTag<View>(element.options[o].second) ?: continue
+                                val segment1Background = segment1.findViewWithTag<View>("button_bg").background as GradientDrawable
+                                val colorNow = segment1Background.color?.defaultColor ?: "#80EADDFF".toColorInt()
+                                val targetColor = if (segment1 == clickedSegment) {"#E8DEF8".toColorInt()} else {"#80EADDFF".toColorInt()}
+                                if (colorNow != targetColor) {
+                                    val animation = ValueAnimator.ofObject(ArgbEvaluator(), colorNow, targetColor).apply {
+                                        duration = 100
+                                        interpolator = AccelerateDecelerateInterpolator()
+                                        addUpdateListener { animator ->
+                                            segment1Background.setColor(animator.animatedValue as Int)
+                                        }
+                                    }
+                                    animation.start()
+                                }
+                            }
                         }
                     }
                     if (showPoloska) {
@@ -5643,7 +5661,7 @@ class bottomSheetDialogFactory(private val activity: Activity) {
                 }
 
                 is BottomSheetDialogElement.Slider -> {
-                    val sliderHeight = elementHeight // или можно отдельно, оставим так
+                    val sliderHeight = elementHeight
                     val sliderViews = createSliderRow(
                         context = activity,
                         width = elementWidth,
@@ -5674,8 +5692,8 @@ class bottomSheetDialogFactory(private val activity: Activity) {
                         titleText = element.text,
                         icoId = element.icoId,
                         options = element.options,
-                        onItemSelected = { selected ->
-                            callback(element.tag)
+                        onItemSelected = { selectedText, selectedTag ->
+                            callback(selectedTag)
                         },
                         buttonIcoId = element.buttonIcoId
                     )
@@ -7369,18 +7387,16 @@ class animePageAdapter(private val context: Context, private val showShowAllText
                     createSteps = true
                 ),
                 BottomSheetDialogElement.SegmentedButton(
-                    tag = BsdButtonsTags.animePage_extraButton_changeAllEpisodesWatchedMark,
                     icoId = R.drawable.close_ico,
                     text = "Пометить все эпизоды как непросмотренные",
                     sizeType = SizeType.SMALL,
-                    options = listOf(segmentedButtonOptions("", R.drawable.check_ico), segmentedButtonOptions("", R.drawable.check_ico), segmentedButtonOptions("", R.drawable.check_ico))
+                    options = listOf(Pair(segmentedButtonOptions("", R.drawable.check_ico, true), BsdButtonsTags.animePage_extraButton_changeAllEpisodesWatchedMark), Pair(segmentedButtonOptions("", R.drawable.check_ico, false), BsdButtonsTags.animePage_extraButton_changeAllEpisodesWatchedMark), Pair(segmentedButtonOptions("", R.drawable.check_ico, false), BsdButtonsTags.animePage_extraButton_changeAllEpisodesWatchedMark))
                 ),
                 BottomSheetDialogElement.DropdownRow(
-                    tag = BsdButtonsTags.animePage_extraButton_changeAllEpisodesWatchedMark,
                     icoId = R.drawable.close_ico,
                     text = "Удалить",
                     buttonIcoId = R.drawable.check_ico,
-                    options = listOf("Русский", "Английский", "Китайский")
+                    options = listOf(Pair("Русский", BsdButtonsTags.animePage_extraButton_changeAllEpisodesWatchedMark), Pair("Английский", BsdButtonsTags.animePage_extraButton_changeAllEpisodesWatchedMark), Pair("Китайский",BsdButtonsTags.animePage_extraButton_changeAllEpisodesWatchedMark))
                 )
             )
             _bsdFlow.tryEmit(bsdDialogExtraButton)
