@@ -128,6 +128,7 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.core.view.updateLayoutParams
+import com.example.garden.customView.OptimizedTextView
 import com.example.garden.database.MusicGenre
 import com.example.garden.database.objectData
 import com.example.garden.players.AnimeVideoPlayer
@@ -1894,7 +1895,7 @@ fun createSegmentedButton(context: Context, width: Int, height: Int, options: Li
         }
 
         button.layoutParams = layoutparams1
-        button.tag = options[i].second
+        button.tag = "button_$i"
         button.id = View.generateViewId()
 
         container.addView(button)
@@ -2135,7 +2136,11 @@ fun createDropdownRow(context: Context, width: Int, height: Int, titleText: Stri
     container.addView(textView)
 
     val listPopupWindow = ListPopupWindow(context).apply {
-        setAdapter(ArrayAdapter(context, android.R.layout.simple_list_item_1, options))
+        val newOptions = mutableListOf<String>()
+        for (i in options) {
+            newOptions.add(i.first)
+        }
+        setAdapter(ArrayAdapter(context, android.R.layout.simple_list_item_1, newOptions))
         anchorView = dropdownButton // Привязываем список к созданной M3 кнопке
         isModal = true
 
@@ -4470,7 +4475,6 @@ fun toggleSystemBars(show: Boolean, context: Context) {
 var currentPendingKeyForFiles: String? = null
 var currentPendingPositionForCreateCardChangeImage: Int = 0
 class MainActivity : AppCompatActivity() {
-    var fullScreenViewId = -1
     private lateinit var displayManager: DisplayManager
     private lateinit var recycler: RecyclerView
     private lateinit var animePage: RecyclerView
@@ -4528,7 +4532,6 @@ class MainActivity : AppCompatActivity() {
         enableEdgeToEdge()
         setContentView(R.layout.mainactivity)
         statusBarHeight = getStatusBarHeight(this)
-        Log.d("SBH", "${statusBarHeight}")
         screenWidth = resources.displayMetrics.widthPixels
         screenHeight = resources.displayMetrics.heightPixels
         screenWidthDp = round(screenWidth.toFloat() / resources.displayMetrics.density).toInt()
@@ -4996,7 +4999,7 @@ class MainActivity : AppCompatActivity() {
     }
     fun bsdButtonActions(tag: BsdButtonsTags) {
         when (tag) {
-            BsdButtonsTags.animePage_extraButton_changeAllEpisodesWatchedMark -> { Log.d("ДОШЛО", "${animePageObjectId}") }
+            BsdButtonsTags.animePage_extraButton_changeAllEpisodesWatchedMark -> {}
         }
     }
     fun restoreLayer() {
@@ -5632,11 +5635,11 @@ class bottomSheetDialogFactory(private val activity: Activity) {
                     )
                     for (i in element.options.indices) {
                         val currentTag = element.options[i].second
-                        val segment = segmentedView.findViewWithTag<View>(currentTag)
+                        val segment = segmentedView.findViewWithTag<View>("button_$i")
                         segment?.setOnClickListener { clickedSegment ->
                             callback(currentTag)
                             for (o in element.options.indices) {
-                                val segment1 = segmentedView.findViewWithTag<View>(element.options[o].second) ?: continue
+                                val segment1 = segmentedView.findViewWithTag<View>("button_$o") ?: continue
                                 val segment1Background = segment1.findViewWithTag<View>("button_bg").background as GradientDrawable
                                 val colorNow = segment1Background.color?.defaultColor ?: "#80EADDFF".toColorInt()
                                 val targetColor = if (segment1 == clickedSegment) {"#E8DEF8".toColorInt()} else {"#80EADDFF".toColorInt()}

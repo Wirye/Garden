@@ -19,7 +19,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import com.example.garden.R
 import com.example.garden.ResultKeys
-import com.example.garden.StrokeTextView
+import com.example.garden.customView.StrokeTextView
 import com.example.garden.baseDensity
 import com.example.garden.convertToStringTime
 import com.example.garden.database.objectData
@@ -418,7 +418,7 @@ class AnimeVideoPlayer(context: Context, private val resultSenderViewModel: Resu
             this.typeface = boldFont
             setTextSize(TypedValue.COMPLEX_UNIT_PX, lengthTextTextSize)
             setTextColor("#BF9C9C9C".toColorInt())
-            id = View.generateViewId()
+            id = generateViewId()
             maxWidth = screenWidth - marginHorizontal*2 - marginBetweenElements - length.measuredWidth
         }
         contrainer.addView(episodeName)
@@ -438,7 +438,7 @@ class AnimeVideoPlayer(context: Context, private val resultSenderViewModel: Resu
             setTextSize(TypedValue.COMPLEX_UNIT_PX, nameTextSize)
             setTextColor("#FFFFFF".toColorInt())
             includeFontPadding = false
-            id = View.generateViewId()
+            id = generateViewId()
             maxWidth = screenWidth - marginHorizontal*2 - marginBetweenElements - length.measuredWidth
         }
         contrainer.addView(episodeNum)
