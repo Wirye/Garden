@@ -1,4 +1,3 @@
-// Файл: app/src/main/java/com/example/garden_beta/database/AppDatabase.kt
 package com.example.garden.database
 
 import androidx.room.Database
@@ -7,10 +6,10 @@ import androidx.room.RoomDatabase
 import android.content.Context
 import androidx.room.TypeConverters
 
-@Database(entities = [objectData::class], version = 3)
+@Database(entities = [ObjectData::class], version = 3)
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
-    abstract fun objectDataDao(): objectDataDao
+    abstract fun objectDataDao(): ObjectDataDao
 
     companion object {
         @Volatile

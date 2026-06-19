@@ -19,13 +19,13 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import com.example.garden.R
 import com.example.garden.ResultKeys
-import com.example.garden.customView.StrokeTextView
+import com.example.garden.ui.customView.StrokeTextView
 import com.example.garden.baseDensity
-import com.example.garden.convertToStringTime
-import com.example.garden.database.objectData
-import com.example.garden.getTextSizeByHeight
-import com.example.garden.lifecycleOwner
-import com.example.garden.optimizeText
+import com.example.garden.ui.utils.convertToStringTime
+import com.example.garden.database.ObjectData
+import com.example.garden.ui.utils.getTextSizeByHeight
+import com.example.garden.ui.utils.viewExtensions.lifecycleOwner
+import com.example.garden.ui.utils.optimizeText
 import com.example.garden.screenHeight
 import com.example.garden.screenWidth
 import com.example.garden.screenWidthDp
@@ -35,8 +35,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.round
 import android.view.GestureDetector
-import com.example.garden.changeOrientation
-import com.example.garden.toggleSystemBars
+import com.example.garden.ui.utils.system.changeOrientation
+import com.example.garden.ui.utils.system.toggleSystemBars
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 
@@ -68,7 +68,7 @@ class AnimeVideoPlayer(context: Context, private val resultSenderViewModel: Resu
                 withContext(Dispatchers.Main) {
                     when (key) {
                         ResultKeys.VIDEO_PLAYER_ANIME_EPISODE_INFORMATION -> {
-                            val info = data as Triple<objectData?, List<objectData>, Int>
+                            val info = data as Triple<ObjectData?, List<ObjectData>, Int>
                             val ui = createUI(info)
                             addView(ui)
                         }
@@ -92,7 +92,7 @@ class AnimeVideoPlayer(context: Context, private val resultSenderViewModel: Resu
     }
 
     var currentEpisodeId: Long? = null
-    private fun createUI(info: Triple<objectData?, List<objectData>, Int>): ConstraintLayout {
+    private fun createUI(info: Triple<ObjectData?, List<ObjectData>, Int>): ConstraintLayout {
         val contrainer = ConstraintLayout(context).apply {
             layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT)
         }

@@ -4,7 +4,7 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 
 @Entity(tableName = "groupsData", indices = [androidx.room.Index(value = ["id", "position"])])
-data class groupsData(
+data class GroupsData(
     @PrimaryKey(autoGenerate = true)
     var grIDi: Int,
     var groupNumber: Int,

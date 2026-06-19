@@ -1,4 +1,4 @@
-package com.example.garden
+package com.example.garden.ui.utils.viewExtensions
 
 import android.content.Context
 import android.content.ContextWrapper
@@ -10,9 +10,10 @@ import com.example.garden.database.ImageSource
 import java.io.File
 import androidx.core.net.toUri
 import androidx.lifecycle.LifecycleOwner
+import com.example.garden.R
 
 val Context.lifecycleOwner: LifecycleOwner?
-    get() { // Это НЕ импорт. Это ключевое слово Kotlin.
+    get() {
         var curContext = this
         while (curContext is ContextWrapper) {
             if (curContext is LifecycleOwner) return curContext

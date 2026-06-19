@@ -81,7 +81,7 @@ data class LinkData(
     val contentPath: String?   // Путь (содержит путь к нужному файлу) (используется для content)
 )
 @Entity(tableName = "objectData", indices = [androidx.room.Index(value = ["parentId", "position", "lnk_targetId"])])
-data class objectData(
+data class ObjectData(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
     var parentId: Long? = null,

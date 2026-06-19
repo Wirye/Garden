@@ -4,19 +4,18 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.garden.appsettings.AnimeSettingsState
 import com.example.garden.appsettings.SettingsManager
-import com.example.garden.baseDensity
 import com.example.garden.database.ElementType
 import com.example.garden.database.Genre
 import com.example.garden.database.ImageData
 import com.example.garden.database.ImageSource
 import com.example.garden.database.LinkData
 import com.example.garden.database.LinkType
-import com.example.garden.database.groups.groupsData
-import com.example.garden.database.groups.groupsDataDao
-import com.example.garden.database.objectData
-import com.example.garden.database.objectDataDao
+import com.example.garden.database.groups.GroupsData
+import com.example.garden.database.groups.GroupsDataDao
+import com.example.garden.database.ObjectData
+import com.example.garden.database.ObjectDataDao
 import com.example.garden.episodeInfo
-import com.example.garden.findObjectByIdInList
+import com.example.garden.ui.utils.findObjectByIdInList
 import com.example.garden.objectData2
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -28,11 +27,11 @@ import kotlin.math.round
 
 data class animePageUIModel(
     val animeData: objectData2?,
-    val groups: List<groupsData>,
+    val groups: List<GroupsData>,
     val settingsState: AnimeSettingsState
 )
 
-class MainViewModel(private val dao: objectDataDao, private val groupDao: groupsDataDao, private val settingsManager: SettingsManager, private val baseDensity1: Float) : ViewModel() {
+class MainViewModel(private val dao: ObjectDataDao, private val groupDao: GroupsDataDao, private val settingsManager: SettingsManager, private val baseDensity1: Float) : ViewModel() {
     val uiDataFlow: Flow<List<objectData2>> = dao.getAll().map {
         allItems ->
         val roots = allItems.filter { it.parentId == null }.sortedBy { it.position }
@@ -40,7 +39,7 @@ class MainViewModel(private val dao: objectDataDao, private val groupDao: groups
     }
     private val _animePageObjectFlow = MutableStateFlow<objectData2?>(null)
 
-    val groupsFlow: Flow<List<groupsData>> = groupDao.getAll()
+    val groupsFlow: Flow<List<GroupsData>> = groupDao.getAll()
     val settingsStateFlow = settingsManager.settingsStateFlow
 
     val animePageFlow = combine(
@@ -62,7 +61,7 @@ class MainViewModel(private val dao: objectDataDao, private val groupDao: groups
         }
     }
 
-    fun getGroupById(id: Long, list: List<groupsData>): Int? {
+    fun getGroupById(id: Long, list: List<GroupsData>): Int? {
         var res: Int? = null
         for (i in 0 until list.size) {
             val obj = list[i]
@@ -74,8 +73,8 @@ class MainViewModel(private val dao: objectDataDao, private val groupDao: groups
         return res
     }
 
-    fun getGroupObjectsByGroupNumber(groupNumber: Int, list: List<groupsData>): List<groupsData> {
-        val res = mutableListOf<groupsData>()
+    fun getGroupObjectsByGroupNumber(groupNumber: Int, list: List<GroupsData>): List<GroupsData> {
+        val res = mutableListOf<GroupsData>()
         for (i in 0 until list.size) {
             val obj = list[i]
             if (obj.groupNumber == groupNumber) {
@@ -86,7 +85,7 @@ class MainViewModel(private val dao: objectDataDao, private val groupDao: groups
         return res
     }
 
-    fun getGroupObjectsByIdOfOne(id: Long, list: List<objectData2>, list2: List<groupsData>): List<objectData2> {
+    fun getGroupObjectsByIdOfOne(id: Long, list: List<objectData2>, list2: List<GroupsData>): List<objectData2> {
         val groupNumber = getGroupById(id, list2)
         val groupObjects = mutableListOf<objectData2>()
         if (groupNumber != null) {
@@ -105,7 +104,7 @@ class MainViewModel(private val dao: objectDataDao, private val groupDao: groups
         return groupObjects
     }
 
-    private fun build(current: objectData, allItems: List<objectData>): objectData2 {
+    private fun build(current: ObjectData, allItems: List<ObjectData>): objectData2 {
         val dataSource = if (current.link?.type == LinkType.INSERT && current.link?.targetId != null) { allItems.find { it.id == current.link?.targetId } ?: current } else { current }
         val childs = allItems.filter { it.parentId == if (dataSource != current) {dataSource.id} else {current.id } }.sortedBy { it.position }
         return objectData2(
@@ -146,7 +145,7 @@ class MainViewModel(private val dao: objectDataDao, private val groupDao: groups
     }
     fun insert() {
         viewModelScope.launch(Dispatchers.IO) {
-            val cr1 = objectData(
+            val cr1 = ObjectData(
                 id = 1,
                 page = 0,
                 parentId = null,
@@ -182,7 +181,7 @@ class MainViewModel(private val dao: objectDataDao, private val groupDao: groups
                 genre = null
             )
             dao.insert(cr1)
-            val cd1 = objectData(
+            val cd1 = ObjectData(
                 id = 2,
                 page = 0,
                 parentId = 1,
@@ -229,7 +228,7 @@ class MainViewModel(private val dao: objectDataDao, private val groupDao: groups
                 )
             )
             dao.insert(cd1)
-            val cd2 = objectData(
+            val cd2 = ObjectData(
                 id = 3,
                 page = 0,
                 parentId = 1,
@@ -270,13 +269,13 @@ class MainViewModel(private val dao: objectDataDao, private val groupDao: groups
             )
             dao.insert(cd2)
             groupDao.deleteAll()
-            groupDao.insert(groupsData(0,0, 2, 0))
-            groupDao.insert(groupsData(0,0,3,1))
+            groupDao.insert(GroupsData(0,0, 2, 0))
+            groupDao.insert(GroupsData(0,0,3,1))
         }
 
     }
 
-    suspend fun insertCarousel(objectData: objectData, page: Int): Long {
+    suspend fun insertCarousel(objectData: ObjectData, page: Int): Long {
         val position = dao.getMaxPosition(null) ?: -1
         objectData.position = position+1
         objectData.page = page
@@ -288,7 +287,7 @@ class MainViewModel(private val dao: objectDataDao, private val groupDao: groups
         return carouselId
     }
 
-    suspend fun insertCard(objectData: objectData, parentId: Long): Long {
+    suspend fun insertCard(objectData: ObjectData, parentId: Long): Long {
         val position = dao.getMaxPosition(parentId) ?: -1
         objectData.position = position+1
         objectData.parentId = parentId
@@ -304,7 +303,7 @@ class MainViewModel(private val dao: objectDataDao, private val groupDao: groups
 
     suspend fun insertEpisode(episodeInfo: episodeInfo, parentId: Long): Long {
         val position = dao.getMaxPosition(parentId) ?: -1
-        val data = objectData(
+        val data = ObjectData(
             id = 0,
             page = 0,
             parentId = parentId,
@@ -342,7 +341,7 @@ class MainViewModel(private val dao: objectDataDao, private val groupDao: groups
         val episodeId = dao.insert(data)
         return episodeId
     }
-    fun insertCardWithEpisodes(cardInfo: objectData, episodesInfo: List<episodeInfo>, parentId: Long) {
+    fun insertCardWithEpisodes(cardInfo: ObjectData, episodesInfo: List<episodeInfo>, parentId: Long) {
         viewModelScope.launch {
             val cardId = insertCard(cardInfo, parentId)
             for (i in 0 until episodesInfo.size) {
@@ -356,9 +355,9 @@ class MainViewModel(private val dao: objectDataDao, private val groupDao: groups
         }
     }
 
-    suspend fun getAllInfoByEpisodeId(id: Long): Triple<objectData?, List<objectData>, Int> {
-        var parentCard: objectData? = null
-        val episodesListToReturn = mutableListOf<objectData>()
+    suspend fun getAllInfoByEpisodeId(id: Long): Triple<ObjectData?, List<ObjectData>, Int> {
+        var parentCard: ObjectData? = null
+        val episodesListToReturn = mutableListOf<ObjectData>()
         val thisEpisode = dao.getById(id)
         var thisEpisodePos = 0
         if (thisEpisode != null) {

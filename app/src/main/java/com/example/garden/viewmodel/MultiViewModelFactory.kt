@@ -3,10 +3,10 @@ package com.example.garden.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.example.garden.appsettings.SettingsManager
-import com.example.garden.database.groups.groupsDataDao
-import com.example.garden.database.objectDataDao
+import com.example.garden.database.groups.GroupsDataDao
+import com.example.garden.database.ObjectDataDao
 
-class MultiViewModelFactory(private val dao: objectDataDao, private val groupsDao: groupsDataDao, private val settings: SettingsManager, private val baseDensity: Float) : ViewModelProvider.Factory {
+class MultiViewModelFactory(private val dao: ObjectDataDao, private val groupsDao: GroupsDataDao, private val settings: SettingsManager, private val baseDensity: Float) : ViewModelProvider.Factory {
 
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {

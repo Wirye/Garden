@@ -1,4 +1,4 @@
-package com.example.garden.customView
+package com.example.garden.ui.customView
 
 import android.content.Context
 import android.graphics.Canvas
