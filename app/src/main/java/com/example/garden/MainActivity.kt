@@ -4481,7 +4481,7 @@ class MainActivity : AppCompatActivity() {
     private var lastRotation = -1
     private val viewModel: MainViewModel by viewModels {
         val app = application as App
-        MultiViewModelFactory(app.dao, app.groupsDao, app.settingsManager)
+        MultiViewModelFactory(app.dao, app.groupsDao, app.settingsManager, resources.displayMetrics.density)
     }
     private val resultSenderViewModel: ResultSenderViewModel by viewModels()
     val pickFile = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
@@ -4534,11 +4534,12 @@ class MainActivity : AppCompatActivity() {
         statusBarHeight = getStatusBarHeight(this)
         screenWidth = resources.displayMetrics.widthPixels
         screenHeight = resources.displayMetrics.heightPixels
-        screenWidthDp = round(screenWidth.toFloat() / resources.displayMetrics.density).toInt()
-        screenHeightDp = round(screenHeight.toFloat() / resources.displayMetrics.density).toInt()
-        density = resources.displayMetrics.density / 2.625f
-        reversDensity = 2.625f / resources.displayMetrics.density
         baseDensity = resources.displayMetrics.density
+        screenWidthDp = round(screenWidth.toFloat() / baseDensity).toInt()
+        screenHeightDp = round(screenHeight.toFloat() / baseDensity).toInt()
+        density = baseDensity / 2.625f
+        reversDensity = 2.625f / baseDensity
+
         steps = listOf(round(512f*density),round(256f*density),round(192f*density),round(128f*density),round(96f*density),round(64f*density), round(48f*density), round(40f*density), round(36f*density), round(32f*density), round(24f*density), round(20f*density), round(16f*density), round(12f*density))  // Это список возможных textSize
         val container = findViewById<ViewGroup>(R.id.main)
         val bsd = bottomSheetDialogFactory(this)

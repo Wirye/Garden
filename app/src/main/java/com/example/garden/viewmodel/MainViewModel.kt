@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.garden.appsettings.AnimeSettingsState
 import com.example.garden.appsettings.SettingsManager
+import com.example.garden.baseDensity
 import com.example.garden.database.ElementType
 import com.example.garden.database.Genre
 import com.example.garden.database.ImageData
@@ -23,6 +24,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlin.math.round
 
 data class animePageUIModel(
     val animeData: objectData2?,
@@ -30,7 +32,7 @@ data class animePageUIModel(
     val settingsState: AnimeSettingsState
 )
 
-class MainViewModel(private val dao: objectDataDao, private val groupDao: groupsDataDao, private val settingsManager: SettingsManager) : ViewModel() {
+class MainViewModel(private val dao: objectDataDao, private val groupDao: groupsDataDao, private val settingsManager: SettingsManager, private val baseDensity1: Float) : ViewModel() {
     val uiDataFlow: Flow<List<objectData2>> = dao.getAll().map {
         allItems ->
         val roots = allItems.filter { it.parentId == null }.sortedBy { it.position }
@@ -124,18 +126,18 @@ class MainViewModel(private val dao: objectDataDao, private val groupDao: groups
             type = dataSource.type,
             alreadyWatched = dataSource.alreadyWatched,
             length = dataSource.length,
-            width = current.width,
-            height = current.height,
+            width = if (current.width != null) {round(current.width!!.toFloat() * baseDensity1).toInt()} else {null},
+            height = if (current.height != null) {round(current.height!!.toFloat() * baseDensity1).toInt()} else {null},
             childsCornerRadius = current.childsCornerRadius,
             layoutType = dataSource.layoutType,
             dovodchik = current.dovodchik,
             showDovodchikDots = current.showDovodchikDots,
             maxObjectsInOneLine = current.maxObjectsInOneLine,
             maxLines = current.maxLines,
-            paddingHorizontal = current.paddingHorizontal,
-            paddingVertical = current.paddingVertical,
-            marginBetweenElementsHorizontal = current.marginBetweenElementsHorizontal,
-            marginBetweenElementsVertical = current.marginBetweenElementsVertical,
+            paddingHorizontal = if (current.paddingHorizontal != null) {round(current.paddingHorizontal!!.toFloat() * baseDensity1).toInt()} else {null},
+            paddingVertical = if (current.paddingVertical != null) {round(current.paddingVertical!!.toFloat() * baseDensity1).toInt()} else {null},
+            marginBetweenElementsHorizontal = if (current.marginBetweenElementsHorizontal != null) {round(current.marginBetweenElementsHorizontal!!.toFloat() * baseDensity1).toInt()} else {null},
+            marginBetweenElementsVertical = if (current.marginBetweenElementsVertical != null) {round(current.marginBetweenElementsVertical!!.toFloat() * baseDensity1).toInt()} else {null},
             childs = childs.map { build(it,allItems) },
             link = dataSource.link,
             elementType = dataSource.elementType,
@@ -202,8 +204,8 @@ class MainViewModel(private val dao: objectDataDao, private val groupDao: groups
                 type = null,
                 alreadyWatched = 32,
                 length = 50,
-                width = 520,
-                height = 743,
+                width = round(520f / baseDensity1).toInt(),
+                height = round(743f / baseDensity1).toInt(),
                 childsCornerRadius = null,
                 layoutType = null,
                 dovodchik = false,
@@ -246,8 +248,8 @@ class MainViewModel(private val dao: objectDataDao, private val groupDao: groups
                 type = null,
                 alreadyWatched = 0,
                 length = 0,
-                width = 520,
-                height = 743,
+                width = round(520f / baseDensity1).toInt(),
+                height = round(743f / baseDensity1).toInt(),
                 childsCornerRadius = null,
                 layoutType = null,
                 dovodchik = false,
@@ -278,6 +280,10 @@ class MainViewModel(private val dao: objectDataDao, private val groupDao: groups
         val position = dao.getMaxPosition(null) ?: -1
         objectData.position = position+1
         objectData.page = page
+        objectData.paddingHorizontal = if (objectData.paddingHorizontal != null) {round(objectData.paddingHorizontal!!.toFloat() / baseDensity1).toInt()} else {null}
+        objectData.paddingVertical = if (objectData.paddingVertical != null) {round(objectData.paddingVertical!!.toFloat() / baseDensity1).toInt()} else {null}
+        objectData.marginBetweenElementsHorizontal = if (objectData.marginBetweenElementsHorizontal != null) {round(objectData.marginBetweenElementsHorizontal!!.toFloat() / baseDensity1).toInt()} else {null}
+        objectData.marginBetweenElementsVertical = if (objectData.marginBetweenElementsVertical != null) {round(objectData.marginBetweenElementsVertical!!.toFloat() / baseDensity1).toInt()} else {null}
         val carouselId = dao.insert(objectData)
         return carouselId
     }
@@ -286,6 +292,12 @@ class MainViewModel(private val dao: objectDataDao, private val groupDao: groups
         val position = dao.getMaxPosition(parentId) ?: -1
         objectData.position = position+1
         objectData.parentId = parentId
+        objectData.width = if (objectData.width != null) {round(objectData.width!!.toFloat() / baseDensity1).toInt()} else {null}
+        objectData.height = if (objectData.height != null) {round(objectData.height!!.toFloat() / baseDensity1).toInt()} else {null}
+        objectData.paddingHorizontal = if (objectData.paddingHorizontal != null) {round(objectData.paddingHorizontal!!.toFloat() / baseDensity1).toInt()} else {null}
+        objectData.paddingVertical = if (objectData.paddingVertical != null) {round(objectData.paddingVertical!!.toFloat() / baseDensity1).toInt()} else {null}
+        objectData.marginBetweenElementsHorizontal = if (objectData.marginBetweenElementsHorizontal != null) {round(objectData.marginBetweenElementsHorizontal!!.toFloat() / baseDensity1).toInt()} else {null}
+        objectData.marginBetweenElementsVertical = if (objectData.marginBetweenElementsVertical != null) {round(objectData.marginBetweenElementsVertical!!.toFloat() / baseDensity1).toInt()} else {null}
         val cardId = dao.insert(objectData)
         return cardId
     }
@@ -358,6 +370,14 @@ class MainViewModel(private val dao: objectDataDao, private val groupDao: groups
                     episodesListToReturn.addAll(episodes)
                 }
             }
+        }
+        if (parentCard != null) {
+            parentCard.width = round(parentCard.width!!.toFloat() * baseDensity1).toInt()
+            parentCard.height = round(parentCard.height!!.toFloat() * baseDensity1).toInt()
+            parentCard.paddingVertical = round(parentCard.paddingVertical!!.toFloat() * baseDensity1).toInt()
+            parentCard.paddingHorizontal = round(parentCard.paddingHorizontal!!.toFloat() * baseDensity1).toInt()
+            parentCard.marginBetweenElementsVertical = round(parentCard.marginBetweenElementsVertical!!.toFloat() * baseDensity1).toInt()
+            parentCard.marginBetweenElementsHorizontal = round(parentCard.marginBetweenElementsHorizontal!!.toFloat() * baseDensity1).toInt()
         }
         return Triple(parentCard,episodesListToReturn, thisEpisodePos)
     }
