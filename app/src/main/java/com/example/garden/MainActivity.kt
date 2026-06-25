@@ -761,7 +761,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 launch {
                     bsdFlow.collect {
-                        bsd.createDialog(it, callback = { tag -> bsdButtonActions(tag)})
+                        bsd.createDialog(it, callback = { tag, value -> bsdButtonActions(tag, value)})
                     }
                 }
                 launch {
@@ -863,9 +863,9 @@ class MainActivity : AppCompatActivity() {
             retriever.release()
         }
     }
-    fun bsdButtonActions(tag: BsdButtonsTags) {
+    fun bsdButtonActions(tag: BsdButtonsTags, value: Float) {
         when (tag) {
-            BsdButtonsTags.animePage_extraButton_changeAllEpisodesWatchedMark -> {}
+            BsdButtonsTags.animePage_extraButton_changeAllEpisodesWatchedMark -> {Log.d("VALUE", "$value")}
         }
     }
     fun restoreLayer() {

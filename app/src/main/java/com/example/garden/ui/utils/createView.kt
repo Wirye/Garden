@@ -16,6 +16,7 @@ import android.graphics.Shader
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
 import android.text.Editable
+import android.text.InputType
 import android.text.TextUtils
 import android.text.TextWatcher
 import android.util.TypedValue
@@ -71,11 +72,13 @@ import com.example.garden.statusBarHeight
 import com.example.garden.steps
 import com.example.garden.ui.adapters.FlatGridOfEditEpisodesAdapter
 import com.example.garden.viewmodel.ResultSenderViewModel
+import com.google.android.material.slider.LabelFormatter
 import com.google.android.material.slider.Slider
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 import kotlinx.coroutines.launch
 import java.util.Collections
+import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
@@ -980,7 +983,7 @@ data class segmentedButtonOptions(
     var icoId: Int?,
     var isActive: Boolean,
 )
-fun createSegmentedButton(context: Context, width: Int, height: Int, options: List<Pair<segmentedButtonOptions, BsdButtonsTags>>): ConstraintLayout {
+fun createSegmentedButton(context: Context, width: Int, height: Int, options: List<segmentedButtonOptions>): ConstraintLayout {
     val buttonWidth = width / options.size
 
     val container = ConstraintLayout(context).apply {
@@ -1002,13 +1005,13 @@ fun createSegmentedButton(context: Context, width: Int, height: Int, options: Li
             context = context,
             width = buttonWidth,
             height = height,
-            textt = options[i].first.text,
-            icoId = options[i].first.icoId,
+            textt = options[i].text,
+            icoId = options[i].icoId,
             name = "",
             sizeType = SizeType.MEDIUM,
             cornersMode = cornersMode,
             nameColor = "#FFFFFF".toColorInt(),
-            isActive = options[i].first.isActive
+            isActive = options[i].isActive
         )
 
         val button = rt.container
@@ -1050,37 +1053,116 @@ fun createSegmentedButton(context: Context, width: Int, height: Int, options: Li
 
     return container
 }
-fun createSlider(context: Context, widthh: Int, stopsList: List<Float>, heightt: Int, createSteps: Boolean = false): ConstraintLayout {
-
+fun createSlider(context: Context, widthh: Int, stopsList: List<Pair<Float, String>>, heightt: Int, createSteps: Boolean = false, alreadyValue: Float, createTextInputView: Boolean = false): ConstraintLayout {
+    val font = context.resources.getFont(R.font.google_sans_regular)
+    val mediumFont = context.resources.getFont(R.font.google_sans_medium)
+    val textSizee = round(7f*baseDensity)
     val container = ConstraintLayout(context).apply {
         layoutParams = ConstraintLayout.LayoutParams(widthh, heightt)
         tag = "slider_container"
         id = View.generateViewId()
     }
+    val maxValue = stopsList[stopsList.lastIndex].first
+    val tempTextView = TextView(context).apply {
+        layoutParams = ConstraintLayout.LayoutParams(
+            ConstraintLayout.LayoutParams.WRAP_CONTENT,
+            ConstraintLayout.LayoutParams.WRAP_CONTENT
+        )
+        includeFontPadding = false
+        typeface = font
+        maxLines = 1
+        text = "0.00"
+    }
+    tempTextView.measure(
+        View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
+        View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+    )
+    val margin = round(4f*baseDensity).toInt()
+    val textInputTextSizee = round(getTextSizeByHeight(heightt, font) / 1.25f)
+    val textInputViewWidth = tempTextView.measuredWidth + (3*ceil(textInputTextSizee).toInt())
+    val textInput = createOutlinedTextFieldForOvDialog(context, textInputViewWidth, SizeType.SMALL, heightt, "", Gravity.CENTER, textInputTextSizee, 1, "%.2f".format(alreadyValue).trim().replace(",","."), (InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL), round(textInputViewWidth.toFloat() / 4f).toInt(), true)
+
+    val containerrWidth = if (!createTextInputView) {widthh} else {widthh - margin - textInputViewWidth}
+    val containerr = ConstraintLayout(context).apply {
+        layoutParams = ConstraintLayout.LayoutParams(containerrWidth, heightt)
+        tag = "slider_containerr"
+        id = View.generateViewId()
+    }
+    val textViewsList = mutableListOf<Triple<Int, Int, TextView>>()
+    for (i in stopsList) {
+        val textView = TextView(context).apply {
+            layoutParams = ConstraintLayout.LayoutParams(
+                ConstraintLayout.LayoutParams.WRAP_CONTENT,
+                ConstraintLayout.LayoutParams.WRAP_CONTENT
+            )
+            includeFontPadding = false
+            setTextSize(TypedValue.COMPLEX_UNIT_PX, textSizee)
+            typeface = mediumFont
+            text = i.second
+            setTextColor("#AFAFAF".toColorInt())
+            ellipsize = TextUtils.TruncateAt.END
+            maxLines = 1
+        }
+        textView.measure(
+            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
+            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+        )
+        textView.updateLayoutParams<ConstraintLayout.LayoutParams> { width = textView.measuredWidth ; height = textView.measuredHeight }
+        textViewsList.add(Triple(textView.measuredWidth, textView.measuredHeight, textView))
+    }
+    val firstTextViewWith = textViewsList[0].first
+    val firstTextViewHeight = textViewsList[0].second
+    val lastTextViewWith = textViewsList[textViewsList.lastIndex].first
+    var containerrrWidth = containerrWidth - ceil(firstTextViewWith.toFloat() / 2f).toInt() - ceil(lastTextViewWith.toFloat() / 2f).toInt()
+    val containerrrHeight = heightt - firstTextViewHeight
+    var containerrrWidthForCalcs = containerrrWidth - round(2f * baseDensity).toInt() - round(2f*baseDensity).toInt()
+    var widthBetweenDots = round(containerrrWidthForCalcs.toFloat() / (stopsList.size-1).toFloat()).toInt()
+    val txtMaxWidth = round(widthBetweenDots.toFloat() / 2f).toInt()
+    for (i in textViewsList) {
+        i.third.maxWidth = txtMaxWidth
+        if (i.third.measuredWidth > txtMaxWidth) {
+            i.third.updateLayoutParams<ConstraintLayout.LayoutParams> { width = txtMaxWidth }
+        }
+    }
+    containerrrWidth = containerrWidth - ceil(min(firstTextViewWith, txtMaxWidth).toFloat() / 2f).toInt() - ceil(min(lastTextViewWith, txtMaxWidth).toFloat() / 2f).toInt()
+    containerrrWidthForCalcs = containerrrWidth - round(2f * baseDensity).toInt() - round(2f * baseDensity).toInt()
+    widthBetweenDots = round(containerrrWidthForCalcs.toFloat() / (stopsList.size-1).toFloat()).toInt()
+    val containerrr = ConstraintLayout(context).apply {
+        layoutParams = ConstraintLayout.LayoutParams(containerrrWidth, containerrrHeight).apply {
+            startToStart = ConstraintLayout.LayoutParams.PARENT_ID
+            endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
+            topToTop = ConstraintLayout.LayoutParams.PARENT_ID
+        }
+        tag = "slider_containerrr"
+        id = View.generateViewId()
+    }
+
     val minSliderHeight = round(48f*baseDensity).toInt()
-    val sliderHeight = max(heightt, minSliderHeight)
-    val marginTop = if (heightt < minSliderHeight) {round((heightt - minSliderHeight).toFloat() / 2f).toInt()} else {0}
-    val gapSize = round(12f * density).toInt()
+    val sliderHeight = max(containerrrHeight, minSliderHeight)
+    val marginTop = if (containerrrHeight < minSliderHeight) {round((containerrrHeight - round(0.25f*baseDensity).toInt() - minSliderHeight).toFloat() / 2f).toInt()} else {0}
+    val gapSize = round(5f * baseDensity).toInt()
     val slider = Slider(context).apply {
         val layoutparams1 = ConstraintLayout.LayoutParams(
-            widthh+trackSidePadding*2,
+            containerrrWidth+trackSidePadding*2-round(5f*baseDensity).toInt(),
             sliderHeight
         )
         layoutparams1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
         layoutparams1.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
-        layoutparams1.setMargins(-trackSidePadding,marginTop,0,0)
-        val thumbWidth = round(3f * baseDensity).toInt()
+        layoutparams1.setMargins(-trackSidePadding+round(2.5f*baseDensity).toInt(),marginTop,0,0)
+        val thumbWidth = round(2f * baseDensity).toInt()
         val thumbDrawable = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
             cornerRadius = 1000f
             setColor("#6750A4".toColorInt())
-            setSize(thumbWidth, heightt)
+            setSize(thumbWidth, round(containerrrHeight.toFloat() / 2f).toInt())
         }
         setCustomThumbDrawable(thumbDrawable)
+        labelBehavior = LabelFormatter.LABEL_GONE
         haloRadius = 0
+        thumbRadius = round(containerrrHeight.toFloat() / 2f).toInt() - round(1f*baseDensity).toInt()
         thumbTrackGapSize = gapSize
-        trackInsideCornerSize = round(4f * density).toInt()
-        trackHeight = round(heightt.toFloat() / 2.75f).toInt()
+        trackInsideCornerSize = round(2f * baseDensity).toInt()
+        trackHeight = round(containerrrHeight.toFloat() / 2.75f).toInt()
         layoutParams = layoutparams1
         trackActiveTintList = ColorStateList.valueOf("#E8DEF8".toColorInt())
         trackInactiveTintList = ColorStateList.valueOf("#80EADDFF".toColorInt())
@@ -1089,34 +1171,72 @@ fun createSlider(context: Context, widthh: Int, stopsList: List<Float>, heightt:
         tickInactiveTintList = ColorStateList.valueOf("#4A4459".toColorInt())
 
         if (stopsList.isNotEmpty()) {
-            valueFrom = stopsList[0]
-            valueTo = stopsList[stopsList.lastIndex]
+            valueFrom = stopsList[0].first
+            valueTo = stopsList[stopsList.lastIndex].first
             if (!createSteps) {
                 stepSize = 0f
             }
             else {
-                stepSize = if(stopsList.size > 2) {(stopsList[stopsList.lastIndex] - stopsList[0]) / (stopsList.size.toFloat() - 1f)} else {stopsList[stopsList.lastIndex] - stopsList[0]}
+                stepSize = if(stopsList.size > 2) {(valueTo - valueFrom) / (stopsList.size.toFloat() - 1f)} else {valueTo - valueFrom}
             }
         }
+        value = if (alreadyValue > valueTo) {valueTo} else {alreadyValue}
         id = View.generateViewId()
         tag = "slider_control"
     }
     slider.addOnSliderTouchListener(object : Slider.OnSliderTouchListener {
         @SuppressLint("RestrictedApi")
         override fun onStartTrackingTouch(slider: Slider) {
-            // Повторно назначаем gap при касании
             slider.thumbTrackGapSize = gapSize
         }
 
         override fun onStopTrackingTouch(slider: Slider) {
-            // И при отпускании
             slider.thumbTrackGapSize = gapSize
         }
     })
-    container.addView(slider)
+    containerrr.addView(slider)
+    containerr.addView(containerrr)
+    for (i in 0 until textViewsList.size) {
+        val obj = textViewsList[i]
+        if (i == 0) {
+            val margin = round((containerrWidth-containerrrWidthForCalcs).toFloat() / 2f).toInt() + round(2.5f*baseDensity).toInt() - round(obj.first.toFloat() / 2f).toInt()
+            obj.third.updateLayoutParams<ConstraintLayout.LayoutParams> {
+                startToStart = ConstraintLayout.LayoutParams.PARENT_ID
+                bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID
+                setMargins(margin,0,0,0)
+            }
+        }
+        else if (i == textViewsList.size-1) {
+            val margin = round((containerrWidth-containerrrWidthForCalcs).toFloat() / 2f).toInt() + round(2.5f*baseDensity).toInt() - round(obj.first.toFloat() / 2f).toInt()
+            obj.third.updateLayoutParams<ConstraintLayout.LayoutParams> {
+                endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
+                bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID
+                setMargins(0,0,margin,0)
+            }
+        }
+        else {
+            val dotCoord = round((containerrWidth - containerrrWidthForCalcs).toFloat() / 2f).toInt() + (widthBetweenDots*(i))
+            val margin = dotCoord - if (obj.first > txtMaxWidth) {round(txtMaxWidth.toFloat()/2f).toInt()} else {round(obj.first.toFloat()/2f).toInt()} + round(0.5f*baseDensity).toInt()
+            obj.third.updateLayoutParams<ConstraintLayout.LayoutParams> {
+                startToStart = ConstraintLayout.LayoutParams.PARENT_ID
+                bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID
+                setMargins(margin,0,0,0)
+            }
+        }
+        containerr.addView(obj.third)
+    }
+    container.addView(containerr)
+    if (createTextInputView) {
+        val lp1 = textInput.layoutParams as ConstraintLayout.LayoutParams
+        lp1.startToEnd = containerr.id
+        lp1.topToTop = containerr.id
+        lp1.setMargins(margin,0,0,0)
+        textInput.layoutParams = lp1
+        container.addView(textInput)
+    }
     return container
 }
-fun createSliderRow(context: Context, width: Int, name: String, icoId: Int, stopsList: List<Float>, heightt: Int, createSteps: Boolean = false): List<View> {
+fun createSliderRow(context: Context, width: Int, name: String, icoId: Int, stopsList: List<Pair<Float, String>>, heightt: Int, createSteps: Boolean = false, alreadyValue: Float, createTextInputView: Boolean = false): List<View> {
     val font = context.resources.getFont(R.font.google_sans_medium)
 
     val icoMarginLeft = round(width.toFloat() / 28.42f).toInt()
@@ -1183,7 +1303,7 @@ fun createSliderRow(context: Context, width: Int, name: String, icoId: Int, stop
     container.addView(textView)
     viewsToReturn.add(textView)
 
-    val slider = createSlider(context, titleWidth, stopsList, textHeight, createSteps)
+    val slider = createSlider(context, titleWidth, stopsList, textHeight, createSteps, alreadyValue, createTextInputView)
     val layoutparams1 = slider.layoutParams as ConstraintLayout.LayoutParams
     layoutparams1.startToStart = titleId
     layoutparams1.height = textHeight
@@ -1314,7 +1434,7 @@ fun createDropdownRow(context: Context, width: Int, height: Int, titleText: Stri
 
     return container
 }
-fun createSegmentedButtonRow(context: Context, width: Int, height: Int, options: List<Pair<segmentedButtonOptions, BsdButtonsTags>>, icoId: Int, textt: String): ConstraintLayout {
+fun createSegmentedButtonRow(context: Context, width: Int, height: Int, options: List<segmentedButtonOptions>, icoId: Int, textt: String): ConstraintLayout {
     val font = context.resources.getFont(R.font.google_sans_medium)
     val icoSize = floor(height.toFloat() / 2f).toInt()
     val icoMarginLeft = round(width.toFloat() / 28.42f).toInt()
@@ -1501,7 +1621,7 @@ fun createSwitchButton(context: Context, isChecked: Boolean, width: Int, height:
     // 6. Возвращаем контейнер
     return container
 }
-fun createOutlinedTextFieldForOvDialog(context: Context, width: Int, radius: SizeType, heightt: Int, hintText: String, gravityy: Int = Gravity.CENTER, textSizee: Float, maxLiness: Int? = null, alreadyEnteredText: String? = null): TextInputLayout {
+fun createOutlinedTextFieldForOvDialog(context: Context, width: Int, radius: SizeType, heightt: Int, hintText: String, gravityy: Int = Gravity.CENTER, textSizee: Float, maxLiness: Int? = null, alreadyEnteredText: String? = null, inputTypee: Int? = null, paddingHorizontal: Int? = null, twoSidePadding: Boolean = false): TextInputLayout {
     val font = context.resources.getFont(R.font.google_sans_regular)
     val strokeWidth = round(1f*baseDensity).toInt()
     val inputLayout = TextInputLayout(context).apply {
@@ -1543,6 +1663,9 @@ fun createOutlinedTextFieldForOvDialog(context: Context, width: Int, radius: Siz
         setTextSize(TypedValue.COMPLEX_UNIT_PX, textSizee)
         setTextColor("#AFAFAF".toColorInt())
 
+        if (inputTypee != null) {
+            inputType = inputTypee
+        }
         typeface = font
         background = null
         gravity = gravityy
@@ -1555,7 +1678,7 @@ fun createOutlinedTextFieldForOvDialog(context: Context, width: Int, radius: Siz
 
         hint = hintText
         setHintTextColor("#AFAFAF".toColorInt())
-        setPadding(textSizee.toInt(),if (gravityy == Gravity.TOP) textSizee.toInt() else 0,0,0)
+        setPadding(paddingHorizontal ?: textSizee.toInt(),if (gravityy == Gravity.TOP) textSizee.toInt() else 0,if (twoSidePadding && (paddingHorizontal != null)) {paddingHorizontal} else {0},0)
         includeFontPadding = false
         setText(alreadyEnteredText)
         tag = "edit_text"

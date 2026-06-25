@@ -7,6 +7,9 @@ import android.app.Activity
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
+import android.text.Editable
+import android.text.TextWatcher
+import android.util.Log
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -22,6 +25,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.widget.NestedScrollView
+import androidx.core.widget.addTextChangedListener
 import com.example.garden.BsdButtonsTags
 import com.example.garden.baseDensity
 import com.example.garden.ui.utils.createBSDButton
@@ -33,6 +37,7 @@ import com.example.garden.density
 import com.example.garden.ui.utils.getAdaptiveRadius
 import com.example.garden.screenHeight
 import com.example.garden.screenWidth
+import com.example.garden.ui.utils.mathExtensions.snapToStep
 import com.example.garden.ui.utils.segmentedButtonOptions
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
@@ -40,6 +45,8 @@ import com.google.android.material.shape.CornerFamily
 import com.google.android.material.shape.MaterialShapeDrawable
 import com.google.android.material.shape.ShapeAppearanceModel
 import com.google.android.material.slider.Slider
+import com.google.android.material.textfield.TextInputEditText
+import com.google.android.material.textfield.TextInputLayout
 import kotlin.math.min
 import kotlin.math.round
 
@@ -52,10 +59,11 @@ sealed class BottomSheetDialogElement {
     ) : BottomSheetDialogElement()
 
     data class SegmentedButton(
+        val tag: BsdButtonsTags,
         val icoId: Int,
         val text: String,
         val sizeType: SizeType,
-        val options: List<Pair<segmentedButtonOptions, BsdButtonsTags>>,
+        val options: List<segmentedButtonOptions>,
     ) : BottomSheetDialogElement()
 
     data class DropdownRow(
@@ -69,13 +77,15 @@ sealed class BottomSheetDialogElement {
         val tag: BsdButtonsTags,
         val icoId: Int,
         val text: String,
-        val stops: List<Float>,
+        val stops: List<Pair<Float, String>>,
         val createSteps: Boolean,
+        val alreadyValue: Float,
+        val createTextInputView: Boolean = false
     ) : BottomSheetDialogElement()
 }
 class bottomSheetDialogFactory(private val activity: Activity) {
-    @SuppressLint("PrivateResource")
-    fun createDialog(list: List<BottomSheetDialogElement>, callback: (tag: BsdButtonsTags) -> Unit) {
+    @SuppressLint("PrivateResource", "SetTextI18n")
+    fun createDialog(list: List<BottomSheetDialogElement>, callback: (tag: BsdButtonsTags, value: Float) -> Unit) {
         val dialog = BottomSheetDialog(activity)
         val googleMaxWidthDp = round(640f * baseDensity).toInt()
         val googleMaxWidthPx = round(googleMaxWidthDp.toFloat() * baseDensity).toInt()
@@ -143,7 +153,7 @@ class bottomSheetDialogFactory(private val activity: Activity) {
                         buttonView.addView(poloska)
                     }
                     buttonView.setOnClickListener {
-                        callback(element.tag)
+                        callback(element.tag,0f)
                     }
                     container.addView(buttonView)
                 }
@@ -158,10 +168,10 @@ class bottomSheetDialogFactory(private val activity: Activity) {
                         textt = element.text
                     )
                     for (i in element.options.indices) {
-                        val currentTag = element.options[i].second
+                        val currentValue = i.toFloat()
                         val segment = segmentedView.findViewWithTag<View>("button_$i")
                         segment?.setOnClickListener { clickedSegment ->
-                            callback(currentTag)
+                            callback(element.tag,currentValue)
                             for (o in element.options.indices) {
                                 val segment1 = segmentedView.findViewWithTag<View>("button_$o") ?: continue
                                 val segment1Background = segment1.findViewWithTag<View>("button_bg").background as GradientDrawable
@@ -196,13 +206,72 @@ class bottomSheetDialogFactory(private val activity: Activity) {
                         icoId = element.icoId,
                         stopsList = element.stops,
                         heightt = sliderHeight,
-                        createSteps = element.createSteps
+                        createSteps = element.createSteps,
+                        alreadyValue = element.alreadyValue,
+                        createTextInputView = element.createTextInputView
                     )
                     val sliderContainer = sliderViews[0] as ConstraintLayout
                     val slider = sliderViews.last() as ConstraintLayout
-                    val sliderr = slider.getChildAt(0) as Slider
+                    val slider1 = slider.getChildAt(0) as ConstraintLayout
+                    val slider2 = slider1.getChildAt(0) as ConstraintLayout
+                    val sliderr = slider2.getChildAt(0) as Slider
+                    val textInputLayout = if (element.createTextInputView) {slider.getChildAt(1) as TextInputLayout} else {null}
+                    var textInputEditText: TextInputEditText? = null
+                    if (element.createTextInputView) {
+                        for (k in 0 until textInputLayout!!.childCount) {
+                            val obj = textInputLayout.getChildAt(k)
+                            if (obj is TextInputEditText) {
+                                textInputEditText = obj
+                                break
+                            }
+                            else if (obj is FrameLayout) {
+                                for (h in 0 until obj.childCount) {
+                                    val objj = obj.getChildAt(h)
+                                    if (objj is TextInputEditText) {
+                                        textInputEditText = objj
+                                        break
+                                    }
+                                }
+                            }
+                        }
+                        textInputEditText?.addTextChangedListener (object : TextWatcher {
+                            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+                            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                                val rawText = textInputEditText.text.toString().trim().replace(',', '.')
+                                var newSliderValue = rawText.toFloatOrNull() ?: 0f
+                                val minSliderValue = element.stops[0].first
+                                val maxSliderValue = element.stops[element.stops.lastIndex].first
+                                if (element.createSteps) {
+                                    val stepSize = if(element.stops.size > 2) {(maxSliderValue - minSliderValue) / (element.stops.size.toFloat() - 1f)} else {maxSliderValue - minSliderValue}
+                                    newSliderValue = newSliderValue.snapToStep(minSliderValue, stepSize)
+                                }
+                                newSliderValue = newSliderValue.coerceIn(minSliderValue, maxSliderValue)
+                                sliderr.value = "%.2f".format(newSliderValue).trim().replace(",", ".").toFloat()
+                            }
+                            override fun afterTextChanged(s: Editable?) {
+                                val minSliderValue = element.stops[0].first
+                                val maxSliderValue = element.stops[element.stops.lastIndex].first
+                                val text = textInputEditText.text.toString().trim().replace(',', '.')
+                                val textValue = text.toFloatOrNull() ?: return
+                                if (textValue > maxSliderValue) {
+                                    textInputEditText.setText("%.2f".format(maxSliderValue).trim().replace(",", "."))
+                                }
+                                else if (textValue < minSliderValue) {
+                                    textInputEditText.setText("%.2f".format(minSliderValue).trim().replace(",", "."))
+                                }
+                                else if (element.createSteps) {
+                                    val stepSize = if(element.stops.size > 2) {(maxSliderValue - minSliderValue) / (element.stops.size.toFloat() - 1f)} else {maxSliderValue - minSliderValue}
+                                    val snappedTextValue = textValue.snapToStep(minSliderValue, stepSize)
+                                    if (snappedTextValue != textValue) {
+                                        textInputEditText.setText("%.2f".format(snappedTextValue).trim().replace(",", "."))
+                                    }
+                                }
+                            }
+                        })
+                    }
                     sliderr.addOnChangeListener { _, value, _ ->
-                        callback(element.tag)
+                        textInputEditText?.setText("%.2f".format(sliderr.value).trim().replace(",","."))
+                        callback(element.tag,value)
                     }
                     if (showPoloska) {
                         val poloska = createPoloska()
@@ -220,7 +289,7 @@ class bottomSheetDialogFactory(private val activity: Activity) {
                         icoId = element.icoId,
                         options = element.options,
                         onItemSelected = { selectedText, selectedTag ->
-                            callback(selectedTag)
+                            callback(selectedTag,0f)
                         },
                         buttonIcoId = element.buttonIcoId
                     )

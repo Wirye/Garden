@@ -924,21 +924,26 @@ class AnimePageAdapter(private val context: Context, private val showShowAllText
                     tag = BsdButtonsTags.animePage_extraButton_changeAllEpisodesWatchedMark,
                     icoId = R.drawable.close_ico,
                     text = "Пометить все эпизоды как непросмотренные",
-                    stops = listOf(0f, 1f),
-                    createSteps = false
+                    stops = listOf(Pair(0f, ""), Pair(1f,"")),
+                    createSteps = false,
+                    alreadyValue = 0.3f,
+                    createTextInputView = true
                 ),
                 BottomSheetDialogElement.Slider(
                     tag = BsdButtonsTags.animePage_extraButton_changeAllEpisodesWatchedMark,
                     icoId = R.drawable.close_ico,
                     text = "Удалить",
-                    stops = listOf(0f, 0.2f, 0.4f, 0.6f, 0.8f, 1f),
-                    createSteps = true
+                    stops = listOf(Pair(0f, "SMALL"), Pair(1f, "MEDIUM"), Pair(2f, "LARGE"), Pair(3f, "XLARGE")),
+                    createSteps = true,
+                    alreadyValue = 1f,
+                    createTextInputView = true
                 ),
                 BottomSheetDialogElement.SegmentedButton(
+                    tag = BsdButtonsTags.animePage_extraButton_changeAllEpisodesWatchedMark,
                     icoId = R.drawable.close_ico,
                     text = "Пометить все эпизоды как непросмотренные",
                     sizeType = SizeType.SMALL,
-                    options = listOf(Pair(segmentedButtonOptions("", R.drawable.check_ico, true), BsdButtonsTags.animePage_extraButton_changeAllEpisodesWatchedMark), Pair(segmentedButtonOptions("", R.drawable.check_ico, false), BsdButtonsTags.animePage_extraButton_changeAllEpisodesWatchedMark), Pair(segmentedButtonOptions("", R.drawable.check_ico, false), BsdButtonsTags.animePage_extraButton_changeAllEpisodesWatchedMark))
+                    options = listOf(segmentedButtonOptions("", R.drawable.check_ico, true), segmentedButtonOptions("", R.drawable.check_ico, false), segmentedButtonOptions("", R.drawable.check_ico, false))
                 ),
                 BottomSheetDialogElement.DropdownRow(
                     icoId = R.drawable.close_ico,
