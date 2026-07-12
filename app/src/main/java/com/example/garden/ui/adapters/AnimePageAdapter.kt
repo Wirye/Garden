@@ -56,7 +56,6 @@ import com.example.garden.database.ImageSource
 import com.example.garden.database.LinkType
 import com.example.garden.database.SizeType
 import com.example.garden.delitRad
-import com.example.garden.density
 import com.example.garden.ui.utils.findLayerByLayerObjectId
 import com.example.garden.ui.utils.getAdaptiveRadius
 import com.example.garden.ui.utils.colors.getDeepDarkColor
@@ -249,7 +248,7 @@ class AnimePageAdapter(private val context: Context, private val showShowAllText
                 break
             }
             else if (i == steps.size-1 && textSize == 0f){
-                textSize = round(12f*density)
+                textSize = round(5f * baseDensity)
             }
         }
         // Создание кнопок "смотреть" и "добавить в избранное"
@@ -359,11 +358,11 @@ class AnimePageAdapter(private val context: Context, private val showShowAllText
             setTextColor(resources.getColor(R.color.white))
             this.typeface = ResourcesCompat.getFont(context, R.font.google_sans_bold)
 
-            setShadowLayer(round(4f*density), round(4f*density), round(4f*density),
+            setShadowLayer(round(2f * baseDensity), round(2f * baseDensity), round(2f * baseDensity),
                 "#80000000".toColorInt())
             val paint = Paint()
             paint.style = Paint.Style.STROKE
-            paint.strokeWidth = round(1f*density)
+            paint.strokeWidth = round(0.38f * baseDensity)
             paint.color = Color.BLACK
             setLayerType(LAYER_TYPE_SOFTWARE, paint)
 
@@ -406,7 +405,8 @@ class AnimePageAdapter(private val context: Context, private val showShowAllText
             val cd = genreGridView.getChildAt(i)
             if (cd.tag == "show_all_info_button") {
                 cd.setOnClickListener {
-                    // Обработка клика
+
+                    cd.requestFocus()
                 }
             }
         }
@@ -446,12 +446,12 @@ class AnimePageAdapter(private val context: Context, private val showShowAllText
                     setTextColor(resources.getColor(R.color.white))
                     this.typeface = ResourcesCompat.getFont(context, R.font.google_sans_bold)
 
-                    setShadowLayer(round(4f*density),
-                        round(4f * density),
-                        round(4f*density), "#80000000".toColorInt())
+                    setShadowLayer(round(2f * baseDensity),
+                        round(2f * baseDensity),
+                        round(2f * baseDensity), "#80000000".toColorInt())
                     val paint = Paint()
                     paint.style = Paint.Style.STROKE
-                    paint.strokeWidth = round(1f*density)
+                    paint.strokeWidth = round(0.38f * baseDensity)
                     paint.color = Color.BLACK
                     setLayerType(LAYER_TYPE_SOFTWARE, paint)
                 }
@@ -542,7 +542,7 @@ class AnimePageAdapter(private val context: Context, private val showShowAllText
                     text = text1
                     includeFontPadding = false
                     layoutparams1.setMargins(0,0,0,7)
-                    setPadding(round(10f*density).toInt(),round(10f*density).toInt(),round(10f*density).toInt(),0)
+                    setPadding(round(4f * baseDensity).toInt(),round(4f * baseDensity).toInt(),round(4f * baseDensity).toInt(),0)
                     val sizee = steps[steps.indexOf(fontSizeGenres) + 1]
                     setTextSize(TypedValue.COMPLEX_UNIT_PX, sizee)
                     this.typeface = ResourcesCompat.getFont(context, R.font.google_sans_bold)
@@ -552,6 +552,7 @@ class AnimePageAdapter(private val context: Context, private val showShowAllText
                 var alreadyShowed1 = false
                 var lastClickTime = System.currentTimeMillis()
                 showALlButtonInNameView.setOnClickListener {
+                    showALlButtonInNameView.requestFocus()
                     if (!alreadyShowed1 && System.currentTimeMillis() - lastClickTime > 100) {
                         showShowAllText(name, steps[steps.indexOf(fontSizeGenres)]) {
                                 alreadyShowed ->
@@ -684,7 +685,7 @@ class AnimePageAdapter(private val context: Context, private val showShowAllText
                 text = text1
                 includeFontPadding = false
                 layoutparams1.setMargins(0,0,0,7)
-                setPadding(round(10f*density).toInt(),round(10f*density).toInt(),round(10f*density).toInt(),0)
+                setPadding(round(4f * baseDensity).toInt(),round(4f * baseDensity).toInt(),round(4f * baseDensity).toInt(),0)
                 val sizee = steps[steps.indexOf(fontSizeGenres) + 1]
                 setTextSize(TypedValue.COMPLEX_UNIT_PX, sizee)
                 this.typeface = ResourcesCompat.getFont(context, R.font.google_sans_bold)
@@ -719,6 +720,7 @@ class AnimePageAdapter(private val context: Context, private val showShowAllText
             var alredyShowed1 = false
             var lastClickTime = 0.toLong()
             showAllButtonInDescription.setOnClickListener {
+                showAllButtonInDescription.requestFocus()
                 if (!alredyShowed1 && System.currentTimeMillis() - lastClickTime > 100) {
                     showShowAllText(descriptionText, fontSizeGenres) {
                             alreadyShowed ->
@@ -814,7 +816,7 @@ class AnimePageAdapter(private val context: Context, private val showShowAllText
         }
 
         val lp2 = razdelLine.layoutParams as ConstraintLayout.LayoutParams
-        lp2.setMargins(marginLeft, marginTop + round(15f*density).toInt() + episodesTextViewHeight,0,0)
+        lp2.setMargins(marginLeft, marginTop + round(6f * baseDensity).toInt() + episodesTextViewHeight,0,0)
         razdelLine.layoutParams = lp2
         container.addView(episodesTextView)
         val sezonsTextView = TextView(context).apply {
@@ -900,6 +902,7 @@ class AnimePageAdapter(private val context: Context, private val showShowAllText
         }
         extraButtonContainerOnRazdelLine.addView(extraButtonIcoOnRazdelLine)
         extraButtonContainerOnRazdelLine.setOnClickListener {
+            extraButtonContainerOnRazdelLine.requestFocus()
             var allEpisodesAreWatched = true
             for (i in currentList[0].childs) {
                 if (i.alreadyWatched != i.length) {
@@ -936,7 +939,7 @@ class AnimePageAdapter(private val context: Context, private val showShowAllText
                     stops = listOf(Pair(0f, "SMALL"), Pair(1f, "MEDIUM"), Pair(2f, "LARGE"), Pair(3f, "XLARGE")),
                     createSteps = true,
                     alreadyValue = 1f,
-                    createTextInputView = true
+                    createTextInputView = false
                 ),
                 BottomSheetDialogElement.SegmentedButton(
                     tag = BsdButtonsTags.animePage_extraButton_changeAllEpisodesWatchedMark,
@@ -1007,6 +1010,7 @@ class AnimePageAdapter(private val context: Context, private val showShowAllText
                 layoutParams = layoutparams1
             }
             episodeContainer.setOnClickListener {
+                episodeContainer.requestFocus()
                 val link = obj.link
                 if (link != null) {
                     if (link.type == LinkType.CONTENT) {
@@ -1029,7 +1033,7 @@ class AnimePageAdapter(private val context: Context, private val showShowAllText
                 layoutparams1.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
                 layoutparams1.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID
                 layoutParams = layoutparams1
-                radius = round(25f*density)
+                radius = round(10f * baseDensity)
             }
             val blurEffect = RenderEffect.createBlurEffect(
                 20f,20f, Shader.TileMode.MIRROR
@@ -1102,12 +1106,12 @@ class AnimePageAdapter(private val context: Context, private val showShowAllText
             val lengthDrawable = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
                 setColor("#99000000".toColorInt())
-                cornerRadius = round(10f*density)
+                cornerRadius = round(4f * baseDensity)
             }
             val lengthContainer = ConstraintLayout(context).apply {
                 val layoutparams1 = ConstraintLayout.LayoutParams(
-                    lengthText.measuredWidth+round(20f*density).toInt(),
-                    lengthText.measuredHeight+round(10f*density).toInt()
+                    lengthText.measuredWidth+round(8f * baseDensity).toInt(),
+                    lengthText.measuredHeight+round(4f * baseDensity).toInt()
                 )
                 layoutparams1.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
                 layoutparams1.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID
@@ -1192,7 +1196,7 @@ class AnimePageAdapter(private val context: Context, private val showShowAllText
                     0f, 0f,  // top-left
                     0f, 0f,  // top-right
                     0f, 0f,    // bottom-right
-                    round(25f*density), round(25f*density)     // bottom-left
+                    round(10f * baseDensity), round(10f * baseDensity)     // bottom-left
                 )
             }
             val alreadyWatchedLineDrawableAllWatched = GradientDrawable().apply {
@@ -1201,11 +1205,10 @@ class AnimePageAdapter(private val context: Context, private val showShowAllText
                 cornerRadii = floatArrayOf(
                     0f, 0f,  // top-left
                     0f, 0f,  // top-right
-                    round(25f*density), round(25f*density),    // bottom-right
-                    round(25f*density), round(25f*density)     // bottom-left
+                    round(10f * baseDensity), round(10f * baseDensity),    // bottom-right
+                    round(10f * baseDensity), round(10f * baseDensity)     // bottom-left
                 )
             }
-            Log.d("ERQWRERWREWREW", "${obj.length}   ${obj.alreadyWatched}")
             val alreadyWatchedLine = ImageView(context).apply {
                 val layoutparams1 = ConstraintLayout.LayoutParams(
                     if (obj.alreadyWatched != obj.length) {(episodeWidth.toFloat() * (obj.alreadyWatched.toFloat() / obj.length.toFloat())).toInt()} else {episodeWidth},
@@ -1250,9 +1253,11 @@ class AnimePageAdapter(private val context: Context, private val showShowAllText
         holder.razdelLineWidth = razdelLineWidth
         holder.altRazdelLineWidth = altRazdelLineWidth
         episodesTextView.setOnClickListener {
+            episodesTextView.requestFocus()
             setState(0)
         }
         sezonsTextView.setOnClickListener {
+            sezonsTextView.requestFocus()
             setState(1)
         }
         val layer = findLayerByLayerObjectId(getItem(position).id)

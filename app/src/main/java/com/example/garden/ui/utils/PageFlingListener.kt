@@ -1,7 +1,7 @@
 package com.example.garden.ui.utils
 
 import androidx.recyclerview.widget.RecyclerView
-import com.example.garden.density
+import com.example.garden.baseDensity
 import com.example.garden.listDot
 import com.example.garden.listDot2
 import kotlin.math.round
@@ -10,9 +10,9 @@ class PageFlingListener(private val dotsList: List<Pair<listDot2, listDot>>, pri
 
     override fun onFling(velocityX: Int, velocityY: Int): Boolean {
         val currentScroll = getCurrentScroll()
-        val targetDot = if (velocityX > round(500f*density).toInt()) {
+        val targetDot = if (velocityX > round(191f * baseDensity).toInt()) {
             dotsList.find { it.second.itemPositionInPx > currentScroll }
-        } else if (velocityX < -round(500f*density).toInt()) {
+        } else if (velocityX < -round(191f * baseDensity).toInt()) {
             dotsList.findLast { it.second.itemPositionInPx < currentScroll }
         } else {
             return false

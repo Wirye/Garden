@@ -55,6 +55,7 @@ class AnimePageSezonsPageAdapter(private val context: Context, private val click
             val obj = layout.getChildAt(i)
             val objData = parentCard.childs[i]
             obj.setOnClickListener {
+                obj.requestFocus()
                 clickOnCard(objData)
             }
         }

@@ -125,6 +125,8 @@ class MainViewModel(private val dao: ObjectDataDao, private val groupDao: Groups
             type = dataSource.type,
             alreadyWatched = dataSource.alreadyWatched,
             length = dataSource.length,
+            carouselType = dataSource.carouselType,
+            carouselCollectionType = dataSource.carouselCollectionType,
             width = if (current.width != null) {round(current.width!!.toFloat() * baseDensity1).toInt()} else {null},
             height = if (current.height != null) {round(current.height!!.toFloat() * baseDensity1).toInt()} else {null},
             childsCornerRadius = current.childsCornerRadius,
@@ -155,7 +157,7 @@ class MainViewModel(private val dao: ObjectDataDao, private val groupDao: Groups
                 namePosition = 0,
                 showAlreadyWatchedLine = true,
                 showAvatar = false,
-                childsShowName = false,
+                childsShowName = true,
                 childsNamePosition = 0,
                 childsShowAlreadyWatchedLine = true,
                 image = null,
@@ -203,8 +205,8 @@ class MainViewModel(private val dao: ObjectDataDao, private val groupDao: Groups
                 type = null,
                 alreadyWatched = 32,
                 length = 50,
-                width = round(520f / baseDensity1).toInt(),
-                height = round(743f / baseDensity1).toInt(),
+                width = 160,
+                height = 229,
                 childsCornerRadius = null,
                 layoutType = null,
                 dovodchik = false,
@@ -247,8 +249,8 @@ class MainViewModel(private val dao: ObjectDataDao, private val groupDao: Groups
                 type = null,
                 alreadyWatched = 0,
                 length = 0,
-                width = round(520f / baseDensity1).toInt(),
-                height = round(743f / baseDensity1).toInt(),
+                width = 160,
+                height = 229,
                 childsCornerRadius = null,
                 layoutType = null,
                 dovodchik = false,
@@ -264,7 +266,7 @@ class MainViewModel(private val dao: ObjectDataDao, private val groupDao: Groups
                     targetId = 2,
                     contentPath = null
                 ),
-                elementType = ElementType.Music,
+                elementType = ElementType.Anime,
                 genre = null
             )
             dao.insert(cd2)

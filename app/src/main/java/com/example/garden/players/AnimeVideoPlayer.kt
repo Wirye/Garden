@@ -54,7 +54,7 @@ class AnimeVideoPlayer(context: Context, private val resultSenderViewModel: Resu
         isClickable = true
         isFocusable = true
         // Чтобы наверняка не пропускал клики к нижним слоям
-        setOnClickListener { /* Пусто, просто ловим клик */ }
+        setOnClickListener { /* Пусто, просто ловим клик */ requestFocus() }
         setOnTouchListener { _, _ -> true }
     }
     private var playerSubscriptionJob: kotlinx.coroutines.Job? = null
@@ -510,7 +510,10 @@ class AnimeVideoPlayer(context: Context, private val resultSenderViewModel: Resu
             }
         }
 
-        playButton.setOnClickListener { togglePlayPause() }
+        playButton.setOnClickListener {
+            togglePlayPause()
+            requestFocus()
+        }
 
         // 3. ЛОГИКА НАЖАТИЯ НА ПУСТОЕ МЕСТО
         val gestureDetector = GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
@@ -566,6 +569,7 @@ class AnimeVideoPlayer(context: Context, private val resultSenderViewModel: Resu
         // 5. ОСТАЛЬНЫЕ КНОПКИ
         var alreadyClosed = false
         closeButton.setOnClickListener {
+            requestFocus()
             if (!alreadyClosed) {
                 alreadyClosed = true
                 Log.d("Player", "Close")
@@ -575,21 +579,30 @@ class AnimeVideoPlayer(context: Context, private val resultSenderViewModel: Resu
         }
 
         settingsButton.setOnClickListener {
-            // openSettings() - как ты и просил
+            // openSettings()
+            requestFocus()
             Log.d("Player", "Open Settings Overlay")
         }
 
         episodesMenuButton.setOnClickListener {
             // openEpisodesMenu()
+            requestFocus()
             Log.d("Player", "Open Episodes Menu")
         }
         sizeButton.setOnClickListener {
+            sizeButton.requestFocus()
             changeOrientation(context, false)
         }
 
         // Кнопки Next/Prev (пока заглушки)
-        nextButton.setOnClickListener { Log.d("Player", "Next Episode") }
-        previousButton.setOnClickListener { Log.d("Player", "Prev Episode") }
+        nextButton.setOnClickListener {
+            requestFocus()
+            Log.d("Player", "Next Episode")
+        }
+        previousButton.setOnClickListener {
+            requestFocus()
+            Log.d("Player", "Prev Episode")
+        }
         resetHideTimer()
         return contrainer
     }

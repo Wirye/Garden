@@ -19,6 +19,7 @@ import android.text.Editable
 import android.text.InputType
 import android.text.TextUtils
 import android.text.TextWatcher
+import android.util.Log
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.MotionEvent
@@ -36,27 +37,31 @@ import android.widget.ScrollView
 import android.widget.TextView
 import androidx.cardview.widget.CardView
 import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.core.animation.addListener
 import androidx.core.content.res.ResourcesCompat
 import androidx.core.graphics.createBitmap
 import androidx.core.graphics.drawable.toDrawable
 import androidx.core.graphics.toColorInt
 import androidx.core.view.isEmpty
 import androidx.core.view.isNotEmpty
+import androidx.core.view.marginTop
 import androidx.core.view.updateLayoutParams
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.garden.BsdButtonsTags
+import com.example.garden.Layer
 import com.example.garden.R
 import com.example.garden.ResultKeys
 import com.example.garden.baseDensity
+import com.example.garden.database.CarouselType
+import com.example.garden.database.CollectionType
 import com.example.garden.ui.utils.drawables.blobInit
 import com.example.garden.database.ElementType
 import com.example.garden.database.Genre
 import com.example.garden.database.ImageData
 import com.example.garden.database.SizeType
-import com.example.garden.density
 import com.example.garden.episodeInfo
 import com.example.garden.genreColors
 import com.example.garden.genreNames
@@ -66,10 +71,12 @@ import com.example.garden.listDot
 import com.example.garden.listDot2
 import com.example.garden.ui.utils.viewExtensions.loadImage
 import com.example.garden.objectData2
+import com.example.garden.scaledDensity
 import com.example.garden.screenHeight
 import com.example.garden.screenWidth
 import com.example.garden.statusBarHeight
 import com.example.garden.steps
+import com.example.garden.ui.adapters.CarouselsAdapter
 import com.example.garden.ui.adapters.FlatGridOfEditEpisodesAdapter
 import com.example.garden.viewmodel.ResultSenderViewModel
 import com.google.android.material.slider.LabelFormatter
@@ -83,14 +90,18 @@ import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.round
-fun createCard(width: Int?, height: Int?, showName: Boolean, namePosition: Int?, image: ImageData?, name: String?, author: String?, alreadyWatched: Long, length: Long, showAlreadyWatchedLine: Boolean, context: Context, items: List<objectData2>, cornerRadius: SizeType?, optimizateCardSize: Boolean = true, gridMode: Boolean = false): Triple<List<View>, Int, Pair<Int, Int>> {
+import kotlin.math.roundToInt
+import androidx.core.view.isGone
+import com.example.garden.ui.utils.system.hideKeyboardd
+
+fun createCard(width: Int?, height: Int?, showName: Boolean, namePosition: Int?, image: ImageData?, name: String?, author: String?, alreadyWatched: Long, length: Long, showAlreadyWatchedLine: Boolean, context: Context, items: List<objectData2>, cornerRadius: SizeType?, optimizateCardSize: Boolean = true, gridMode: Boolean = false, lineWidth: Int? = null, paddingHorizontal: Int? = null, marginBetweenElementsHorizontal: Int? = null): Triple<List<View>, Int, Pair<Int, Int>> {
     val res = mutableListOf<View>()
     val font = ResourcesCompat.getFont(context, R.font.google_sans_medium)
-    val textSizee = floor(40f*density) // в px
+    val textSizee = floor(15f * baseDensity) // в px
     var cardViewId = 0
     var alreadyWatchedLineId = 0
     var cardViewWidth = 0
-    var size = cardScaleCalcFree(items, 50, 30, width, height, screenWidth)
+    var size = cardScaleCalcFree(items, (paddingHorizontal ?: (round(19f * baseDensity).toInt())), (marginBetweenElementsHorizontal ?: round(11f * baseDensity).toInt()), width, height, lineWidth ?: screenWidth)
     if (width != null && height != null && !optimizateCardSize) {
         size = Pair(width, height)
     }
@@ -113,10 +124,25 @@ fun createCard(width: Int?, height: Int?, showName: Boolean, namePosition: Int?,
         res2 = size.first
     }
     val cardView = CardView(context).apply {
-        cardViewWidth = cardWidth
+        var cardHeightForGridMode = 0
+        var cardWidthForGridMode = 0
+        if (author != null && name != null && showName && namePosition == 0) {
+            cardHeightForGridMode = size.second - optimizeText(name, size.first, textSizee, false, font).totalHeight*3
+            cardWidthForGridMode = (cardHeightForGridMode.toFloat() * (size.first.toFloat() / size.second)).toInt()
+        }
+        else if (author == null && name != null && showName && namePosition == 0) {
+            cardHeightForGridMode = size.second - optimizeText(name, size.first, textSizee, false, font).totalHeight*2
+            cardWidthForGridMode = (cardHeightForGridMode.toFloat() * (size.first.toFloat() / size.second)).toInt()
+        }
+        else if ((!showName) || (namePosition == 1)) {
+            cardWidthForGridMode = size.first
+            cardHeightForGridMode = size.second
+        }
+        cardViewWidth = if (!gridMode) cardWidth else cardWidthForGridMode
+
         val layoutparams1 = ConstraintLayout.LayoutParams(
-            cardWidth,
-            cardHeight
+            cardViewWidth,
+            if (!gridMode) cardHeight else cardHeightForGridMode
         )
         layoutparams1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
         layoutparams1.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
@@ -165,9 +191,11 @@ fun createCard(width: Int?, height: Int?, showName: Boolean, namePosition: Int?,
             val newId = View.generateViewId()
             id = newId
             alreadyWatchedLineId = newId
+            elevation = 1000f
         }
         constraintLayoutInsideCardView.addView(alreadyWatchedLine)
     }
+
     if (name != null && showName && namePosition == 1) {
         val textView1 = TextView(context).apply {
             val optimizatedText = optimizeText(name, res2, textSizee, false, font, 1)
@@ -197,10 +225,10 @@ fun createCard(width: Int?, height: Int?, showName: Boolean, namePosition: Int?,
     cardView.addView(constraintLayoutInsideCardView)
     res.add(cardView)
     if (name != null && showName && namePosition == 0) {
-
         var textView1Id = 0
         var textView2Id = 0
         val optimizatedText = optimizeText(name, cardViewWidth, textSizee, false, font)
+
         val textView1 = TextView(context).apply {
             val layoutparams1 = ConstraintLayout.LayoutParams(
                 cardViewWidth,
@@ -275,7 +303,7 @@ fun createCard(width: Int?, height: Int?, showName: Boolean, namePosition: Int?,
             val canvas = Canvas(bitmap)
             val colors = intArrayOf(
                 "#393939".toColorInt(), // 0%
-                "#393939".toColorInt(), // 30%
+                "#80393939".toColorInt(), // 30%
                 "#00393939".toColorInt() // 100%
             )
             val positions = floatArrayOf(0f, 0.5f, 1f)
@@ -348,21 +376,21 @@ fun createGridOfChilds(objList: List<objectData2>, maxObjectsInOneLine: Int?, co
     else {
         maxObjects = objList.size
     }
-    var marginH = 10
+    var marginH = round(4f * baseDensity).toInt()
     if (parent.marginBetweenElementsHorizontal != null) {
         marginH = parent.marginBetweenElementsHorizontal!!
     }
-    var marginV = 10
+    var marginV = round(4f * baseDensity).toInt()
     if (parent.marginBetweenElementsVertical != null) {
         marginV = parent.marginBetweenElementsVertical!!
     }
     var height = 0
     for (i in 0 until maxObjects) {
         val objData = objList[i]
-        val views = createCard(size.first, size.second, parent.childsShowName, parent.childsNamePosition, objData.image, objData.name, objData.author, objData.alreadyWatched, objData.length, parent.showAlreadyWatchedLine, context, objList, parent.childsCornerRadius,false, true)
+        val views = createCard(size.first, size.second, parent.childsShowName, parent.childsNamePosition, objData.image, objData.name, objData.author, objData.alreadyWatched, objData.length, parent.showAlreadyWatchedLine, context, objList, parent.childsCornerRadius,false, true, marginBetweenElementsHorizontal = parent.marginBetweenElementsHorizontal, paddingHorizontal = parent.paddingHorizontal)
         val cardContainer = ConstraintLayout(context).apply {
             val font = ResourcesCompat.getFont(context, R.font.google_sans_medium)
-            val textSizee = floor(40f*density) // в px
+            val textSizee = floor(15f * baseDensity) // в px
             val cardConHeight = views.third.second + if (objData.name != null && parent.showName && parent.namePosition == 0) {optimizeText(objData.name!!, size.first, textSizee, false, font).totalHeight*2} else {0} + if (objData.name != null && parent.showName && parent.namePosition == 0) {if (objData.author != null) {optimizeText(objData.name!!, size.first, textSizee, false, font).totalHeight} else {0}} else {0}
 
             val layoutparams2 = ConstraintLayout.LayoutParams(
@@ -443,13 +471,13 @@ data class createDovodchikDotsReturn(
     val list: List<Pair<listDot2, listDot>>,
     val numTextView: TextView,
 )
-fun createDovodchikDots(context: Context, items: List<objectData2>, paddingHorizontal: Int, marginBetweenElementsHorizontal: Int, showName: Boolean, namePosition: Int?): createDovodchikDotsReturn {
+fun createDovodchikDots(context: Context, items: List<objectData2>, paddingHorizontal: Int, marginBetweenElementsHorizontal: Int, showName: Boolean, namePosition: Int?, lineWidth: Int): createDovodchikDotsReturn {
     val res = mutableListOf< Pair<listDot2, listDot>>()
-    val dotsList = calculateAmountOfDots(items, paddingHorizontal, marginBetweenElementsHorizontal, context, showName, namePosition)
+    val dotsList = calculateAmountOfDots(items, paddingHorizontal, marginBetweenElementsHorizontal, context, showName, namePosition, lineWidth)
     val dotsAmount = dotsList.size
     val height1 = 35
     val margin = 0
-    val maxDotsAmountOnScreen = floor((screenWidth -  300).toFloat() / (height1+margin)).toInt()
+    val maxDotsAmountOnScreen = floor((lineWidth -  300).toFloat() / (height1+margin)).toInt()
     var dotsOnScreen: Int
     var showDotsPageNum = false
     if (dotsAmount > maxDotsAmountOnScreen) {
@@ -459,11 +487,11 @@ fun createDovodchikDots(context: Context, items: List<objectData2>, paddingHoriz
     else {
         dotsOnScreen = dotsAmount
     }
-    val firstDotMargin = if (showDotsPageNum) { 0 } else { ((screenWidth - dotsOnScreen * height1+margin).toFloat() / 2).toInt()}
-    val lastDotMargin = if (showDotsPageNum) { 150 } else { ((screenWidth - dotsOnScreen * height1+margin).toFloat() / 2).toInt()}
+    val firstDotMargin = if (showDotsPageNum) { 0 } else { ((lineWidth - dotsOnScreen * height1+margin).toFloat() / 2).toInt()}
+    val lastDotMargin = if (showDotsPageNum) { 150 } else { ((lineWidth - dotsOnScreen * height1+margin).toFloat() / 2).toInt()}
     val container = ConstraintLayout(context).apply {
         layoutParams = ConstraintLayout.LayoutParams(
-            ConstraintLayout.LayoutParams.MATCH_PARENT,
+            lineWidth,
             height1
         )
     }
@@ -505,9 +533,9 @@ fun createDovodchikDots(context: Context, items: List<objectData2>, paddingHoriz
     val horizontalScrollView = HorizontalScrollView(context).apply {
         val layoutparams1 = ConstraintLayout.LayoutParams(
             if (showDotsPageNum) {
-                screenWidth - 150 - height1 - 5
+                lineWidth - 150 - height1 - 5
             } else {
-                ConstraintLayout.LayoutParams.MATCH_PARENT
+                lineWidth
             },
             ConstraintLayout.LayoutParams.WRAP_CONTENT
         )
@@ -528,7 +556,7 @@ fun createDovodchikDots(context: Context, items: List<objectData2>, paddingHoriz
     var lastNumer = 1
     val dotsContainer = ConstraintLayout(context).apply {
         layoutParams = ConstraintLayout.LayoutParams(
-            ConstraintLayout.LayoutParams.MATCH_PARENT,
+            lineWidth,
             ConstraintLayout.LayoutParams.WRAP_CONTENT)
 
     }
@@ -568,40 +596,44 @@ fun createDovodchikDots(context: Context, items: List<objectData2>, paddingHoriz
     container.addView(horizontalScrollView)
     return createDovodchikDotsReturn(container, res, numRes)
 }
-fun createBSDButton(textt: String, icoId: Int, showOpenPageArrow: Boolean, context: Context, width: Int, height: Int): ConstraintLayout {
+fun createBSDButton(textt: String, icoId: Int?, showOpenPageArrow: Boolean, context: Context, width: Int, height: Int): ConstraintLayout {
     val font = context.resources.getFont(R.font.google_sans_medium)
     val icoSize = floor(height.toFloat() / 2f).toInt()
-    val icoMarginLeft = round(width.toFloat() / 28.42f).toInt()
-    val marginRight = round(icoMarginLeft.toFloat() * 1.42f).toInt()
-    val arrowMarginRight = floor(marginRight.toFloat() / icoSizesRatio).toInt()
-    val textViewWidth = width - icoMarginLeft*2 - marginRight - icoSize
+    val margins = calculateLeftAndRightMarginForRows(width)
+    val icoMarginLeft = margins.marginLeft
+    val marginRight = margins.marginRight
+    val arrowMarginRight = round(marginRight.toFloat() / icoSizesRatio).toInt()
+    val arrowSize = floor(icoSize.toFloat() / 1.46f).toInt()
+    val textViewWidth = width - icoMarginLeft - if (icoId != null) {icoMarginLeft + icoSize} else {0}  - if (showOpenPageArrow) {(arrowSize+arrowMarginRight+icoMarginLeft)} else {marginRight}
     val textHeight = round(icoSize.toFloat() / 1f).toInt()
     val textSizee = getTextSizeByHeight(textHeight, font)
     var icoViewId = 0
-    val arrowSize = floor(icoSize.toFloat() / 1.46f).toInt()
     val container = ConstraintLayout(context).apply {
         layoutParams = ConstraintLayout.LayoutParams(
             width,
             height
         )
     }
-    val ico = ImageView(context).apply {
-        val layoutparams1 = ConstraintLayout.LayoutParams(
-            icoSize,
-            icoSize
-        )
-        layoutparams1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
-        layoutparams1.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
-        layoutparams1.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID
-        layoutparams1.setMargins(icoMarginLeft,0,0,0)
-        layoutParams = layoutparams1
-        setImageResource(icoId)
-        scaleType = ImageView.ScaleType.CENTER_CROP
-        val newId = View.generateViewId()
-        id = newId
-        icoViewId = newId
+    if (icoId != null) {
+        val ico = ImageView(context).apply {
+            val layoutparams1 = ConstraintLayout.LayoutParams(
+                icoSize,
+                icoSize
+            )
+            layoutparams1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
+            layoutparams1.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
+            layoutparams1.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID
+            layoutparams1.setMargins(icoMarginLeft,0,0,0)
+            layoutParams = layoutparams1
+            setImageResource(icoId)
+            scaleType = ImageView.ScaleType.CENTER_CROP
+            val newId = View.generateViewId()
+            id = newId
+            icoViewId = newId
+        }
+        container.addView(ico)
     }
-    container.addView(ico)
+
     val textView = TextView(context).apply {
         val layoutparams1 = ConstraintLayout.LayoutParams(
             textViewWidth,
@@ -618,16 +650,24 @@ fun createBSDButton(textt: String, icoId: Int, showOpenPageArrow: Boolean, conte
             View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
         )
         ellipsize = TextUtils.TruncateAt.END
-        layoutparams1.topToTop = icoViewId
-        layoutparams1.startToEnd = icoViewId
-        val difference = icoSize - measuredHeight
-        if (difference < 0) {
-            layoutparams1.setMargins(icoMarginLeft,round(difference.toFloat() / 2f).toInt(),0,0)
-        }
-        else if (difference > 0){
-            layoutparams1.setMargins(icoMarginLeft, (round(difference.toFloat() / 2f)).toInt(),0,0)
+        if (icoId != null) {
+            layoutparams1.topToTop = icoViewId
+            layoutparams1.startToEnd = icoViewId
+            val difference = icoSize - measuredHeight
+            if (difference < 0) {
+                layoutparams1.setMargins(icoMarginLeft,round(difference.toFloat() / 2f).toInt(),0,0)
+            }
+            else if (difference > 0){
+                layoutparams1.setMargins(icoMarginLeft, (round(difference.toFloat() / 2f)).toInt(),0,0)
+            }
+            else {
+                layoutparams1.setMargins(icoMarginLeft,0,0,0)
+            }
         }
         else {
+            layoutparams1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
+            layoutparams1.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
+            layoutparams1.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID
             layoutparams1.setMargins(icoMarginLeft,0,0,0)
         }
         layoutParams = layoutparams1
@@ -672,12 +712,44 @@ fun createM3Button(context: Context, width: Int, height: Int, textt: String, nam
         SizeType.MEDIUM -> 2.6f
         SizeType.SMALL -> 2.2f
     }
-    var buttonHeight = height
+    val nameHeight = round(height.toFloat() / 3f).toInt().coerceIn(0, round(12f*baseDensity).toInt())
+    var buttonHeight = if (name == "") {height} else {height-nameHeight}
+    val buttonWidth = round(width.toFloat() / height.toFloat() * buttonHeight.toFloat()).toInt()
+    val textHeight = round(buttonHeight / textRatio).toInt()
+    val textSizee = getTextSizeByHeight(textHeight, font)
+    val icoSize = (textSizee * 1.5f).toInt().coerceIn(0, buttonHeight)
+    val arrowMarginRight = round(1.4f*baseDensity*textRatio).toInt()
+    val maxTextWidth = (if (wrapContentMode) {maxWidthh ?: 1000000} else {buttonWidth} - if (icoId != null) {(icoSize+arrowMarginRight)} else {0} - if (dropDownMode) {(icoSize+(arrowMarginRight*2))} else {0}).coerceIn(0,1000000000)
+    val textView = TextView(context).apply {
+        val layoutparams1 = ConstraintLayout.LayoutParams(
+            ConstraintLayout.LayoutParams.WRAP_CONTENT,
+            ConstraintLayout.LayoutParams.WRAP_CONTENT
+        )
+        layoutParams = layoutparams1
+        maxWidth = maxTextWidth
+        maxLines = 1
+        text = textt
+        includeFontPadding = false
+        typeface = font
+        measure(
+            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
+            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+        )
+        setTextSize(TypedValue.COMPLEX_UNIT_PX, textSizee)
+        setTextColor("#804A4459".toColorInt())
+        tag = "button_text"
+        id = View.generateViewId()
+        ellipsize = TextUtils.TruncateAt.END
+    }
+    val wrapContentModeButtonWidth = if (icoId != null) {(icoSize+(arrowMarginRight*2))} else {0} + if (dropDownMode) {(icoSize+(arrowMarginRight*2))} else {0} + textView.measuredWidth + if (dropDownMode && (icoId == null)) {arrowMarginRight*3} else {0}
+    if (wrapContentMode) {
+        widthToReturn = wrapContentModeButtonWidth
+        val containerlp1 = container.layoutParams as ConstraintLayout.LayoutParams
+        containerlp1.width = wrapContentModeButtonWidth
+        container.layoutParams = containerlp1
+    }
     var nameId = 0
-
     if (name != "") {
-        val nameHeight = round(height.toFloat() / 3f).toInt()
-        buttonHeight = (round(height.toFloat() / 3f) * 2f).toInt()
         val nameView = TextView(context).apply {
             val layoutparams1 = ConstraintLayout.LayoutParams(
                 width,
@@ -707,20 +779,12 @@ fun createM3Button(context: Context, width: Int, height: Int, textt: String, nam
             nameId = newId
             tag = "button_name"
         }
-//        container.addView(nameView)
         viewList.add(nameView)
     }
 
-    val buttonWidth = round(width.toFloat() / height.toFloat() * buttonHeight.toFloat()).toInt()
-    val textHeight = round(buttonHeight / textRatio).toInt()
-    val textSizee = getTextSizeByHeight(textHeight, font)
-    val icoSize = textSizee.toInt()
-    val icoMarginLeft = round((round((round((buttonHeight - icoSize).toFloat() / 2f)) * 1.3f)) / icoSizesRatio).toInt()
-    val textViewMarginRight = round(icoMarginLeft.toFloat() * icoSizesRatio).toInt()
-
     val buttonBg = View(context).apply {
         val layoutparams1 = ConstraintLayout.LayoutParams(
-            buttonWidth,
+            if (wrapContentMode) {wrapContentModeButtonWidth} else {buttonWidth},
             buttonHeight
         )
         layoutparams1.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
@@ -732,7 +796,7 @@ fun createM3Button(context: Context, width: Int, height: Int, textt: String, nam
         }
         layoutParams = layoutparams1
 
-        val radius = if (!pillMode) {getAdaptiveRadius(width, sizeType)} else {10000f}
+        val radius = if (!pillMode) {getAdaptiveRadius(if (wrapContentMode) {wrapContentModeButtonWidth} else {buttonWidth}, sizeType)} else {10000f}
         val radii = FloatArray(8)
         when (cornersMode) {
             1 -> { // Только левые
@@ -759,82 +823,10 @@ fun createM3Button(context: Context, width: Int, height: Int, textt: String, nam
         id = newId
         tag = "button_bg"
     }
-//    container.addView(buttonBg)
     viewList.add(buttonBg)
 
-    var textVieww: TextView? = null
-    if (textt != "") {
-        val textView = TextView(context).apply {
-            val layoutparams1 = ConstraintLayout.LayoutParams(
-                ConstraintLayout.LayoutParams.WRAP_CONTENT,
-                ConstraintLayout.LayoutParams.WRAP_CONTENT
-            )
-            layoutparams1.topToTop = buttonBg.id
-            layoutparams1.bottomToBottom = buttonBg.id
-            layoutparams1.startToStart = buttonBg.id
-            layoutparams1.endToEnd = buttonBg.id
-            layoutParams = layoutparams1
-            maxWidth = buttonWidth - textViewMarginRight - textViewMarginRight
-            maxLines = 1
-            text = textt
-            includeFontPadding = false
-            typeface = font
-            measure(
-                View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
-                View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
-            )
-            setTextSize(TypedValue.COMPLEX_UNIT_PX, textSizee)
-            setTextColor("#804A4459".toColorInt())
-            tag = "button_text"
-            id = View.generateViewId()
-            ellipsize = TextUtils.TruncateAt.END
-        }
-        textVieww = textView
-//        container.addView(textView)
-        viewList.add(textView)
-    }
-
-    var icoViewMarginLeft = 0
-    if (icoId != null) {
-        val icoViewId = View.generateViewId()
-        val icoView = ImageView(context).apply {
-            val layoutparams1 = ConstraintLayout.LayoutParams(
-                icoSize,
-                icoSize
-            )
-            layoutparams1.topToTop = buttonBg.id
-            layoutparams1.bottomToBottom = buttonBg.id
-            layoutparams1.startToStart = buttonBg.id
-            layoutparams1.endToEnd = buttonBg.id
-            layoutparams1.setMargins(0,0,0,0)
-            setImageResource(icoId)
-            scaleType = ImageView.ScaleType.CENTER_CROP
-            tag = "button_ico"
-            id = icoViewId
-            layoutParams = layoutparams1
-        }
-//        container.addView(icoView)
-        viewList.add(icoView)
-        if (textVieww != null) {
-            textVieww.maxWidth = buttonWidth- icoSize - textViewMarginRight
-            textVieww.measure(
-                View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
-                View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
-            )
-            val layoutparams1 = icoView.layoutParams as ConstraintLayout.LayoutParams
-            icoViewMarginLeft = round((buttonWidth - icoSize - textVieww.measuredWidth).toFloat() / 2f).toInt()
-            layoutparams1.setMargins(icoViewMarginLeft,0,0,0)
-            icoView.layoutParams = layoutparams1
-
-            val lp1 = textVieww.layoutParams as ConstraintLayout.LayoutParams
-            lp1.startToEnd = icoViewId
-            lp1.endToEnd = ConstraintLayout.LayoutParams.UNSET
-            lp1.startToStart = ConstraintLayout.LayoutParams.UNSET
-            textVieww.layoutParams = lp1
-        }
-    }
+    var arrowId = 0
     if (dropDownMode) {
-        val arrowViewId = View.generateViewId()
         val arrow = ImageView(context).apply {
             val layoutparams1 = ConstraintLayout.LayoutParams(
                 icoSize,
@@ -843,137 +835,67 @@ fun createM3Button(context: Context, width: Int, height: Int, textt: String, nam
             layoutparams1.endToEnd = buttonBg.id
             layoutparams1.topToTop = buttonBg.id
             layoutparams1.bottomToBottom = buttonBg.id
-            layoutparams1.setMargins(0,0,icoMarginLeft,0)
+            layoutparams1.setMargins(0,0,arrowMarginRight,0)
             setImageResource(R.drawable.chevron_forward)
+            imageTintList = ColorStateList.valueOf("#804A4459".toColorInt())
             rotation = 90f
             scaleType = ImageView.ScaleType.CENTER_CROP
             layoutParams = layoutparams1
-            id = arrowViewId
+            val newId = View.generateViewId()
+            id = newId
+            arrowId = newId
             tag = "arrow"
         }
-        if (textVieww != null) {
-            val lp1 = textVieww.layoutParams as ConstraintLayout.LayoutParams
-            if (icoId == null) {
-                lp1.startToStart = ConstraintLayout.LayoutParams.UNSET
-                lp1.endToEnd = ConstraintLayout.LayoutParams.UNSET
-                lp1.endToStart = arrowViewId
-            }
-            textVieww.maxWidth = buttonWidth - icoMarginLeft - if (icoId != null) {icoSize + icoViewMarginLeft} else {0} - icoSize
-            textVieww.layoutParams = lp1
-        }
-//        container.addView(arrow)
         viewList.add(arrow)
     }
-    if (wrapContentMode) {
-        var theIco: ImageView? = null
-        var theText: TextView? = null
-        var theName: TextView? = null
-        var theArrow: ImageView? = null
-        for (i in viewList) {
-            when (i.tag) {
-                "button_ico" -> theIco = i as ImageView
-                "button_text" -> theText = i as TextView
-                "button_name" -> theName = i as TextView
-                "arrow" -> theArrow = i as ImageView
-            }
-        }
 
-
-        if (theText != null) {
-            theText.maxWidth = Int.MAX_VALUE
-            theText.measure(
-                View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
-                View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
-            )
-        }
-
-        val actualTextWidth = theText?.measuredWidth ?: 0
-        val actualIcoSize = if (icoId != null) icoSize else 0
-        val actualArrowSize = if (dropDownMode) icoSize else 0
-
-        var newWidth = icoMarginLeft + actualIcoSize + actualTextWidth + actualArrowSize + icoMarginLeft + textViewMarginRight
-        widthToReturn = newWidth
-
-        if (maxWidthh != null) {
-            newWidth = min(newWidth, maxWidthh)
-        }
-        val textViewMaxWidthh = newWidth - icoMarginLeft - actualIcoSize - actualArrowSize - icoMarginLeft - textViewMarginRight
-        if (theText != null) {
-            theText.maxWidth = textViewMaxWidthh
-            theText.measure(
-                View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
-                View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
-            )
-        }
-        val containerLp = container.layoutParams
-        containerLp.width = newWidth
-        container.layoutParams = containerLp
-
-        val bgLp = buttonBg.layoutParams as ConstraintLayout.LayoutParams
-        bgLp.width = newWidth
-        buttonBg.layoutParams = bgLp
-
-        if (theName != null) {
-            val nLp = theName.layoutParams as ConstraintLayout.LayoutParams
-            nLp.width = newWidth
-            theName.layoutParams = nLp
-        }
-
-        val newRadius = if (!pillMode) { getAdaptiveRadius(newWidth, sizeType) } else { 10000f }
-        val newRadii = FloatArray(8)
-        when (cornersMode) {
-            1 -> { newRadii[0] = newRadius; newRadii[1] = newRadius; newRadii[6] = newRadius; newRadii[7] = newRadius }
-            2 -> { /* Без закруглений */ }
-            3 -> { newRadii[2] = newRadius; newRadii[3] = newRadius; newRadii[4] = newRadius; newRadii[5] = newRadius }
-            else -> { for (i in 0..7) newRadii[i] = newRadius }
-        }
-        (buttonBg.background as? GradientDrawable)?.cornerRadii = newRadii
-
-        if (theIco != null) {
-            val lp = theIco.layoutParams as ConstraintLayout.LayoutParams
-            lp.startToStart = buttonBg.id
-            lp.endToEnd = ConstraintLayout.LayoutParams.UNSET
-            lp.setMargins(icoMarginLeft, 0, 0, 0)
-            theIco.layoutParams = lp
-        }
-
-        if (theText != null) {
-            val lp = theText.layoutParams as ConstraintLayout.LayoutParams
-            lp.startToStart = ConstraintLayout.LayoutParams.UNSET
-            lp.endToEnd = ConstraintLayout.LayoutParams.UNSET
-            lp.startToEnd = ConstraintLayout.LayoutParams.UNSET
-            lp.endToStart = ConstraintLayout.LayoutParams.UNSET
-
-            if (theIco != null) {
-                lp.startToEnd = theIco.id
-                lp.setMargins(textViewMarginRight, 0, 0, 0)
-            } else {
-                lp.startToStart = buttonBg.id
-                lp.setMargins(icoMarginLeft, 0, 0, 0)
-            }
-            theText.layoutParams = lp
-        }
-
-        if (theArrow != null) {
-            val lp = theArrow.layoutParams as ConstraintLayout.LayoutParams
-            lp.startToStart = ConstraintLayout.LayoutParams.UNSET
-            lp.endToEnd = ConstraintLayout.LayoutParams.UNSET
-            lp.startToEnd = ConstraintLayout.LayoutParams.UNSET
-            lp.endToStart = ConstraintLayout.LayoutParams.UNSET
-
-            if (theText != null) {
-                lp.startToEnd = theText.id
-                lp.setMargins(0, 0, 0, 0)
-            } else if (theIco != null) {
-                lp.startToEnd = theIco.id
-                lp.setMargins(0, 0, 0, 0)
-            } else {
-                lp.startToStart = buttonBg.id
-                lp.setMargins(icoMarginLeft, 0, 0, 0)
-            }
-            theArrow.layoutParams = lp
-        }
+    val icoAndTextContaier = ConstraintLayout(context).apply {
+        val lp1 = ConstraintLayout.LayoutParams(
+            (if (icoId != null) {(icoSize+arrowMarginRight)} else {0} + textView.measuredWidth),
+            ConstraintLayout.LayoutParams.WRAP_CONTENT
+        )
+        lp1.startToStart = buttonBg.id
+        lp1.topToTop = buttonBg.id
+        lp1.bottomToBottom = buttonBg.id
+        if (dropDownMode) {lp1.endToStart = arrowId} else {lp1.endToEnd = buttonBg.id}
+        layoutParams = lp1
+        tag = "icoAndTextContaier"
     }
+    viewList.add(icoAndTextContaier)
+
+    var icoViewId = 0
+    if (icoId != null) {
+        val icoView = ImageView(context).apply {
+            val layoutparams1 = ConstraintLayout.LayoutParams(
+                icoSize,
+                icoSize
+            )
+            layoutparams1.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
+            layoutparams1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
+            setImageResource(icoId)
+            scaleType = ImageView.ScaleType.CENTER_CROP
+            tag = "button_ico"
+            val newId = View.generateViewId()
+            id = newId
+            icoViewId = newId
+            layoutParams = layoutparams1
+        }
+        icoAndTextContaier.addView(icoView)
+    }
+
+
+    val textViewlp1 = textView.layoutParams as ConstraintLayout.LayoutParams
+    textViewlp1.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
+    if (icoViewId == 0) {
+        textViewlp1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
+    }
+    else {
+        textViewlp1.startToEnd = icoViewId
+        textViewlp1.setMargins(arrowMarginRight,0,0,0)
+    }
+    textView.layoutParams = textViewlp1
+    icoAndTextContaier.addView(textView)
+
 
     return createM3ButtonReturn(container, viewList, widthToReturn)
 }
@@ -1015,8 +937,8 @@ fun createSegmentedButton(context: Context, width: Int, height: Int, options: Li
         )
 
         val button = rt.container
-        for (i in rt.childs) {
-            button.addView(i)
+        for (i in rt.childs.indices) {
+            button.addView(rt.childs[i])
         }
         val cr = getAdaptiveRadius(buttonWidth, SizeType.MEDIUM)
         val radii: FloatArray = if (cornersMode == 1) {
@@ -1029,7 +951,7 @@ fun createSegmentedButton(context: Context, width: Int, height: Int, options: Li
             floatArrayOf(0f,0f,cr,cr,cr,cr,0f,0f)
         }
         val poloska = GradientDrawable().apply {
-            setStroke(round(2f*density).toInt(), "#000000".toColorInt())
+            setStroke(round(1f * baseDensity).toInt(), "#000000".toColorInt())
             cornerRadii = radii
         }
         button.background = poloska
@@ -1080,7 +1002,7 @@ fun createSlider(context: Context, widthh: Int, stopsList: List<Pair<Float, Stri
     val margin = round(4f*baseDensity).toInt()
     val textInputTextSizee = round(getTextSizeByHeight(heightt, font) / 1.25f)
     val textInputViewWidth = tempTextView.measuredWidth + (3*ceil(textInputTextSizee).toInt())
-    val textInput = createOutlinedTextFieldForOvDialog(context, textInputViewWidth, SizeType.SMALL, heightt, "", Gravity.CENTER, textInputTextSizee, 1, "%.2f".format(alreadyValue).trim().replace(",","."), (InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL), round(textInputViewWidth.toFloat() / 4f).toInt(), true)
+    val textInput = createOutlinedTextField(context, textInputViewWidth, SizeType.SMALL, heightt, "", Gravity.CENTER, textInputTextSizee, 1, "%.2f".format(alreadyValue).trim().replace(",","."), (InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL), round(textInputViewWidth.toFloat() / 4f).toInt(), true)
 
     val containerrWidth = if (!createTextInputView) {widthh} else {widthh - margin - textInputViewWidth}
     val containerr = ConstraintLayout(context).apply {
@@ -1236,13 +1158,14 @@ fun createSlider(context: Context, widthh: Int, stopsList: List<Pair<Float, Stri
     }
     return container
 }
-fun createSliderRow(context: Context, width: Int, name: String, icoId: Int, stopsList: List<Pair<Float, String>>, heightt: Int, createSteps: Boolean = false, alreadyValue: Float, createTextInputView: Boolean = false): List<View> {
+fun createSliderRow(context: Context, width: Int, name: String, icoId: Int?, stopsList: List<Pair<Float, String>>, heightt: Int, createSteps: Boolean = false, alreadyValue: Float, createTextInputView: Boolean = false): List<View> {
     val font = context.resources.getFont(R.font.google_sans_medium)
 
-    val icoMarginLeft = round(width.toFloat() / 28.42f).toInt()
-    val marginRight = round(icoMarginLeft.toFloat() * 1.42f).toInt()
+    val margins = calculateLeftAndRightMarginForRows(width)
+    val icoMarginLeft = margins.marginLeft
+    val marginRight = margins.marginRight
     val icoSize = floor(heightt.toFloat() / 2f).toInt()
-    val titleWidth = width - icoMarginLeft - icoMarginLeft - marginRight - icoSize
+    val titleWidth = width - icoMarginLeft - marginRight - if (icoId != null) {(icoSize + icoMarginLeft)} else {0}
     val titleId = View.generateViewId()
     val textHeight = round(icoSize.toFloat() / 1f).toInt()
     val textSizee = getTextSizeByHeight(textHeight, font)
@@ -1259,29 +1182,31 @@ fun createSliderRow(context: Context, width: Int, name: String, icoId: Int, stop
     viewsToReturn.add(container)
 
     val icoViewId = View.generateViewId()
-    val ico = ImageView(context).apply {
-        val layoutparams1 = ConstraintLayout.LayoutParams(icoSize, icoSize)
-        layoutparams1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
-        layoutparams1.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
-        layoutparams1.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID
-        layoutparams1.setMargins(icoMarginLeft, 0, 0, 0)
-        layoutParams = layoutparams1
+    if (icoId != null) {
+        val ico = ImageView(context).apply {
+            val layoutparams1 = ConstraintLayout.LayoutParams(icoSize, icoSize)
+            layoutparams1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
+            layoutparams1.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
+            layoutparams1.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID
+            layoutparams1.setMargins(icoMarginLeft, 0, 0, 0)
+            layoutParams = layoutparams1
 
-        setImageResource(icoId)
-        scaleType = ImageView.ScaleType.CENTER_CROP
-        id = icoViewId
-        tag = "slider_icon"
+            setImageResource(icoId)
+            scaleType = ImageView.ScaleType.CENTER_CROP
+            id = icoViewId
+            tag = "slider_icon"
+        }
+        container.addView(ico)
+        viewsToReturn.add(ico)
     }
-    container.addView(ico)
-    viewsToReturn.add(ico)
+
 
     val textView = TextView(context).apply {
         val layoutparams1 = ConstraintLayout.LayoutParams(
             titleWidth,
             ConstraintLayout.LayoutParams.WRAP_CONTENT
         )
-        layoutparams1.startToEnd = icoViewId
-        layoutparams1.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
+
         maxLines = 1
         text = name
         includeFontPadding = false
@@ -1293,9 +1218,17 @@ fun createSliderRow(context: Context, width: Int, name: String, icoId: Int, stop
             View.MeasureSpec.makeMeasureSpec(titleWidth, View.MeasureSpec.EXACTLY),
             View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
         )
-
-        val diff2 = heightt - measuredHeight - textHeight
-        layoutparams1.setMargins(icoMarginLeft, round(diff2.toFloat() / 2f).toInt(),0,0)
+        if (icoId != null) {
+            layoutparams1.startToEnd = icoViewId
+            layoutparams1.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
+            val diff2 = heightt - measuredHeight - textHeight
+            layoutparams1.setMargins(icoMarginLeft, round(diff2.toFloat() / 2f).toInt(),0,0)
+        }
+        else {
+            layoutparams1.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
+            layoutparams1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
+            layoutparams1.setMargins(icoMarginLeft,0,0,0)
+        }
         id = titleId
         tag = "slider_title"
         layoutParams = layoutparams1
@@ -1320,12 +1253,13 @@ fun createSliderRow(context: Context, width: Int, name: String, icoId: Int, stop
 
     return viewsToReturn
 }
-fun createDropdownRow(context: Context, width: Int, height: Int, titleText: String, icoId: Int, options: List<Pair<String, BsdButtonsTags>>, onItemSelected: (String, BsdButtonsTags) -> Unit, buttonIcoId: Int? = null): ConstraintLayout {
+fun createDropdownRow(context: Context, width: Int, height: Int, titleText: String, icoId: Int?, options: List<Pair<String, BsdButtonsTags>>, onItemSelected: (String, BsdButtonsTags) -> Unit, buttonIcoId: Int? = null): ConstraintLayout {
     val font = context.resources.getFont(R.font.google_sans_medium)
-    val icoMarginLeft = round(width.toFloat() / 28.42f).toInt()
-    val marginRight = round(icoMarginLeft.toFloat() * 1.42f).toInt()
+    val margins = calculateLeftAndRightMarginForRows(width)
+    val icoMarginLeft = margins.marginLeft
+    val marginRight = margins.marginRight
     val icoSize = floor(height.toFloat() / 2f).toInt()
-    val textViewWidth = round((width - icoMarginLeft - icoMarginLeft - marginRight - icoSize).toFloat() / 2.5f).toInt()
+    val textViewWidth = round((width - icoMarginLeft - marginRight - if (icoId != null) {(icoSize + icoMarginLeft)} else {0}).toFloat() / 2.5f).toInt()
     val buttonHeight = round(height.toFloat() / 1.5f).toInt()
     val buttonWidth = width - icoMarginLeft - icoMarginLeft - icoSize - textViewWidth
     val textHeight = round(icoSize.toFloat() / 1f).toInt()
@@ -1337,25 +1271,28 @@ fun createDropdownRow(context: Context, width: Int, height: Int, titleText: Stri
     }
 
     val icoViewId = View.generateViewId()
-    val ico = ImageView(context).apply {
-        val layoutparams1 = ConstraintLayout.LayoutParams(icoSize, icoSize)
-        layoutparams1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
-        layoutparams1.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
-        layoutparams1.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID
-        layoutparams1.setMargins(icoMarginLeft, 0, 0, 0)
-        layoutParams = layoutparams1
+    if (icoId != null) {
+        val ico = ImageView(context).apply {
+            val layoutparams1 = ConstraintLayout.LayoutParams(icoSize, icoSize)
+            layoutparams1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
+            layoutparams1.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
+            layoutparams1.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID
+            layoutparams1.setMargins(icoMarginLeft, 0, 0, 0)
+            layoutParams = layoutparams1
 
-        setImageResource(icoId)
-        scaleType = ImageView.ScaleType.CENTER_CROP
-        id = icoViewId
-        tag = "dropdown_icon"
+            setImageResource(icoId)
+            scaleType = ImageView.ScaleType.CENTER_CROP
+            id = icoViewId
+            tag = "dropdown_icon"
+        }
+        container.addView(ico)
     }
-    container.addView(ico)
+
 
     val rt = createM3Button(context = context, width = buttonWidth, height = buttonHeight, textt = options[0].first, name = "", sizeType = SizeType.SMALL, cornersMode = 0, icoId = buttonIcoId, pillMode = true, dropDownMode = true, wrapContentMode = true, maxWidthh = buttonWidth, isActive = true, nameColor = "#FFFFFF".toColorInt())
     val dropdownButton = rt.container
-    for (i in rt.childs) {
-        dropdownButton.addView(i)
+    for (i in rt.childs.indices) {
+        dropdownButton.addView(rt.childs[i])
     }
     val layoutparams1 = dropdownButton.layoutParams as ConstraintLayout.LayoutParams
     layoutparams1.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
@@ -1363,7 +1300,6 @@ fun createDropdownRow(context: Context, width: Int, height: Int, titleText: Stri
     layoutparams1.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID
     layoutparams1.setMargins(0, 0, marginRight, 0)
     dropdownButton.layoutParams = layoutparams1
-
     val newId = View.generateViewId()
     dropdownButton.id = newId
     dropdownButton.tag = "dropdown_button"
@@ -1374,7 +1310,7 @@ fun createDropdownRow(context: Context, width: Int, height: Int, titleText: Stri
             textViewWidth,
             ConstraintLayout.LayoutParams.WRAP_CONTENT
         )
-        layoutparams1.startToEnd = icoViewId
+        if (icoId != null) {layoutparams1.startToEnd = icoViewId} else {layoutparams1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID}
         layoutparams1.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
         layoutparams1.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID
         layoutparams1.setMargins(icoMarginLeft, 0, 0, 0)
@@ -1389,12 +1325,14 @@ fun createDropdownRow(context: Context, width: Int, height: Int, titleText: Stri
             View.MeasureSpec.makeMeasureSpec(textViewWidth, View.MeasureSpec.EXACTLY),
             View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
         )
-        val difference = icoSize - measuredHeight
-        if (difference < 0) {
-            layoutparams1.setMargins(icoMarginLeft,round(difference.toFloat() / 2f).toInt(),0,0)
-        }
-        else if (difference > 0){
-            layoutparams1.setMargins(icoMarginLeft, (round(difference.toFloat() / 2f)).toInt(),0,0)
+        if (icoId != null) {
+            val difference = icoSize - measuredHeight
+            if (difference < 0) {
+                layoutparams1.setMargins(icoMarginLeft,round(difference.toFloat() / 2f).toInt(),0,0)
+            }
+            else if (difference > 0){
+                layoutparams1.setMargins(icoMarginLeft, (round(difference.toFloat() / 2f)).toInt(),0,0)
+            }
         }
         tag = "dropdown_title"
         layoutParams = layoutparams1
@@ -1406,40 +1344,45 @@ fun createDropdownRow(context: Context, width: Int, height: Int, titleText: Stri
         for (i in options) {
             newOptions.add(i.first)
         }
-        setAdapter(ArrayAdapter(context, android.R.layout.simple_list_item_1, newOptions))
-        anchorView = dropdownButton // Привязываем список к созданной M3 кнопке
+        val adapter = ArrayAdapter(context, android.R.layout.simple_list_item_1, newOptions)
+        setAdapter(adapter)
+        anchorView = dropdownButton
         isModal = true
+        setWidth(calculateContentWidthForListPopupWindow(context, newOptions, 16f* scaledDensity) + round(32f*baseDensity).toInt())
 
         setOnItemClickListener { _, _, position, _ ->
             val selected = options[position]
-            // Находим TextView внутри кнопки и меняем текст
-            val btnText = dropdownButton.findViewWithTag<TextView>("button_text")
-            btnText?.text = selected.first
             val newChilds = createM3Button(context = context, width = buttonWidth, height = buttonHeight, textt = selected.first, name = "", sizeType = SizeType.SMALL, cornersMode = 0, icoId = buttonIcoId, pillMode = true, dropDownMode = true, wrapContentMode = true, maxWidthh = buttonWidth, isActive = true, nameColor = "#FFFFFF".toColorInt())
             dropdownButton.removeAllViews()
+            for (i in rt.childs.indices) {
+                dropdownButton.addView(rt.childs[i])
+            }
             val lp1 = dropdownButton.layoutParams as ConstraintLayout.LayoutParams
             lp1.width = newChilds.width
             dropdownButton.layoutParams = lp1
             for (i in newChilds.childs) {
                 dropdownButton.addView(i)
             }
-            onItemSelected(selected.first,selected.second) // Вызываем callback
+            onItemSelected(selected.first,selected.second)
             dismiss()
         }
     }
-
-    // Обрабатываем клик по кнопке (можно кликнуть и по фону, и по тексту)
-    dropdownButton.setOnClickListener { listPopupWindow.show() }
-    dropdownButton.findViewWithTag<View>("button_bg")?.setOnClickListener { listPopupWindow.show() }
+    dropdownButton.setOnClickListener {
+        dropdownButton.requestFocus()
+        listPopupWindow.show()
+    }
 
     return container
 }
-fun createSegmentedButtonRow(context: Context, width: Int, height: Int, options: List<segmentedButtonOptions>, icoId: Int, textt: String): ConstraintLayout {
+fun createSegmentedButtonRow(context: Context, width: Int, height: Int, options: List<segmentedButtonOptions>, icoId: Int?, textt: String, callback: (Float) -> Unit): ConstraintLayout {
     val font = context.resources.getFont(R.font.google_sans_medium)
     val icoSize = floor(height.toFloat() / 2f).toInt()
-    val icoMarginLeft = round(width.toFloat() / 28.42f).toInt()
-    val marginRight = round(icoMarginLeft.toFloat() * icoSizesRatio).toInt()
-    val textViewWidthMaxWidth = round((width - icoMarginLeft*2 - marginRight - icoSize).toFloat() / 2.5f).toInt()
+    val margins = calculateLeftAndRightMarginForRows(width)
+    val icoMarginLeft = margins.marginLeft
+    val marginRight = margins.marginRight
+    val segmentedButtonWidth = calculateIdealButtonWidthByHeight(context,
+        CalculateIdealButtonWidthByHeightInput.SegmentedButtonInput(height, options, font), round(32f*baseDensity).toInt()).coerceIn(0, round(width.toFloat() / 2.15f).toInt())
+    val textViewWidthMaxWidth = width - icoMarginLeft - marginRight - segmentedButtonWidth - if (icoId != null) {(icoSize + icoMarginLeft)} else {0}
     val textHeight = round(icoSize.toFloat() / 1f).toInt()
     val textSizee = getTextSizeByHeight(textHeight, font)
     val marginBetweenTextAndButton = round(icoMarginLeft.toFloat() / 2f).toInt()
@@ -1452,23 +1395,26 @@ fun createSegmentedButtonRow(context: Context, width: Int, height: Int, options:
         )
     }
 
-    val ico = ImageView(context).apply {
-        val layoutparams1 = ConstraintLayout.LayoutParams(
-            icoSize,
-            icoSize
-        )
-        layoutparams1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
-        layoutparams1.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
-        layoutparams1.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID
-        layoutparams1.setMargins(icoMarginLeft,0,0,0)
-        layoutParams = layoutparams1
-        setImageResource(icoId)
-        scaleType = ImageView.ScaleType.CENTER_CROP
-        val newId = View.generateViewId()
-        id = newId
-        icoViewId = newId
+    if (icoId != null) {
+        val ico = ImageView(context).apply {
+            val layoutparams1 = ConstraintLayout.LayoutParams(
+                icoSize,
+                icoSize
+            )
+            layoutparams1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
+            layoutparams1.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
+            layoutparams1.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID
+            layoutparams1.setMargins(icoMarginLeft,0,0,0)
+            layoutParams = layoutparams1
+            setImageResource(icoId)
+            scaleType = ImageView.ScaleType.CENTER_CROP
+            val newId = View.generateViewId()
+            id = newId
+            icoViewId = newId
+        }
+        container.addView(ico)
     }
-    container.addView(ico)
+
     val textView = TextView(context).apply {
         val layoutparams1 = ConstraintLayout.LayoutParams(
             ConstraintLayout.LayoutParams.WRAP_CONTENT,
@@ -1486,16 +1432,24 @@ fun createSegmentedButtonRow(context: Context, width: Int, height: Int, options:
             View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
         )
         ellipsize = TextUtils.TruncateAt.END
-        layoutparams1.topToTop = icoViewId
-        layoutparams1.startToEnd = icoViewId
-        val difference = icoSize - measuredHeight
-        if (difference >= 0) {
-            val marginTop = -round(measuredHeight.toFloat() / 2f).toInt()
-            layoutparams1.setMargins(icoMarginLeft, -marginTop,0,0)
+        if (icoId != null) {
+            layoutparams1.topToTop = icoViewId
+            layoutparams1.startToEnd = icoViewId
+            val difference = icoSize - measuredHeight
+            if (difference >= 0) {
+                val marginTop = -round(measuredHeight.toFloat() / 2f).toInt()
+                layoutparams1.setMargins(icoMarginLeft, -marginTop,0,0)
+            }
+            else {
+                val marginTop = round(difference.toFloat() / 2f).toInt()
+                layoutparams1.setMargins(icoMarginLeft, marginTop,0,0)
+            }
         }
         else {
-            val marginTop = round(difference.toFloat() / 2f).toInt()
-            layoutparams1.setMargins(icoMarginLeft, marginTop,0,0)
+            layoutparams1.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
+            layoutparams1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
+            layoutparams1.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID
+            layoutparams1.setMargins(icoMarginLeft, 0,0,0)
         }
         layoutParams = layoutparams1
         val newId = View.generateViewId()
@@ -1504,44 +1458,58 @@ fun createSegmentedButtonRow(context: Context, width: Int, height: Int, options:
     }
     container.addView(textView)
 
-    val buttonWidth = width - icoMarginLeft - icoSize - icoMarginLeft - textView.measuredWidth - marginRight
+    val notIdealButtonWidth = width - if (icoId != null) {(icoMarginLeft + icoSize)} else {0} - icoMarginLeft - textView.measuredWidth - marginRight
+    val idealButtonWidth = calculateIdealButtonWidthByHeight(context,CalculateIdealButtonWidthByHeightInput.SegmentedButtonInput(height, options, font), round(16f*baseDensity).toInt())
+    val buttonWidth = min(notIdealButtonWidth, idealButtonWidth)
     val buttonHeight = round(height.toFloat() * 0.8f).toInt()
     val segmentedButton = createSegmentedButton(context, buttonWidth, buttonHeight, options)
     val lp1 = segmentedButton.layoutParams as ConstraintLayout.LayoutParams
-    if (textt == "") {
-        lp1.startToEnd = icoViewId
-        lp1.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
-        lp1.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID
-        lp1.setMargins(icoMarginLeft,0,0,0)
-    }
-    else {
-        lp1.startToEnd = textViewId
-        lp1.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
-        lp1.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID
-        lp1.setMargins(icoMarginLeft,0,0,0)
-    }
+    lp1.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
+    lp1.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
+    lp1.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID
+    lp1.setMargins(0,0,marginRight,0)
     segmentedButton.layoutParams = lp1
     container.addView(segmentedButton)
+    for (i in options.indices) {
+        val currentValue = i.toFloat()
+        val segment = segmentedButton.findViewWithTag<View>("button_$i")
+        segment?.setOnClickListener { clickedSegment ->
+            segment.requestFocus()
+            callback(currentValue)
+            for (o in options.indices) {
+                val segment1 = segmentedButton.findViewWithTag<View>("button_$o") ?: continue
+                val segment1Background = segment1.findViewWithTag<View>("button_bg").background as GradientDrawable
+                val colorNow = segment1Background.color?.defaultColor ?: "#80EADDFF".toColorInt()
+                val targetColor = if (segment1 == clickedSegment) {"#E8DEF8".toColorInt()} else {"#80EADDFF".toColorInt()}
+                if (colorNow != targetColor) {
+                    val animation = ValueAnimator.ofObject(ArgbEvaluator(), colorNow, targetColor).apply {
+                        duration = 100
+                        interpolator = AccelerateDecelerateInterpolator()
+                        addUpdateListener { animator ->
+                            segment1Background.setColor(animator.animatedValue as Int)
+                        }
+                    }
+                    animation.start()
+                }
+            }
+        }
+    }
     return container
 }
-fun createSwitchButton(context: Context, isChecked: Boolean, width: Int, height: Int, onCheckedChange: ((Boolean) -> Unit)? = null): ConstraintLayout {
+fun createSwitchButton(context: Context, isChecked: Boolean, width: Int, height: Int, callback: (Boolean) -> Unit): ConstraintLayout {
 
-    // 1. Прописываем все размеры и цвета
-    val padding = round(height * 0.15f).toInt() // Отступ кружка от краев
+    val padding = round(height * 0.15f).toInt()
     val thumbSize = height - padding * 2
     val colorOn = "#EADDFF".toColorInt()
     val colorOff = "#80EADDFF".toColorInt()
     var currentState = isChecked
 
-    // 2. Создаем container (ConstraintLayout)
     val container = ConstraintLayout(context).apply {
         layoutParams = ConstraintLayout.LayoutParams(width, height)
     }
 
-    // 3. Создаем остальные view (фон и ползунок)
     val track = View(context).apply {
         id = View.generateViewId()
-        // Размеры 0, 0, так как растянем по constraints
         layoutParams = ConstraintLayout.LayoutParams(0, 0)
         background = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
@@ -1557,14 +1525,12 @@ fun createSwitchButton(context: Context, isChecked: Boolean, width: Int, height:
             shape = GradientDrawable.OVAL
             setColor(Color.WHITE)
         }
-        elevation = 4f // Небольшая тень, чтобы кружок выделялся как на референсах
+        elevation = 4f
     }
 
-    // 4. Добавляем view в контейнер и настраиваем привязки
     container.addView(track)
     container.addView(thumb)
 
-    // Фон растягиваем на весь контейнер
     track.updateLayoutParams<ConstraintLayout.LayoutParams> {
         startToStart = ConstraintLayout.LayoutParams.PARENT_ID
         endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
@@ -1572,7 +1538,6 @@ fun createSwitchButton(context: Context, isChecked: Boolean, width: Int, height:
         bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID
     }
 
-    // Кружок привязываем ко всем краям, но двигаем через horizontalBias
     thumb.updateLayoutParams<ConstraintLayout.LayoutParams> {
         startToStart = ConstraintLayout.LayoutParams.PARENT_ID
         endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
@@ -1582,18 +1547,15 @@ fun createSwitchButton(context: Context, isChecked: Boolean, width: Int, height:
         horizontalBias = if (currentState) 1f else 0f
     }
 
-    // 5. Добавляем ClickListener и анимацию
     container.setOnClickListener {
+        container.requestFocus()
         val startBias = if (currentState) 1f else 0f
         val endBias = if (currentState) 0f else 1f
         val startColor = if (currentState) colorOn else colorOff
         val endColor = if (currentState) colorOff else colorOn
 
-        // Меняем состояние
         currentState = !currentState
-        onCheckedChange?.invoke(currentState)
-
-        // Анимация передвижения ползунка
+        callback(currentState)
         val biasAnimator = ValueAnimator.ofFloat(startBias, endBias).apply {
             duration = 100
             interpolator = AccelerateDecelerateInterpolator()
@@ -1604,7 +1566,6 @@ fun createSwitchButton(context: Context, isChecked: Boolean, width: Int, height:
             }
         }
 
-        // Анимация смены цвета фона
         val colorAnimator = ValueAnimator.ofObject(ArgbEvaluator(), startColor, endColor).apply {
             duration = 100
             interpolator = AccelerateDecelerateInterpolator()
@@ -1613,15 +1574,104 @@ fun createSwitchButton(context: Context, isChecked: Boolean, width: Int, height:
             }
         }
 
-        // Запускаем обе анимации одновременно
         biasAnimator.start()
         colorAnimator.start()
     }
 
-    // 6. Возвращаем контейнер
     return container
 }
-fun createOutlinedTextFieldForOvDialog(context: Context, width: Int, radius: SizeType, heightt: Int, hintText: String, gravityy: Int = Gravity.CENTER, textSizee: Float, maxLiness: Int? = null, alreadyEnteredText: String? = null, inputTypee: Int? = null, paddingHorizontal: Int? = null, twoSidePadding: Boolean = false): TextInputLayout {
+fun createSwitchButtonRow(context: Context, isChecked: Boolean, width: Int, height: Int, name: String, icoId: Int?, callback1: (Boolean) -> Unit): ConstraintLayout {
+    val font = context.resources.getFont(R.font.google_sans_medium)
+    val icoSize = floor(height.toFloat() / 2f).toInt()
+    val margins = calculateLeftAndRightMarginForRows(width)
+    val icoMarginLeft = margins.marginLeft
+    val marginRight = margins.marginRight
+    val switchButtonHeight = round(height.toFloat() / 2.3f).toInt()
+    val switchButtonWidth = calculateIdealButtonWidthByHeight(context,CalculateIdealButtonWidthByHeightInput.SwitchButtonInput(switchButtonHeight),0)
+    val textViewWidth = width - icoMarginLeft*2 - marginRight - if (icoId != null) {(icoSize + icoMarginLeft)} else {0} - switchButtonWidth
+    val textHeight = round(icoSize.toFloat() / 1f).toInt()
+    val textSizee = getTextSizeByHeight(textHeight, font)
+    var icoViewId = 0
+    val container = ConstraintLayout(context).apply {
+        layoutParams = ConstraintLayout.LayoutParams(
+            width,
+            height
+        )
+    }
+    if (icoId != null) {
+        val ico = ImageView(context).apply {
+            val layoutparams1 = ConstraintLayout.LayoutParams(
+                icoSize,
+                icoSize
+            )
+            layoutparams1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
+            layoutparams1.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
+            layoutparams1.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID
+            layoutparams1.setMargins(icoMarginLeft,0,0,0)
+            layoutParams = layoutparams1
+            setImageResource(icoId)
+            scaleType = ImageView.ScaleType.CENTER_CROP
+            val newId = View.generateViewId()
+            id = newId
+            icoViewId = newId
+        }
+        container.addView(ico)
+    }
+
+    val textView = TextView(context).apply {
+        val layoutparams1 = ConstraintLayout.LayoutParams(
+            textViewWidth,
+            ConstraintLayout.LayoutParams.WRAP_CONTENT
+        )
+        maxLines = 2
+        text = name
+        includeFontPadding = false
+        typeface = font
+        setTextSize(TypedValue.COMPLEX_UNIT_PX, textSizee)
+        setTextColor("#D9FFFFFF".toColorInt())
+        measure(
+            View.MeasureSpec.makeMeasureSpec(textViewWidth, View.MeasureSpec.EXACTLY),
+            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+        )
+        ellipsize = TextUtils.TruncateAt.END
+        if (icoId != null) {
+            layoutparams1.topToTop = icoViewId
+            layoutparams1.startToEnd = icoViewId
+            val difference = icoSize - measuredHeight
+            if (difference < 0) {
+                layoutparams1.setMargins(icoMarginLeft,round(difference.toFloat() / 2f).toInt(),0,0)
+            }
+            else if (difference > 0){
+                layoutparams1.setMargins(icoMarginLeft, (round(difference.toFloat() / 2f)).toInt(),0,0)
+            }
+            else {
+                layoutparams1.setMargins(icoMarginLeft,0,0,0)
+            }
+        }
+        else {
+            layoutparams1.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
+            layoutparams1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
+            layoutparams1.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID
+            layoutparams1.setMargins(icoMarginLeft,0,0,0)
+        }
+
+        layoutParams = layoutparams1
+    }
+    container.addView(textView)
+
+    val switchButton = createSwitchButton(context, isChecked, switchButtonWidth, switchButtonHeight, callback = {value -> callback1(value)})
+    val lp1 = switchButton.layoutParams as ConstraintLayout.LayoutParams
+    lp1.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
+    lp1.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
+    lp1.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID
+    lp1.setMargins(0,0,marginRight,0)
+    switchButton.layoutParams = lp1
+    switchButton.tag = "switch_button"
+    container.addView(switchButton)
+
+    return container
+}
+fun createOutlinedTextField(context: Context, width: Int, radius: SizeType, heightt: Int, hintText: String, gravityy: Int = Gravity.CENTER, textSizee: Float, maxLiness: Int? = null, alreadyEnteredText: String? = null, inputTypee: Int? = null, paddingHorizontal: Int? = null, twoSidePadding: Boolean = false): TextInputLayout {
     val font = context.resources.getFont(R.font.google_sans_regular)
     val strokeWidth = round(1f*baseDensity).toInt()
     val inputLayout = TextInputLayout(context).apply {
@@ -1683,7 +1733,6 @@ fun createOutlinedTextFieldForOvDialog(context: Context, width: Int, radius: Siz
         setText(alreadyEnteredText)
         tag = "edit_text"
     }
-
     inputLayout.addView(editText)
     return inputLayout
 }
@@ -1808,6 +1857,7 @@ fun createGridOfGenres(context: Context, infoContainerHeight: Int, genreList: Li
         infoContainer.addView(infoText)
         if (addClickListeners) {
             infoContainer.setOnClickListener {
+                infoContainer.requestFocus()
                 onClick(genreList[i].second)
             }
         }
@@ -2038,10 +2088,9 @@ fun createGradientStrokeDrawable(startColor: Int, endColor: Int, strokeWidth1: I
             val bounds = bounds
             val w = bounds.width().toFloat()
 
-            // Создаем градиент для обводки (слева направо)
             val shader = LinearGradient(
-                0f, 0f,           // начало (левый верх)
-                w, 0f,            // конец (правый верх)
+                0f, 0f,
+                w, 0f,
                 intArrayOf(startColor, endColor),
                 positions,
                 Shader.TileMode.CLAMP
@@ -2049,7 +2098,6 @@ fun createGradientStrokeDrawable(startColor: Int, endColor: Int, strokeWidth1: I
 
             paint.shader = shader
 
-            // Рисуем прямоугольник с обводкой
             rectF.set(
                 bounds.left.toFloat() + strokeWidth1 / 2f,
                 bounds.top.toFloat() + strokeWidth1 / 2f,
@@ -2110,7 +2158,7 @@ fun createFlatGrid(context: Context, startsInfo: createFlatGridInput, widthh: In
         )
         orientation = LinearLayout.VERTICAL
     }
-    val elementHeight = round(120f*density).toInt()
+    val elementHeight = round(46f * baseDensity).toInt()
     when (startsInfo) {
         is createFlatGridInput.EditEpisodes -> {
             var list = startsInfo.info as MutableList<episodeInfo>
@@ -2123,7 +2171,7 @@ fun createFlatGrid(context: Context, startsInfo: createFlatGridInput, widthh: In
                 )
                 layoutManager = LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false)
                 adapter = adapterr
-                addItemDecoration(spaceItemDecoration(spaceItemDecorationInput(listOf(0,round(30f*density).toInt(),0,0), listOf(0,0,0,0))))
+                addItemDecoration(spaceItemDecoration(spaceItemDecorationInput(listOf(0,round(11f * baseDensity).toInt(),0,0), listOf(0,0,0,0), listOf(0,round(11f * baseDensity).toInt(),0,0))))
             }
             val callback = object : ItemTouchHelper.SimpleCallback(
                 ItemTouchHelper.UP or ItemTouchHelper.DOWN, // Разрешаем движение вверх/вниз
@@ -2172,38 +2220,68 @@ sealed class OverLayLayer {
         var author: String,
         var genreList: List<Genre>,
         val episodesList: List<episodeInfo>,
-        val type: ElementType
+        val type: ElementType,
+        val parentId: Long
     ) : OverLayLayer()
     data class GenreChoice(
         var genreList: List<Pair<Boolean, Genre>>,
         val key: String
     ) : OverLayLayer()
     data class CreateCarouselPage(
-        val name: String,
-        val childsCornerRadius: SizeType?,
-        val childsShowName: Boolean,
-        val childsNamePosition: Int?,
-        val childsShowAlreadyWatchedLine: Boolean,
-        val layoutType: Int?,
+        var name: String,
+        var page: Int,
+        var childsCornerRadius: SizeType?,
+        var childsShowName: Boolean,
+        var childsNamePosition: Int?,
+        var childsShowAlreadyWatchedLine: Boolean,
+        var layoutType: Int?,
         val showWatchAllButton: Boolean,
-        val maxObjectsInOneLine: Int?,
-        val maxLines: Int?,
-        val dovodchik: Boolean,
-        val showDovodchikDots: Boolean,
+        var maxObjectsInOneLine: Int?,
+        var maxLines: Int?,
+        var dovodchik: Boolean,
+        var showDovodchikDots: Boolean,
+        var carouselType: CarouselType,
+        var carouselCollectionType: CollectionType? = null,
+        var showIco: Boolean = false,
+        var ico: ImageData? = null,
     ) : OverLayLayer()
 }
+data class AnimState(
+    var currentSwitchState: Boolean,
+    var isDropAnimationPlaying: Boolean,
+    var isLiftAnimationPlaying: Boolean
+)
 object createOvDialog {
-    fun createCarouselPage(context: Context, startsInfo: OverLayLayer.CreateCarouselPage) {
+    fun createCarouselPage(context: Context, startsInfo: OverLayLayer.CreateCarouselPage, layer: Layer, resultSenderViewModel: ResultSenderViewModel, choiceIco: () -> Unit, apply: (OverLayLayer.CreateCarouselPage) -> Unit) : ConstraintLayout {
+
+        var lastDropAndLiftAnimForRowsId = 0
+
+        val localLayersList = mutableListOf<Layer>()
+        localLayersList.add(Layer.MainPage(
+            elevation = 1,
+            pageId = 0,
+            scrollPositionCarousels = mutableMapOf<Int,Int>(),
+            activeDotPositionCarousels = mutableMapOf<Int,Int>(),
+            scrollPositionsInPx = mutableMapOf<Int,Int>(),
+            mainRecyclerScrollPositionInPx = 0,
+            mainRecyclerScrollPosition = 0,
+            state = 0
+        ))
+
+        val info = startsInfo
+
         val font = context.resources.getFont(R.font.google_sans_regular)
         val boldFont = context.resources.getFont(R.font.google_sans_bold)
-        val isLandscape = screenWidth > screenHeight
         val maxPageWidth = round(1000f * baseDensity).toInt()
         val actualWidth = min(screenWidth, maxPageWidth)
         val marginLeft = round(16f * baseDensity).toInt()
         val marginTop = round(12f * baseDensity).toInt()
+        val previewContainerMarginTop = marginTop * 2
         var hTextSizee = round(24f*baseDensity)
         val hTextText = "Создание карусели"
         val hTextMaxWidth = actualWidth - marginLeft*2
+        val elementHeight = round(57f * baseDensity).toInt()
+        val hBtn = round(32f * baseDensity).toInt()
         for (i in steps) {
             val opT = optimizeText(hTextText, hTextMaxWidth, i, false, boldFont, 1)
             if (opT.firstLine[opT.firstLine.lastIndex].toString() != "." && i <= hTextSizee) {
@@ -2217,21 +2295,22 @@ object createOvDialog {
                 ConstraintLayout.LayoutParams.MATCH_PARENT
             )
             setBackgroundColor("#181619".toColorInt())
+            setOnClickListener {
+                requestFocus()
+            }
+            setOnTouchListener { view, event ->
+                when (event.action) {
+                    MotionEvent.ACTION_DOWN -> {
+
+                    }
+                    MotionEvent.ACTION_UP -> {
+                        view.performClick()
+                    }
+                }
+                true
+            }
         }
 
-        val scrollContainer = ScrollView(context).apply {
-            val layoutparams1 = ConstraintLayout.LayoutParams(
-                ConstraintLayout.LayoutParams.MATCH_PARENT,
-                ConstraintLayout.LayoutParams.MATCH_PARENT
-            )
-            layoutparams1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
-            layoutparams1.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
-            layoutparams1.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
-            layoutParams = layoutparams1
-            isVerticalScrollBarEnabled = false
-            isHorizontalScrollBarEnabled = false
-        }
-        container.addView(scrollContainer)
         val hText = TextView(context).apply {
             val lp1 = ConstraintLayout.LayoutParams(
                 ConstraintLayout.LayoutParams.WRAP_CONTENT,
@@ -2255,40 +2334,843 @@ object createOvDialog {
             )
         }
         container.addView(hText)
-        val containerInsideScrollContainer = ConstraintLayout(context).apply {
-            val layoutparams1 = LinearLayout.LayoutParams(
-                ConstraintLayout.LayoutParams.MATCH_PARENT,
-                ConstraintLayout.LayoutParams.MATCH_PARENT
-            )
-            layoutParams = layoutparams1
-        }
-        scrollContainer.addView(containerInsideScrollContainer)
+
         val previewContainerWidth = actualWidth - marginLeft*2
-        val previewContainerHeight = round(previewContainerWidth / 1.258f).toInt()
+        val previewContainerHeight = round(previewContainerWidth / 1.258f).toInt() + (marginTop * 2)
+        val scrollContainerHeight = screenHeight - statusBarHeight - marginTop - hText.measuredHeight - (previewContainerMarginTop*2) - previewContainerHeight - hBtn - (marginTop*2)
+
+        val previewContainerForeground = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = getAdaptiveRadius(previewContainerWidth, SizeType.MEDIUM)
+            setStroke(round(2f*baseDensity).toInt(), "#9C9C9C".toColorInt())
+        }
         val previewContainerBackground = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
             cornerRadius = getAdaptiveRadius(previewContainerWidth, SizeType.MEDIUM)
             setColor("#08040D".toColorInt())
         }
+
         val previewContainer = ConstraintLayout(context).apply {
             val layoutparams1 = ConstraintLayout.LayoutParams(
                 previewContainerWidth,
                 previewContainerHeight
             )
             layoutparams1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
-            layoutparams1.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
+            layoutparams1.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
+            layoutparams1.topToBottom = hText.id
+            layoutparams1.setMargins(0,previewContainerMarginTop,0,0)
             layoutParams = layoutparams1
             background = previewContainerBackground
+            foreground = previewContainerForeground
+            id = View.generateViewId()
+        }
+        val previewAdapter = CarouselsAdapter(context, addCardToCarousel = {}, clickOnItem = {}, true, localLayersList, previewContainerWidth)
+        val recyclerView = RecyclerView(context).apply {
+            val layoutparams1 = ConstraintLayout.LayoutParams(
+                previewContainerWidth,
+                screenHeight
+            )
+            layoutparams1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
+            layoutparams1.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
+            layoutparams1.setMargins(0,round(marginTop*1.5f).toInt(),0,0)
+            layoutParams = layoutparams1
+            layoutManager = LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false)
+            adapter = previewAdapter
+            val newId = View.generateViewId()
+            id = newId
+        }
+        previewContainer.addView(recyclerView)
+
+
+        fun createChildWrapper(startsInfo1: OverLayLayer.CreateCarouselPage, positionn: Int): objectData2 {
+            val elType = if (startsInfo1.carouselType == CarouselType.Music || startsInfo1.carouselType == CarouselType.PlaylistNMusic) {
+                ElementType.Music} else if (startsInfo1.carouselType == CarouselType.Manga) {
+                ElementType.Manga} else if (startsInfo1.carouselType == CarouselType.Playlist) {
+                ElementType.Playlist} else {ElementType.Anime}
+            val childWrapper = objectData2(
+                page = 0,
+                position = positionn,
+                name = "Карточка ${positionn+1}",
+                showName = startsInfo1.childsShowName,
+                namePosition = startsInfo1.childsNamePosition,
+                length = 1L,
+                alreadyWatched = 1L,
+                image = null,
+                childs = emptyList(),
+                elementType = elType,
+                width = if (elType == ElementType.Anime || elType == ElementType.Manga) {round(160f*baseDensity).toInt()} else if (elType == ElementType.Music && (startsInfo1.layoutType == null || startsInfo1.layoutType == 1)) {round(308f*baseDensity).toInt()} else if (elType == ElementType.Music) {round(92f*baseDensity).toInt()} else {round(160f*baseDensity).toInt()},
+                height = if (elType == ElementType.Anime || elType == ElementType.Manga) {round(229f*baseDensity).toInt()} else if (elType == ElementType.Music && (startsInfo1.layoutType == null || startsInfo1.layoutType == 1)) {round(308f*baseDensity).toInt()} else if (elType == ElementType.Music) {round(92f*baseDensity).toInt()} else {round(160f*baseDensity).toInt()}
+            )
+            return childWrapper
         }
 
         fun createCarouselPreview(startsInfo1: OverLayLayer.CreateCarouselPage) {
-
+            val childss = mutableListOf<objectData2>()
+            if (startsInfo1.layoutType == null || startsInfo1.layoutType == 1) {
+                for (i in 0 until 4) {
+                    val child = createChildWrapper(startsInfo1, i)
+                    childss.add(child)
+                }
+            }
+            else {
+                val maxObjInOneLine = startsInfo1.maxObjectsInOneLine
+                val maxLines = startsInfo1.maxLines
+                val amount = if (maxObjInOneLine == null && maxLines != null) {4*maxLines} else if (maxObjInOneLine == null) {4} else {(maxLines ?: 1) * (maxObjInOneLine ?: 1)}
+                for (i in 0 until amount) {
+                    val child = createChildWrapper(startsInfo1, i)
+                    childss.add(child)
+                }
+            }
+            val carouselWrapper = objectData2(
+                id = 0L,
+                page = 0,
+                position = 0,
+                name = startsInfo1.name,
+                length = 1L,
+                alreadyWatched = 0,
+                elementType = ElementType.Carousel,
+                childs = childss,
+                childsCornerRadius = startsInfo1.childsCornerRadius,
+                childsShowName = startsInfo1.childsShowName,
+                childsNamePosition = startsInfo1.childsNamePosition,
+                childsShowAlreadyWatchedLine = startsInfo1.childsShowAlreadyWatchedLine,
+                layoutType = startsInfo1.layoutType,
+                maxObjectsInOneLine = startsInfo1.maxObjectsInOneLine,
+                maxLines = startsInfo1.maxLines,
+                dovodchik = startsInfo1.dovodchik,
+                showDovodchikDots = true,
+                carouselType = startsInfo1.carouselType,
+                carouselCollectionType = startsInfo1.carouselCollectionType
+            )
+            previewAdapter.submitList(listOf<objectData2>(carouselWrapper))
         }
-        containerInsideScrollContainer.addView(previewContainer)
+        container.addView(previewContainer)
+        createCarouselPreview(startsInfo)
 
+        val scrollContainerBackgroundDrawable = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = getAdaptiveRadius(previewContainerWidth, SizeType.MEDIUM)
+            setColor("#29262C".toColorInt())
+        }
+        val scrollContainerBackground = ImageView(context).apply {
+            val layoutparams1 = ConstraintLayout.LayoutParams(
+                previewContainerWidth,
+                scrollContainerHeight
+            )
+            layoutparams1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
+            layoutparams1.topToBottom = previewContainer.id
+            layoutparams1.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
+            layoutparams1.setMargins(0,previewContainerMarginTop,0,0)
+            layoutParams = layoutparams1
+            background = scrollContainerBackgroundDrawable
+        }
+        container.addView(scrollContainerBackground)
+        val scrollContainer = ScrollView(context).apply {
+            val layoutparams1 = ConstraintLayout.LayoutParams(
+                ConstraintLayout.LayoutParams.MATCH_PARENT,
+                scrollContainerHeight
+            )
+            layoutparams1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
+            layoutparams1.topToBottom = previewContainer.id
+            layoutparams1.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
+            layoutparams1.setMargins(0,previewContainerMarginTop,0,0)
+            layoutParams = layoutparams1
+            isVerticalScrollBarEnabled = false
+            isHorizontalScrollBarEnabled = false
+            val paddingHorizontal = round((screenWidth-previewContainerWidth).toFloat() / 2f).toInt()
+            setPadding(paddingHorizontal, 0, paddingHorizontal,0)
+            id = View.generateViewId()
+        }
+        container.addView(scrollContainer)
+
+        val scrollContainerForegroundDrawable = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = getAdaptiveRadius(previewContainerWidth, SizeType.MEDIUM)
+            setStroke(round(1f*baseDensity).toInt(), "#809C9C9C".toColorInt())
+        }
+        val scrollContainerForeground = ImageView(context).apply {
+            val layoutparams1 = ConstraintLayout.LayoutParams(
+                previewContainerWidth,
+                scrollContainerHeight
+            )
+            layoutparams1.startToStart = scrollContainer.id
+            layoutparams1.topToTop = scrollContainer.id
+            layoutparams1.endToEnd = scrollContainer.id
+            layoutParams = layoutparams1
+            foreground = scrollContainerForegroundDrawable
+        }
+        container.addView(scrollContainerForeground)
+
+        val containerInsideScrollContainer = ConstraintLayout(context).apply {
+            val layoutparams1 = LinearLayout.LayoutParams(
+                previewContainerWidth,
+                ConstraintLayout.LayoutParams.WRAP_CONTENT
+            )
+            layoutParams = layoutparams1
+        }
+        scrollContainer.addView(containerInsideScrollContainer)
+
+
+        var choiceIcoRow: ConstraintLayout? = null
+        var presetsRow: ConstraintLayout? = null
+        var presetsRowlp1: ConstraintLayout.LayoutParams? = null
+        var choiceIcoRowlp1: ConstraintLayout.LayoutParams? = null
+        var showIcoRow: ConstraintLayout? = null
+        var showIcoRowlp1: ConstraintLayout.LayoutParams? = null
+        var carouselType: ConstraintLayout? = null
+        var carouselTypelp1: ConstraintLayout.LayoutParams? = null
+        var carouselMaketType: ConstraintLayout? = null
+        var carouselMaketTypelp1: ConstraintLayout.LayoutParams? = null
+        var gridSizes: ConstraintLayout? = null
+        var gridSizeslp1: ConstraintLayout.LayoutParams? = null
+        var showCardsName: ConstraintLayout? = null
+        var showCardsNamelp1: ConstraintLayout.LayoutParams? = null
+        var cardsNamePosition: ConstraintLayout? = null
+        var cardsNamePositionlp1: ConstraintLayout.LayoutParams? = null
+        var showAlreadyWatchedLine: ConstraintLayout? = null
+        var showAlreadyWatchedLinelp1: ConstraintLayout.LayoutParams? = null
+        var cardsCornerRadius: ConstraintLayout? = null
+        var cardsCornerRadiuslp1: ConstraintLayout.LayoutParams? = null
+        var turnOnDovodchik: ConstraintLayout? = null
+        var turnOnDovodchiklp1: ConstraintLayout.LayoutParams? = null
+        var showDovodchikDots: ConstraintLayout? = null
+        var showDovodchikDotslp1: ConstraintLayout.LayoutParams? = null
+
+        val animStates = mutableListOf<AnimState>()
+
+        fun dropAndLiftAnimForRows(animSource: ConstraintLayout? = null, animTarget: ConstraintLayout? = null, animTargetlp1: ConstraintLayout.LayoutParams? = null, nextView: ConstraintLayout? = null, nextViewlp1: ConstraintLayout.LayoutParams? = null, currentSwitchStatee: Boolean, id: Int, includeNextView: Boolean = true) {
+            val state = if (id > animStates.size-1) {
+                animStates.add(AnimState(currentSwitchStatee, false, false))
+                animStates.last()
+            } else {
+                animStates[id]
+            }
+            val animTargett = animTarget
+            val nextVieww = nextView
+            val nextViewwlp1 = nextViewlp1
+            val animTargettlp1 = animTargetlp1
+            val animSourcee = animSource
+            state.currentSwitchState = currentSwitchStatee
+            if ((!includeNextView && animTargett != null && animTargettlp1 != null && animSourcee != null) || (includeNextView && animTargett != null && nextVieww != null && nextViewwlp1 != null && animTargettlp1 != null && animSourcee != null)) {
+                if (state.currentSwitchState) {
+                    if (animTargett.isGone) {
+                        animTargett.visibility = View.VISIBLE
+                        if (includeNextView) {
+                            nextViewwlp1!!.topToBottom = animTargett.id
+                            nextVieww!!.invalidate()
+                            nextVieww.requestLayout()
+                        }
+                        state.isDropAnimationPlaying = true
+                        ValueAnimator.ofFloat(0f,1f).apply {
+                            duration = 250
+                            addUpdateListener {
+                                animTargett.alpha = it.animatedValue as Float
+                            }
+                        }.start()
+                        ValueAnimator.ofFloat(0f,elementHeight.toFloat()).apply {
+                            duration = 250
+                            addUpdateListener {
+                                val av = it.animatedValue as Float
+                                animTargettlp1.setMargins(0, av.toInt(),0,0)
+                                animTargett.invalidate()
+                                animTargett.requestLayout()
+                            }
+                            addListener(onEnd = {state.isDropAnimationPlaying = false})
+                        }.start()
+                    }
+                    else if (state.isLiftAnimationPlaying) {
+                        state.isDropAnimationPlaying = true
+                        state.isLiftAnimationPlaying = false
+                        val animationProgress = 100 - if (animTargett.marginTop == 0) {0} else {(animTargett.marginTop.toFloat() / (elementHeight.toFloat() / 100)).roundToInt()}
+                        val durationn = ((250f / 100f) * animationProgress.toFloat()).roundToInt()
+                        val alphaNow = animTargett.alpha
+                        val marginTopNow = animTargett.marginTop
+                        ValueAnimator.ofFloat(alphaNow, 1f).apply {
+                            duration = durationn.toLong()
+                            addUpdateListener {
+                                animTargett.alpha = it.animatedValue as Float
+                            }
+                        }.start()
+                        ValueAnimator.ofFloat(marginTopNow.toFloat(), elementHeight.toFloat()).apply {
+                            duration = durationn.toLong()
+                            addUpdateListener {
+                                val av = it.animatedValue as Float
+                                animTargettlp1.setMargins(0, av.toInt(),0,0)
+                                animTargett.invalidate()
+                                animTargett.requestLayout()
+                            }
+                            addListener(onEnd = {state.isDropAnimationPlaying = false})
+                        }.start()
+                    }
+                }
+                else {
+                    if (animTargett.visibility == View.VISIBLE && !state.isDropAnimationPlaying) {
+                        state.isLiftAnimationPlaying = true
+                        ValueAnimator.ofFloat(1f,0f).apply {
+                            duration = 250
+                            addUpdateListener {
+                                animTargett.alpha = it.animatedValue as Float
+                            }
+                        }.start()
+                        ValueAnimator.ofFloat(elementHeight.toFloat(), 0f).apply {
+                            duration = 250
+                            addUpdateListener {
+                                val av = it.animatedValue as Float
+                                animTargettlp1.setMargins(0, av.toInt(),0,0)
+                                animTargett.invalidate()
+                                animTargett.requestLayout()
+                            }
+                            addListener(onEnd = {
+                                if (includeNextView) {
+                                    nextViewwlp1!!.topToBottom = animSourcee.id
+                                    nextVieww!!.invalidate()
+                                    nextVieww.requestLayout()
+                                }
+                                animTargett.visibility = View.GONE
+                                state.isLiftAnimationPlaying = false
+                            })
+                        }.start()
+                    }
+                    else {
+                        animTargett.visibility = View.VISIBLE
+                        state.isDropAnimationPlaying = false
+                        state.isLiftAnimationPlaying = true
+                        val animationProgress = if (animTargett.marginTop == 0) {0} else {(animTargett.marginTop.toFloat() / (elementHeight.toFloat() / 100)).roundToInt()}
+                        val durationn = ((250f / 100f) * animationProgress.toFloat()).roundToInt()
+                        val alphaNow = animTargett.alpha
+                        val marginTopNow = animTargett.marginTop
+                        ValueAnimator.ofFloat(alphaNow, 0f).apply {
+                            duration = durationn.toLong()
+                            addUpdateListener {
+                                animTargett.alpha = it.animatedValue as Float
+                            }
+                        }.start()
+                        ValueAnimator.ofFloat(marginTopNow.toFloat(), 0f).apply {
+                            duration = durationn.toLong()
+                            addUpdateListener {
+                                val av = it.animatedValue as Float
+                                animTargettlp1.setMargins(0, av.toInt(),0,0)
+                                animTargett.invalidate()
+                                animTargett.requestLayout()
+                            }
+                            addListener(onEnd = {
+                                if (includeNextView) {
+                                    nextViewwlp1!!.topToBottom = animSourcee.id
+                                    nextVieww!!.invalidate()
+                                    nextVieww.requestLayout()
+                                }
+                                animTargett.visibility = View.GONE
+                                state.isLiftAnimationPlaying = false
+                            })
+                        }.start()
+                    }
+                }
+            }
+        }
+
+        val ml = round(previewContainerWidth.toFloat() / 28.42f).toInt().coerceIn(0, round(32f*baseDensity).toInt())
+        val nameInputTextSizee = getTextSizeByHeight(round(hBtn.toFloat() / 2f).toInt(), font)
+        val nameInput = createOutlinedTextField(context, (previewContainerWidth - (ml * 2)), SizeType.SMALL, hBtn, "Название", maxLiness = 1, alreadyEnteredText = if (startsInfo.name != "") { startsInfo.name } else { null }, textSizee = nameInputTextSizee, gravityy = Gravity.CENTER_VERTICAL)
+        val nameInputlp1 = nameInput.layoutParams as ConstraintLayout.LayoutParams
+        nameInputlp1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
+        nameInputlp1.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
+        nameInputlp1.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
+        nameInputlp1.setMargins(0, marginLeft,0,0)
+        nameInput.layoutParams = nameInputlp1
+        nameInput.id = View.generateViewId()
+        containerInsideScrollContainer.addView(nameInput)
+        var nameInputt: TextInputEditText? = null
+        for (k in 0 until nameInput.childCount) {
+            val obj = nameInput.getChildAt(k)
+            if (obj is TextInputEditText) {
+                nameInputt = obj
+                break
+            }
+            else if (obj is FrameLayout) {
+                for (h in 0 until obj.childCount) {
+                    val objj = obj.getChildAt(h)
+                    if (objj is TextInputEditText) {
+                        nameInputt = objj
+                        break
+                    }
+                }
+            }
+        }
+        nameInputt?.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                info.name = nameInputt.text.toString()
+                createCarouselPreview(info)
+            }
+            override fun afterTextChanged(s: Editable?) {}
+        })
+
+        presetsRow = createBSDButton("Пресеты", null, true, context, previewContainerWidth, elementHeight)
+        presetsRowlp1 = presetsRow.layoutParams as ConstraintLayout.LayoutParams
+        presetsRowlp1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
+        presetsRowlp1.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
+        presetsRowlp1.topToBottom = nameInput.id
+        presetsRow.layoutParams = presetsRowlp1
+        presetsRow.id = View.generateViewId()
+        containerInsideScrollContainer.addView(presetsRow)
+
+
+        val showIcoRowAnimId = lastDropAndLiftAnimForRowsId + 1
+        lastDropAndLiftAnimForRowsId += 1
+        showIcoRow = createSwitchButtonRow(context, startsInfo.showIco, previewContainerWidth, elementHeight, "Показывать иконку", null,
+            callback1 = {
+                value -> run {
+                    info.showIco = value
+                    createCarouselPreview(info)
+                    dropAndLiftAnimForRows(showIcoRow, choiceIcoRow, choiceIcoRowlp1, carouselType, carouselTypelp1, value, showIcoRowAnimId)
+                }
+            })
+        showIcoRowlp1 = showIcoRow.layoutParams as ConstraintLayout.LayoutParams
+        showIcoRowlp1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
+        showIcoRowlp1.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
+        showIcoRowlp1.topToBottom = presetsRow.id
+        showIcoRow.id = View.generateViewId()
+        showIcoRow.layoutParams = showIcoRowlp1
+        showIcoRow.elevation = 10f
+        containerInsideScrollContainer.addView(showIcoRow)
+
+        choiceIcoRow = createBSDButton("Иконка", null, false, context, previewContainerWidth, elementHeight)
+        choiceIcoRowlp1 = choiceIcoRow.layoutParams as ConstraintLayout.LayoutParams
+        choiceIcoRowlp1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
+        choiceIcoRowlp1.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
+        choiceIcoRowlp1.topToTop = showIcoRow.id
+        choiceIcoRow.id = View.generateViewId()
+        if (startsInfo.showIco) {
+            choiceIcoRowlp1.setMargins(0,elementHeight,0,0)
+        }
+        choiceIcoRow.layoutParams = choiceIcoRowlp1
+        if (!startsInfo.showIco) {
+            choiceIcoRow.visibility = View.GONE
+            choiceIcoRow.alpha = 0f
+        }
+        val choiceIcoButtonSize = round(elementHeight.toFloat() / 1.786f).toInt()
+        val choiceIcoButtonBackgroundDrawable = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = getAdaptiveRadius(choiceIcoButtonSize, SizeType.SMALL)
+            setColor("#BF1B1B1B".toColorInt())
+            setStroke(round(1f*baseDensity).toInt(), "#809C9C9C".toColorInt())
+        }
+        val choiceIcoButtonContainer = ConstraintLayout(context).apply {
+            val lp1 = ConstraintLayout.LayoutParams(
+                choiceIcoButtonSize,
+                choiceIcoButtonSize
+            )
+            lp1.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
+            lp1.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
+            lp1.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID
+            lp1.setMargins(0,0,calculateLeftAndRightMarginForRows(previewContainerWidth).marginRight,0)
+            layoutParams = lp1
+            background = choiceIcoButtonBackgroundDrawable
+            tag = "choiceIcoButton"
+        }
+        val choiceIcoButton = ImageView(context).apply {
+            val layoutparams1 = ConstraintLayout.LayoutParams(
+                ConstraintLayout.LayoutParams.MATCH_PARENT,
+                ConstraintLayout.LayoutParams.MATCH_PARENT
+            )
+            layoutparams1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
+            layoutparams1.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
+            layoutParams = layoutparams1
+            setImageResource(R.drawable.add_ico)
+            imageTintList = ColorStateList.valueOf("#B0B0B0".toColorInt())
+            scaleType = ImageView.ScaleType.CENTER_CROP
+            if (startsInfo.ico != null) {
+                visibility = View.GONE
+            }
+        }
+        val choiceIcoButton2 = CardView(context).apply {
+            val layoutparams1 = ConstraintLayout.LayoutParams(
+                ConstraintLayout.LayoutParams.MATCH_PARENT,
+                ConstraintLayout.LayoutParams.MATCH_PARENT
+            )
+            layoutparams1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
+            layoutparams1.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
+            layoutParams = layoutparams1
+            radius = 10000f
+            if (startsInfo.ico == null) {
+                visibility = View.GONE
+            }
+        }
+        val choiceIcoButton2Image = ImageView(context).apply {
+            val layoutparams1 = ConstraintLayout.LayoutParams(
+                ConstraintLayout.LayoutParams.MATCH_PARENT,
+                ConstraintLayout.LayoutParams.MATCH_PARENT
+            )
+            layoutparams1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
+            layoutparams1.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
+            layoutParams = layoutparams1
+            scaleType = ImageView.ScaleType.CENTER_CROP
+            loadImage(startsInfo.ico)
+        }
+        choiceIcoButton2.addView(choiceIcoButton2Image)
+        choiceIcoButtonContainer.addView(choiceIcoButton2)
+        choiceIcoButtonContainer.addView(choiceIcoButton)
+        choiceIcoRow.addView(choiceIcoButtonContainer)
+        containerInsideScrollContainer.addView(choiceIcoRow)
+        choiceIcoButtonContainer.setOnClickListener {
+            choiceIcoButtonContainer.requestFocus()
+            choiceIco()
+        }
+
+        carouselType = createDropdownRow(context, previewContainerWidth, elementHeight, "Тип карусели", null, listOf(Pair("Аниме",
+            BsdButtonsTags.none), Pair("Музыка",
+            BsdButtonsTags.none), Pair("Манга",
+            BsdButtonsTags.none), Pair("Плейлисты",
+            BsdButtonsTags.none), Pair("Аниме и манга",
+            BsdButtonsTags.none), Pair("Плейлисты и музыка",
+            BsdButtonsTags.none)), onItemSelected = {name, tag -> run {
+                    info.carouselType = when (name) {
+                        "Аниме" -> { CarouselType.Anime }
+                        "Музыка" -> { CarouselType.Music }
+                        "Манга" -> { CarouselType.Manga }
+                        "Плейлисты" -> { CarouselType.Playlist }
+                        "Аниме и манга" -> { CarouselType.AnimeNManga }
+                        else -> { CarouselType.PlaylistNMusic }
+                    }
+                    createCarouselPreview(info)
+                }
+            })
+
+        carouselTypelp1 = carouselType.layoutParams as ConstraintLayout.LayoutParams
+        carouselTypelp1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
+        carouselTypelp1.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
+        carouselTypelp1.topToBottom = if (startsInfo.showIco) {choiceIcoRow.id} else {showIcoRow.id}
+        carouselType.layoutParams = carouselTypelp1
+        carouselType.id = View.generateViewId()
+        containerInsideScrollContainer.addView(carouselType)
+
+        val carouselMaketTypeAnimId = lastDropAndLiftAnimForRowsId + 1
+        lastDropAndLiftAnimForRowsId += 1
+        carouselMaketType = createSegmentedButtonRow(context, previewContainerWidth, elementHeight, listOf(
+            segmentedButtonOptions("Обычный", null, startsInfo.layoutType == 1 || startsInfo.layoutType == null),
+            segmentedButtonOptions("Сетка", null, startsInfo.layoutType == 0)
+        ), null, "Тип макета карусели", callback = {
+            value -> run {
+                info.layoutType = if (value == 1f) 0 else 1
+                createCarouselPreview(info)
+                dropAndLiftAnimForRows(carouselMaketType, gridSizes, gridSizeslp1, showCardsName, showCardsNamelp1, if (value == 1f) true else false, carouselMaketTypeAnimId)
+            }
+        })
+
+        carouselMaketTypelp1 = carouselMaketType.layoutParams as ConstraintLayout.LayoutParams
+        carouselMaketTypelp1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
+        carouselMaketTypelp1.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
+        carouselMaketTypelp1.topToBottom = carouselType.id
+        carouselMaketType.layoutParams = carouselMaketTypelp1
+        carouselMaketType.id = View.generateViewId()
+        containerInsideScrollContainer.addView(carouselMaketType)
+
+        gridSizes = createBSDButton("Размеры сетки", null, false, context, previewContainerWidth, elementHeight)
+        gridSizeslp1 = gridSizes.layoutParams as ConstraintLayout.LayoutParams
+        gridSizeslp1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
+        gridSizeslp1.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
+        if (startsInfo.layoutType == 1 || startsInfo.layoutType == null) {
+            gridSizeslp1.topToTop = carouselMaketType.id
+            gridSizes.visibility = View.GONE
+            gridSizes.alpha = 0f
+        }
+        else {
+            gridSizeslp1.topToTop = carouselMaketType.id
+            gridSizeslp1.setMargins(0,elementHeight,0,0)
+        }
+        gridSizes.id = View.generateViewId()
+        gridSizes.layoutParams = gridSizeslp1
+        containerInsideScrollContainer.addView(gridSizes)
+
+        val inputsTextSizee = getTextSizeByHeight(round(choiceIcoButtonSize.toFloat() / 2f).toInt(), font)
+        val inputsColumsWidth = calculateIdealWidthForOutlinedTextFieldForOvDialog(inputsTextSizee, "Столбцов", context, paddingHorizontal = round(8f*baseDensity).toInt(), twoSidePadding = true, gravityy = Gravity.CENTER_VERTICAL)
+        val inputsLinesWidth = calculateIdealWidthForOutlinedTextFieldForOvDialog(inputsTextSizee, "Строк", context, paddingHorizontal = round(8f*baseDensity).toInt(), twoSidePadding = true, gravityy = Gravity.CENTER_VERTICAL)
+        val inputsWidth = max(inputsColumsWidth, inputsLinesWidth)
+        val columnsInput = createOutlinedTextField(context, inputsWidth, SizeType.SMALL, choiceIcoButtonSize, "Столбцов", maxLiness = 1, alreadyEnteredText = startsInfo.maxObjectsInOneLine?.toString(), textSizee = inputsTextSizee, gravityy = Gravity.CENTER, inputTypee = InputType.TYPE_CLASS_NUMBER, paddingHorizontal = 0)
+        val linesInput = createOutlinedTextField(context, inputsWidth, SizeType.SMALL, choiceIcoButtonSize, "Строк", maxLiness = 1, alreadyEnteredText = startsInfo.maxObjectsInOneLine?.toString(), textSizee = inputsTextSizee, gravityy = Gravity.CENTER, inputTypee = InputType.TYPE_CLASS_NUMBER, paddingHorizontal = 0)
+        val linesInputlp1 = linesInput.layoutParams as ConstraintLayout.LayoutParams
+        linesInputlp1.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
+        linesInputlp1.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
+        linesInputlp1.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID
+        linesInputlp1.setMargins(0,0,calculateLeftAndRightMarginForRows(previewContainerWidth).marginRight,0)
+        linesInput.layoutParams = linesInputlp1
+        linesInput.id = View.generateViewId()
+        linesInput.tag = "linesInput"
+
+        val columnsInputlp1 = columnsInput.layoutParams as ConstraintLayout.LayoutParams
+        columnsInputlp1.endToStart = linesInput.id
+        columnsInputlp1.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
+        columnsInputlp1.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID
+        columnsInputlp1.setMargins(0,0,calculateLeftAndRightMarginForRows(previewContainerWidth).marginRight,0)
+        columnsInput.layoutParams = columnsInputlp1
+        columnsInput.id = View.generateViewId()
+        columnsInput.tag = "columnsInput"
+
+        var linesInputt: TextInputEditText? = null
+        for (k in 0 until linesInput.childCount) {
+            val obj = linesInput.getChildAt(k)
+            if (obj is TextInputEditText) {
+                linesInputt = obj
+                break
+            }
+            else if (obj is FrameLayout) {
+                for (h in 0 until obj.childCount) {
+                    val objj = obj.getChildAt(h)
+                    if (objj is TextInputEditText) {
+                        linesInputt = objj
+                        break
+                    }
+                }
+            }
+        }
+        linesInputt?.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                val maxLinesStr = linesInputt.text.toString()
+                info.maxLines = if (maxLinesStr == "0") 1 else if (maxLinesStr == "") null else maxLinesStr.toInt()
+                createCarouselPreview(info)
+            }
+            override fun afterTextChanged(s: Editable?) {
+                val maxLinesStr = linesInputt.text.toString()
+                if (maxLinesStr == "0") {
+                    linesInputt.setText("1")
+                }
+            }
+        })
+
+        var columnsInputt: TextInputEditText? = null
+        for (k in 0 until columnsInput.childCount) {
+            val obj = columnsInput.getChildAt(k)
+            if (obj is TextInputEditText) {
+                columnsInputt = obj
+                break
+            }
+            else if (obj is FrameLayout) {
+                for (h in 0 until obj.childCount) {
+                    val objj = obj.getChildAt(h)
+                    if (objj is TextInputEditText) {
+                        columnsInputt = objj
+                        break
+                    }
+                }
+            }
+        }
+        columnsInputt?.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                val maxObjectsInOneLineStr = columnsInputt.text.toString()
+                info.maxObjectsInOneLine = if (maxObjectsInOneLineStr == "0") 1 else if (maxObjectsInOneLineStr == "") null else maxObjectsInOneLineStr.toInt()
+                createCarouselPreview(info)
+            }
+            override fun afterTextChanged(s: Editable?) {
+                val maxObjectsInOneLineStr = columnsInputt.text.toString()
+                if (maxObjectsInOneLineStr == "0") {
+                    columnsInputt.setText("1")
+                }
+            }
+        })
+
+        gridSizes.addView(linesInput)
+        gridSizes.addView(columnsInput)
+
+        val showCardsNameAnimId = lastDropAndLiftAnimForRowsId + 1
+        lastDropAndLiftAnimForRowsId += 1
+        showCardsName = createSwitchButtonRow(context, startsInfo.childsShowName, previewContainerWidth, elementHeight, "Показывать имя карточек", null, callback1 = {
+            value -> run {
+                info.childsShowName = value
+                createCarouselPreview(info)
+                dropAndLiftAnimForRows(showCardsName, cardsNamePosition, cardsNamePositionlp1, showAlreadyWatchedLine, showAlreadyWatchedLinelp1, value, showCardsNameAnimId)
+            }
+        })
+        showCardsNamelp1 = showCardsName.layoutParams as ConstraintLayout.LayoutParams
+        showCardsNamelp1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
+        showCardsNamelp1.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
+        showCardsNamelp1.topToBottom = if (startsInfo.layoutType == 1 || startsInfo.layoutType == null) {carouselMaketType.id} else {gridSizes.id}
+        showCardsName.id = View.generateViewId()
+        showCardsName.layoutParams = showCardsNamelp1
+        containerInsideScrollContainer.addView(showCardsName)
+
+        cardsNamePosition = createSegmentedButtonRow(context, previewContainerWidth, elementHeight, listOf(
+            segmentedButtonOptions("Внутри", null, startsInfo.childsNamePosition == 1 || startsInfo.childsNamePosition == null),
+            segmentedButtonOptions("Снаружи", null, startsInfo.childsNamePosition == 0)
+        ), null, "Расположение имени карточек", callback = {
+            value -> run {
+                info.childsNamePosition = if (value == 0f) 1 else 0
+                createCarouselPreview(info)
+            }
+        })
+        cardsNamePositionlp1 = cardsNamePosition.layoutParams as ConstraintLayout.LayoutParams
+        cardsNamePositionlp1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
+        cardsNamePositionlp1.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
+        cardsNamePositionlp1.topToTop = showCardsName.id
+        if (startsInfo.childsShowName) {
+            cardsNamePositionlp1.setMargins(0,elementHeight,0,0)
+        }
+        else {
+            cardsNamePosition.visibility = View.GONE
+            cardsNamePosition.alpha = 0f
+        }
+        cardsNamePosition.layoutParams = cardsNamePositionlp1
+        cardsNamePosition.id = View.generateViewId()
+        containerInsideScrollContainer.addView(cardsNamePosition)
+
+        showAlreadyWatchedLine = createSwitchButtonRow(context, startsInfo.childsShowAlreadyWatchedLine, previewContainerWidth, elementHeight, "Показывать линию просмотра у карточек", null, callback1 = {
+            value -> run {
+                info.childsShowAlreadyWatchedLine = value
+                createCarouselPreview(info)
+            }
+        })
+        showAlreadyWatchedLinelp1 = showAlreadyWatchedLine.layoutParams as ConstraintLayout.LayoutParams
+        showAlreadyWatchedLinelp1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
+        showAlreadyWatchedLinelp1.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
+        showAlreadyWatchedLinelp1.topToBottom = if (startsInfo.childsShowName) {cardsNamePosition.id} else {showCardsName.id}
+        showAlreadyWatchedLine.layoutParams = showAlreadyWatchedLinelp1
+        showAlreadyWatchedLine.id = View.generateViewId()
+        containerInsideScrollContainer.addView(showAlreadyWatchedLine)
+
+        val alreadyValue = if (startsInfo.childsCornerRadius == null || startsInfo.childsCornerRadius == SizeType.SMALL) 0f
+        else if (startsInfo.childsCornerRadius == SizeType.MEDIUM) 1f else if (startsInfo.childsCornerRadius == SizeType.LARGE) 2f
+        else if (startsInfo.childsCornerRadius == SizeType.XLARGE) 3f else 0f
+        val cardsCornerRadiusSliderRow = createSliderRow(context, previewContainerWidth, "Радиус закругления карточек", null, listOf(Pair(0f, "SMALL"), Pair(1f, "MEDIUM"), Pair(2f, "LARGE"), Pair(3f, "XLARGE")), elementHeight, true, alreadyValue, false)
+        cardsCornerRadius = cardsCornerRadiusSliderRow[0] as ConstraintLayout
+        cardsCornerRadiuslp1 = cardsCornerRadius.layoutParams as ConstraintLayout.LayoutParams
+        cardsCornerRadiuslp1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
+        cardsCornerRadiuslp1.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
+        cardsCornerRadiuslp1.topToBottom = showAlreadyWatchedLine.id
+        cardsCornerRadius.id = View.generateViewId()
+        cardsCornerRadius.layoutParams = cardsCornerRadiuslp1
+        containerInsideScrollContainer.addView(cardsCornerRadius)
+        val slider = cardsCornerRadiusSliderRow.last() as ConstraintLayout
+        val slider1 = slider.getChildAt(0) as ConstraintLayout
+        val slider2 = slider1.getChildAt(0) as ConstraintLayout
+        val sliderr = slider2.getChildAt(0) as Slider
+        sliderr.addOnChangeListener { _, value, _ ->
+            info.childsCornerRadius = when(value) {
+                0f -> SizeType.SMALL
+                1f -> SizeType.MEDIUM
+                2f -> SizeType.LARGE
+                3f -> SizeType.XLARGE
+                else -> SizeType.SMALL
+            }
+            createCarouselPreview(info)
+        }
+
+//        val turnOnDovodchikAnimId = lastDropAndLiftAnimForRowsId + 1
+//        lastDropAndLiftAnimForRowsId += 1
+        turnOnDovodchik = createSwitchButtonRow(context, startsInfo.dovodchik, previewContainerWidth, elementHeight, "Доводчик", null,
+            callback1 = {
+                value -> run {
+                    info.dovodchik = value
+                    createCarouselPreview(info)
+//                    dropAndLiftAnimForRows(turnOnDovodchik, showDovodchikDots, showDovodchikDotslp1, null, null, value, turnOnDovodchikAnimId, false)
+                }
+            }
+        )
+        turnOnDovodchiklp1 = turnOnDovodchik.layoutParams as ConstraintLayout.LayoutParams
+        turnOnDovodchiklp1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
+        turnOnDovodchiklp1.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
+        turnOnDovodchiklp1.topToBottom = cardsCornerRadius.id
+        turnOnDovodchik.id = View.generateViewId()
+        turnOnDovodchik.layoutParams = turnOnDovodchiklp1
+        containerInsideScrollContainer.addView(turnOnDovodchik)
+
+
+        // Show dovodcik dots временно не доступен из-за бага с отключением доводчика при выключенной этой функции, будет исправлено в ближайшем апдейте
+
+//        showDovodchikDots = createSwitchButtonRow(context, startsInfo.dovodchik, previewContainerWidth, elementHeight, "Показывать точки доводчика", null,
+//            callback1 = {
+//                value -> run {
+//                    info.showDovodchikDots = value
+//                    createCarouselPreview(info)
+//                }
+//            }
+//        )
+//        showDovodchikDotslp1 = showDovodchikDots.layoutParams as ConstraintLayout.LayoutParams
+//        showDovodchikDotslp1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
+//        showDovodchikDotslp1.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
+//        showDovodchikDotslp1.topToTop = turnOnDovodchik.id
+//        showDovodchikDots.id = View.generateViewId()
+//        if (startsInfo.showDovodchikDots) {
+//            showDovodchikDotslp1.setMargins(0,elementHeight,0,0)
+//        }
+//        else {
+//            showDovodchikDots.visibility = View.GONE
+//            showDovodchikDots.alpha = 0f
+//        }
+//        showDovodchikDots.layoutParams = showDovodchikDotslp1
+//        containerInsideScrollContainer.addView(showDovodchikDots)
+
+        val addButtonBg = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = getAdaptiveRadius(previewContainerWidth, SizeType.SMALL)
+            setColor("#805EFF56".toColorInt())
+        }
+
+        val addButtonContainer = ConstraintLayout(context).apply {
+            val layoutparams1 = ConstraintLayout.LayoutParams(
+                previewContainerWidth,
+                hBtn
+            )
+            layoutparams1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
+            layoutparams1.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID
+            layoutparams1.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
+            layoutparams1.setMargins(0,0,0,marginTop)
+            layoutParams = layoutparams1
+            background = addButtonBg
+            tag = "add_card_button"
+            elevation = 101f
+        }
+
+        val addButtonTextHeight = round(hBtn.toFloat() / 1.82f).toInt()
+        val addButtonTextSize = getTextSizeByHeight(addButtonTextHeight, font)
+
+        val addButtonText = TextView(context).apply {
+            val layoutparams1 = ConstraintLayout.LayoutParams(
+                ConstraintLayout.LayoutParams.WRAP_CONTENT,
+                ConstraintLayout.LayoutParams.WRAP_CONTENT
+            )
+            layoutparams1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
+            layoutparams1.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
+            layoutparams1.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID
+            layoutparams1.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
+            layoutParams = layoutparams1
+            includeFontPadding = false
+            typeface = font
+            setTextSize(TypedValue.COMPLEX_UNIT_PX, addButtonTextSize)
+            text = "Добавить"
+            setTextColor("#FFFFFF".toColorInt())
+        }
+
+        addButtonContainer.addView(addButtonText)
+        container.addView(addButtonContainer)
+        addButtonContainer.setOnClickListener {
+            addButtonContainer.requestFocus()
+            apply(info)
+        }
+
+        val job = context.lifecycleOwner?.lifecycleScope?.launch {
+            resultSenderViewModel.results.collect { (key, data) -> run {
+                when (key) {
+                    ResultKeys.CREATE_CAROUSEL_PAGE_CHANGE_ICO -> {
+                        val dataa = data as ImageData
+                        choiceIcoButton2.visibility = View.VISIBLE
+                        choiceIcoButton.visibility = View.GONE
+                        choiceIcoButton2Image.loadImage(dataa)
+                        info.ico = dataa
+                        createCarouselPreview(info)
+                    }
+                }
+            }
+            }
+        }
+        if (layer is Layer.OverLay && job != null) {
+            layer.activeJobs.add(job)
+        }
+
+        return container
     }
     @SuppressLint("ClickableViewAccessibility")
-    fun CreateAnimePage(context: Context, startsInfo: OverLayLayer.CreateAnimePage, resultSenderViewModel: ResultSenderViewModel, addCard: (List<episodeInfo>) -> Unit, changeImage: (Int) -> Unit, openGenreChoice: (String) -> Unit) : ConstraintLayout {
+    fun CreateAnimePage(context: Context, startsInfo: OverLayLayer.CreateAnimePage, resultSenderViewModel: ResultSenderViewModel, addCard: (List<episodeInfo>) -> Unit, changeImage: (Int) -> Unit, openGenreChoice: (String) -> Unit, layer: Layer) : ConstraintLayout {
         val font = context.resources.getFont(R.font.google_sans_regular)
         val boldFont = context.resources.getFont(R.font.google_sans_bold)
         val isLandscape = screenWidth > screenHeight
@@ -2341,11 +3223,6 @@ object createOvDialog {
             layoutParams = layoutparams1
             elevation = 100f
             background = containerBackgroundDrawable
-        }
-        if (screenWidth > maxPageWidth) {
-            val paddingHorizontal = round((screenWidth-maxPageWidth).toFloat() / 2f).toInt()
-
-            containerr.setPadding(paddingHorizontal,0,paddingHorizontal,0)
         }
         val blobSize = containerWidth * 2
         val blobDrawable = blobInit(blobSize, "#C2A6FF", floatArrayOf(0f,1f), 0.6f)
@@ -2400,7 +3277,7 @@ object createOvDialog {
             layoutparams1.topToTop = hTextId
             layoutparams1.bottomToBottom = hTextId
             layoutparams1.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
-            layoutparams1.setMargins(0,0,marginTop,0)
+            layoutparams1.setMargins(0,0,marginTop,if(actualWidth > screenWidth) {(screenWidth - actualWidth)} else {0})
             layoutParams = layoutparams1
             background = extraButtonBgDrawable
         }
@@ -2429,9 +3306,11 @@ object createOvDialog {
             layoutparams1.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
             layoutparams1.setMargins(0,bannerMarginTop,0,0)
             layoutParams = layoutparams1
-            val paddingHorizontal = ((containerWidth - scrollContainerWidth).toFloat() / 2f).toInt()
-            setPadding(paddingHorizontal,0,paddingHorizontal,(marginTop*2+hBtn))
+            val paddingHorizontal = ((screenWidth - scrollContainerWidth).toFloat() / 2f).toInt()
+            setPadding(paddingHorizontal,0,paddingHorizontal,(bannerMarginTop+hBtn))
             tag = "scroll_container"
+            isVerticalScrollBarEnabled = false
+            isHorizontalScrollBarEnabled = false
         }
         val container = ConstraintLayout(context).apply {
             layoutParams = LinearLayout.LayoutParams(
@@ -2511,13 +3390,14 @@ object createOvDialog {
         banner.addView(bannerAddIco)
         container.addView(banner)
         banner.setOnClickListener {
+            banner.requestFocus()
             changeImage(-1)
         }
 //        buttonsList.add(banner)
 
         val nameInputId = View.generateViewId()
         val nameInputTextSizee = getTextSizeByHeight(round(nameInputHeight.toFloat() / 2f).toInt(), font)
-        val nameInput = createOutlinedTextFieldForOvDialog(context, nameInputWidth, SizeType.SMALL, nameInputHeight, "Введите название", Gravity.CENTER_VERTICAL,nameInputTextSizee,1, startsInfo.name)
+        val nameInput = createOutlinedTextField(context, nameInputWidth, SizeType.SMALL, nameInputHeight, "Введите название", Gravity.CENTER_VERTICAL,nameInputTextSizee,1, startsInfo.name)
         val lp1 = nameInput.layoutParams as ConstraintLayout.LayoutParams
         lp1.startToEnd = bannerId
         lp1.topToTop = bannerId
@@ -2564,7 +3444,7 @@ object createOvDialog {
             id = authorInputId
             tag = "author_input"
         }
-        val authorInput = createOutlinedTextFieldForOvDialog(context, nameInputWidth,SizeType.SMALL, nameInputHeight, "Автор", Gravity.CENTER_VERTICAL, nameInputTextSizee,1, startsInfo.author)
+        val authorInput = createOutlinedTextField(context, nameInputWidth,SizeType.SMALL, nameInputHeight, "Автор", Gravity.CENTER_VERTICAL, nameInputTextSizee,1, startsInfo.author)
         val lp2 = authorInput.layoutParams as ConstraintLayout.LayoutParams
         lp2.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
         lp2.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
@@ -2732,6 +3612,9 @@ object createOvDialog {
             layoutParams = layoutparams1
             background = genreContainerBackgroundDrawable
             tag = "genre_container"
+            setOnClickListener {
+                requestFocus()
+            }
         }
         genreContainer.addView(genreGridView)
         container.addView(genreContainer)
@@ -2962,7 +3845,7 @@ object createOvDialog {
             val descriptionInputHeight = round(descriptionInputWidth.toFloat() / 2.83f).toInt()
             val descriptionInputMarginTop = round(marginTop.toFloat() * 1.8f).toInt()
             val descriptionInputId = View.generateViewId()
-            val descriptionInput = createOutlinedTextFieldForOvDialog(context, descriptionInputWidth,SizeType.SMALL, descriptionInputHeight, "Введите описание", Gravity.TOP, nameInputTextSizee, null, startsInfo.description)
+            val descriptionInput = createOutlinedTextField(context, descriptionInputWidth,SizeType.SMALL, descriptionInputHeight, "Введите описание", Gravity.TOP, nameInputTextSizee, null, startsInfo.description)
             val lp3 = descriptionInput.layoutParams as ConstraintLayout.LayoutParams
             lp3.startToStart = bannerId
             lp3.topToBottom = editBannerButtonId
@@ -3037,15 +3920,15 @@ object createOvDialog {
             val episodesBlockWidth = min(descriptionInputWidth, round(320f*baseDensity).toInt())
             val maxEpisodesBlockHeight = round(episodesBlockWidth.toFloat() / 1.2f).toInt()
 
-            val maxEditEpisodesBlockHeight = maxEpisodesBlockHeight - nameInputHeight - marginTop - round(30f*density).toInt()
-            var editEpisodesBlockHeight = ((round(120f*density).toInt() + round(30f*density).toInt())*episodesList.size) -  if (episodesList.isNotEmpty()) round(30f*density).toInt() else 0
+            val maxEditEpisodesBlockHeight = maxEpisodesBlockHeight - nameInputHeight - marginTop - round(11f * baseDensity).toInt()
+            var editEpisodesBlockHeight = ((round(46f * baseDensity).toInt() + round(11f * baseDensity).toInt())*episodesList.size) -  if (episodesList.isNotEmpty()) round(11f * baseDensity).toInt() else 0
             if (editEpisodesBlockHeight > maxEditEpisodesBlockHeight) {
                 editEpisodesBlockHeight = maxEditEpisodesBlockHeight
             }
             val addEpisodesBlockContainer = ConstraintLayout(context).apply {
                 val layoutparams1 = ConstraintLayout.LayoutParams(
                     descriptionInputWidth,
-                    (editEpisodesBlockHeight + marginTop + nameInputHeight + round(30f*density).toInt())
+                    (editEpisodesBlockHeight + marginTop + nameInputHeight + round(11f * baseDensity).toInt())
                 )
                 layoutparams1.startToStart = episodesHTextId
                 layoutparams1.topToBottom = episodesHTextId
@@ -3054,6 +3937,9 @@ object createOvDialog {
                 background = addEpisodesContainerBgDrawable
                 id = View.generateViewId()
                 tag = "add_episodes_block_container"
+                setOnClickListener {
+                    requestFocus()
+                }
             }
 
             val addEpisodeButtonId = View.generateViewId()
@@ -3070,12 +3956,12 @@ object createOvDialog {
 
             fun applyEpisodesListChanges(list: MutableList<episodeInfo>) {
                 episodesList = list
-                editEpisodesBlockHeight = ((round(120f*density).toInt() + round(30f*density).toInt())*episodesList.size) -  if (episodesList.isNotEmpty()) round(30f*density).toInt() else 0
+                editEpisodesBlockHeight = ((round(46f * baseDensity).toInt() + round(11f * baseDensity).toInt())*episodesList.size) -  if (episodesList.isNotEmpty()) round(11f * baseDensity).toInt() else 0
                 if (editEpisodesBlockHeight > maxEditEpisodesBlockHeight) {
                     editEpisodesBlockHeight = maxEditEpisodesBlockHeight
                 }
                 val lp1 = addEpisodesBlockContainer.layoutParams as ConstraintLayout.LayoutParams
-                lp1.height = (editEpisodesBlockHeight + marginTop + nameInputHeight + if (list.isNotEmpty()) round(30f*density).toInt() else 0)
+                lp1.height = (editEpisodesBlockHeight + marginTop + nameInputHeight + if (list.isNotEmpty()) round(11f * baseDensity).toInt() else 0)
                 addEpisodesBlockContainer.layoutParams = lp1
                 if (list.isEmpty()) {
                     val lp2 = addEpisodeButtonContainer.layoutParams as ConstraintLayout.LayoutParams
@@ -3084,11 +3970,14 @@ object createOvDialog {
                 }
                 else {
                     val lp2 = addEpisodeButtonContainer.layoutParams as ConstraintLayout.LayoutParams
-                    lp2.setMargins(0,round(30f*density).toInt(),0,0)
+                    lp2.setMargins(0,round(11f * baseDensity).toInt(),0,0)
                     addEpisodeButtonContainer.layoutParams = lp2
                 }
             }
             val editEpisodesContainer = createFlatGrid(context, createFlatGridInput.EditEpisodes(episodesList, callback = {applyEpisodesListChanges((it as MutableList<episodeInfo>))}), addEpisodeButtonContainerWidth, editEpisodesBlockHeight, changeImage = {changeImage(it)})
+            editEpisodesContainer.setOnClickListener {
+                editEpisodesContainer.requestFocus()
+            }
             val lpp = editEpisodesContainer.layoutParams as ConstraintLayout.LayoutParams
             lpp.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
             lpp.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
@@ -3109,7 +3998,7 @@ object createOvDialog {
             lppp1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
             lppp1.topToBottom = editEpisodesContainer.id
             lppp1.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
-            lppp1.setMargins(0,round(30f*density).toInt(),0,0)
+            lppp1.setMargins(0,round(11f * baseDensity).toInt(),0,0)
             addEpisodeButtonContainer.layoutParams = lppp1
             val addEpisodeButtonIco = ImageView(context).apply {
                 val layoutparams1 = ConstraintLayout.LayoutParams(
@@ -3327,11 +4216,6 @@ object createOvDialog {
         }
         container.setOnClickListener {
             container.requestFocus()
-            val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-            for (i in inputLayoutsList) {
-                i.clearFocus()
-                imm.hideSoftInputFromWindow(i.windowToken, 0)
-            }
         }
         container.setOnTouchListener { view, event ->
             when (event.action) {
@@ -3346,11 +4230,6 @@ object createOvDialog {
         }
         containerr.setOnClickListener {
             containerr.requestFocus()
-            val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-            for (i in inputLayoutsList) {
-                i.clearFocus()
-                imm.hideSoftInputFromWindow(i.windowToken, 0)
-            }
         }
         containerr.setOnTouchListener { view, event ->
             when (event.action) {
@@ -3364,8 +4243,13 @@ object createOvDialog {
             true
         }
 
+        var clicked = false
         addCardButtonContainer.setOnClickListener {
-            addCard(episodesList)
+            addCardButtonContainer.requestFocus()
+            if (!clicked) {
+                clicked = true
+                addCard(episodesList)
+            }
         }
         val ls = mutableListOf<Pair<Boolean, Genre>>()
         for (i in startsInfo.genreList) {
@@ -3373,7 +4257,7 @@ object createOvDialog {
         }
         updateGenreList(ls)
 
-        context.lifecycleOwner?.lifecycleScope?.launch {
+        val job = context.lifecycleOwner?.lifecycleScope?.launch {
             resultSenderViewModel.results.collect { (key, data) -> run {
                 when (key) {
                     ResultKeys.CREATE_CARD_GENRE_CHOICE -> {
@@ -3382,6 +4266,11 @@ object createOvDialog {
                     }
                 }
             }
+            }
+        }
+        if (job != null) {
+            if (layer is Layer.OverLay) {
+                layer.activeJobs.add(job)
             }
         }
         return containerr
@@ -3441,6 +4330,9 @@ object createOvDialog {
                 (gridWidth-(marginBetweenInfoElements*2)),
                 ConstraintLayout.LayoutParams.WRAP_CONTENT
             )
+            setOnClickListener {
+                requestFocus()
+            }
         }
         fun apply(genre: Genre) {
             for (i in 0 until fullGenreList.size) {
@@ -3539,6 +4431,20 @@ object createOvDialog {
                 containerHeight
             )
             background = containerDrawable
+            setOnClickListener {
+                requestFocus()
+            }
+            setOnTouchListener { view, event ->
+                when (event.action) {
+                    MotionEvent.ACTION_DOWN -> {
+
+                    }
+                    MotionEvent.ACTION_UP -> {
+                        view.performClick()
+                    }
+                }
+                true
+            }
         }
         val stroke = ImageView(context).apply {
             val layoutparams1 = ConstraintLayout.LayoutParams(
@@ -3654,22 +4560,13 @@ object createOvDialog {
         container.addView(denyButtonContainer)
 
         applyButtonContainer.setOnClickListener {
+            applyButtonContainer.requestFocus()
             resultSenderViewModel.sendResult(startsInfo.key, fullGenreList)
             deny()
         }
         denyButtonContainer.setOnClickListener {
+            denyButtonContainer.requestFocus()
             deny()
-        }
-        container.setOnTouchListener { view, event ->
-            when (event.action) {
-                MotionEvent.ACTION_DOWN -> {
-
-                }
-                MotionEvent.ACTION_UP -> {
-                    view.performClick()
-                }
-            }
-            true
         }
 
         return container

@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Color
 import android.graphics.text.LineBreaker
+import android.util.Log
 import android.util.TypedValue
 import android.view.View
 import android.view.ViewGroup
@@ -15,6 +16,7 @@ import android.widget.TextView
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.graphics.drawable.toDrawable
 import androidx.core.view.isEmpty
+import androidx.core.view.isNotEmpty
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
@@ -29,7 +31,6 @@ import com.example.garden.ui.utils.calculateDigitParams
 import com.example.garden.ui.utils.createDovodchikDots
 import com.example.garden.ui.utils.createDovodchikDotsReturn
 import com.example.garden.ui.utils.createGridOfChilds
-import com.example.garden.density
 import com.example.garden.dotDrawables
 import com.example.garden.ui.utils.findMainPageLayerByPageId
 import com.example.garden.layersList
@@ -38,10 +39,12 @@ import com.example.garden.orientationNow
 import com.example.garden.orientationOld
 import com.example.garden.screenWidth
 import com.example.garden.ui.customView.OptimizedTextView
+import com.example.garden.ui.utils.spaceItemDecoration
+import com.example.garden.ui.utils.spaceItemDecorationInput
 import kotlin.collections.set
 import kotlin.math.round
 
-class CarouselsAdapter(private val context: Context, val addCardToCarousel: (Long) -> Unit, val clickOnItem: (objectData2) -> Unit) : ListAdapter<objectData2, CarouselsAdapter.ViewHolder>(ObjectDiffCallback()) {
+class CarouselsAdapter(private val context: Context, val addCardToCarousel: (Long) -> Unit, val clickOnItem: (objectData2) -> Unit, val previewMode: Boolean = false, val layersListForPreviewMode: List<Layer>? = null, val customLineWidth: Int? = null) : ListAdapter<objectData2, CarouselsAdapter.ViewHolder>(ObjectDiffCallback()) {
 
     class ViewHolder(val constraintLayout: ConstraintLayout)  : RecyclerView.ViewHolder(constraintLayout) {
         var totalScrolledRecyclerView = 0
@@ -57,7 +60,6 @@ class CarouselsAdapter(private val context: Context, val addCardToCarousel: (Lon
     }
 
 
-    // Это база для элемента (остальные его модификации применяются в onBindViewHolder)
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         return ViewHolder(ConstraintLayout(context).apply {
             val layoutParams1 = RecyclerView.LayoutParams(
@@ -69,19 +71,25 @@ class CarouselsAdapter(private val context: Context, val addCardToCarousel: (Lon
         })
     }
 
-    // Это уже преобразования элемента (см. onCreateViewHolder) в зависимости от позиции (position)
     override fun onBindViewHolder(holder: ViewHolder, @SuppressLint("RecyclerView") position: Int) {
+        val lineWidth = customLineWidth ?: screenWidth
         holder.totalScrolledRecyclerView = 0
         holder.totalScrolledHorizontalScrollView = 0
         holder.activeDotPosition = 0
-        val layer = layersList[layersList.indexOf(findMainPageLayerByPageId(getItem(position).page))]
-        if (holder.constraintLayout.isEmpty() && layer is Layer.MainPage) {
-            var paddingVertical = getItem(position).paddingVertical
-            if (paddingVertical == null) {
-                paddingVertical = round(100f*density).toInt()
-            }
-            else {
-                paddingVertical = round(paddingVertical.toFloat()*density).toInt()
+        val layer = if (!previewMode) {layersList[layersList.indexOf(findMainPageLayerByPageId(getItem(position).page))]} else {layersListForPreviewMode?.get(0)}
+        if (((holder.constraintLayout.isEmpty()) ||
+                    (holder.constraintLayout.isNotEmpty() && (getItem(position).layoutType == 1 || getItem(position).layoutType == null) && holder.recyclerView == null) ||
+                    (holder.constraintLayout.isNotEmpty() && getItem(position).layoutType == 0 && holder.constraintLayoutGrid == null))
+            && layer is Layer.MainPage) {
+            if (holder.constraintLayout.isNotEmpty()) {
+                holder.constraintLayout.removeAllViews()
+                holder.nameTextView = null
+                holder.editButton = null
+                holder.addButton = null
+                holder.watchAllButton = null
+                holder.recyclerView = null
+                holder.constraintLayoutGrid = null
+                holder.dotsLayout = null
             }
             val layoutparams2 = holder.constraintLayout.layoutParams as RecyclerView.LayoutParams
             layoutparams2.setMargins(0,0,0,0)
@@ -90,18 +98,16 @@ class CarouselsAdapter(private val context: Context, val addCardToCarousel: (Lon
             var idOfEditButton = 0
             var idOfAddButton = 0
             val buttonsSize = round(25f*baseDensity).toInt()
-            val addButtonSize = buttonsSize+round(0f*baseDensity).toInt()
-            val watchButtonWidth = round(240f*density).toInt()
+            val watchButtonWidth = round(91f * baseDensity).toInt()
             val watchButtonHeight = (25f * baseDensity).toInt()
-            val watchButtonMarginRight = (50f * density).toInt()
+            val watchButtonMarginRight = (19f * baseDensity).toInt()
             var pdH = getItem(position).paddingHorizontal
             if (pdH == null) {
-                pdH = round(50f*density).toInt()
+                pdH = round(19f * baseDensity).toInt()
             }
-            else {
-                pdH = round(pdH.toFloat()*density).toInt()
-            }
-            val textViewWidth = screenWidth - pdH - buttonsSize*2 - watchButtonWidth - watchButtonMarginRight
+            val textViewWidth = if (!previewMode) {lineWidth} else {
+                lineWidth
+            } - pdH - buttonsSize*2 - watchButtonWidth - watchButtonMarginRight
             val textView = OptimizedTextView(context).apply {
                 if (getItem(position).name != null) {
                     text = getItem(position).name
@@ -150,8 +156,8 @@ class CarouselsAdapter(private val context: Context, val addCardToCarousel: (Lon
             holder.editButton = editButton
             val addButton = ImageButton(context).apply {
                 val layoutparams1 = ConstraintLayout.LayoutParams(
-                    addButtonSize,
-                    addButtonSize
+                    buttonsSize,
+                    buttonsSize
                 )
                 layoutparams1.startToEnd = idOfEditButton
                 layoutparams1.topToTop = idOfEditButton
@@ -164,6 +170,7 @@ class CarouselsAdapter(private val context: Context, val addCardToCarousel: (Lon
                 setImageResource(R.drawable.add_ico)
                 scaleType = ImageView.ScaleType.CENTER_CROP
                 setOnClickListener {
+                    requestFocus()
                     addCardToCarousel(currentList[holder.position].id)
                 }
             }
@@ -181,7 +188,7 @@ class CarouselsAdapter(private val context: Context, val addCardToCarousel: (Lon
                 text = "Смотреть все"
                 setPadding(0,0,0,0)
                 setTextColor(Color.WHITE)
-                setTextSize(TypedValue.COMPLEX_UNIT_PX, round(25f*density)) // converted to px value
+                setTextSize(TypedValue.COMPLEX_UNIT_PX, round(10f * baseDensity))
                 backgroundTintList = null
                 stateListAnimator = null
                 elevation = 0f
@@ -197,22 +204,29 @@ class CarouselsAdapter(private val context: Context, val addCardToCarousel: (Lon
                 val recycler = RecyclerView(context).apply {
                     val layoutParams1 = ConstraintLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
-                        calcRecyclerViewHeight(currentList,position)
+                        calcRecyclerViewHeight(currentList,position, lineWidth)
                     )
                     layoutParams1.topToBottom = idOfTextObj
                     layoutParams1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
-                    layoutParams1.setMargins(0, round(15f*density).toInt(), 0, 0)
+                    layoutParams1.setMargins(0, round(6f * baseDensity).toInt(), 0, 0)
                     layoutParams = layoutParams1
                     layoutManager = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
                     adapter = ChildAdapter(context, getItem(position), clickOnCard = {
                         clickOnItem(it)
-                    })
+                    }, lineWidth)
                     val newId = View.generateViewId()
                     id = newId
                     recyclerViewId = newId
+                    addItemDecoration(spaceItemDecoration(spaceItemDecorationInput(
+                        listOf(getItem(position).marginBetweenElementsHorizontal ?: round(11f * baseDensity).toInt(),0,0,0),
+                        listOf(getItem(position).paddingHorizontal ?: round(19f * baseDensity).toInt(),0,0,0),
+                        listOf(getItem(position).marginBetweenElementsHorizontal ?: round(11f * baseDensity).toInt(),0,getItem(position).paddingHorizontal ?: round(19f * baseDensity).toInt(),0)
+                    )))
                 }
                 val ad = recycler.adapter as ChildAdapter
-                ad.submitList(getItem(position).childs)
+                ad.submitList(getItem(position).childs) {
+                    recycler.invalidateItemDecorations()
+                }
                 holder.constraintLayout.addView(recycler)
                 holder.recyclerView = recycler
                 recycler.post {
@@ -230,36 +244,29 @@ class CarouselsAdapter(private val context: Context, val addCardToCarousel: (Lon
                         if (!(getItem(position).dovodchik && getItem(position).showDovodchikDots)) {
                             var pdH = getItem(position).paddingHorizontal
                             if (pdH == null) {
-                                pdH = round(50f*density).toInt()
-                            }
-                            else {
-                                pdH = round(pdH.toFloat()*density).toInt()
+                                pdH = round(19f * baseDensity).toInt()
                             }
                             layer.scrollPositionCarousels[getItem(position).position] = 0
-                            val scrollH = calcItemPosInPxByPos(currentList,position, layer.scrollPositionCarousels[getItem(position).position]!!, context) - pdH
+                            val scrollH = calcItemPosInPxByPos(currentList,position, layer.scrollPositionCarousels[getItem(position).position]!!, context, lineWidth) - pdH
                             recycler.scrollBy(scrollH,0)
-
                         }
                     }
                 }
                 if (getItem(position).dovodchik && getItem(position).showDovodchikDots) {
-                    var padding = round(50f*density).toInt()
+                    var padding = round(19f * baseDensity).toInt()
                     if (getItem(position).paddingHorizontal != null) {
-                        padding = round(getItem(position).paddingHorizontal!!.toFloat()*density).toInt()
+                        padding = getItem(position).paddingHorizontal!!
                     }
                     var marginBetweenElementsHorizontal = getItem(position).marginBetweenElementsHorizontal
                     if (marginBetweenElementsHorizontal == null) {
-                        marginBetweenElementsHorizontal = round(30f*density).toInt()
+                        marginBetweenElementsHorizontal = round(11f * baseDensity).toInt()
                     }
-                    else {
-                        marginBetweenElementsHorizontal = round(marginBetweenElementsHorizontal.toFloat()*density).toInt()
-                    }
-                    val dots = createDovodchikDots(context, getItem(position).childs, padding, marginBetweenElementsHorizontal, currentList[position].childsShowName, currentList[position].childsNamePosition)
+                    val dots = createDovodchikDots(context, getItem(position).childs, padding, marginBetweenElementsHorizontal, currentList[position].childsShowName, currentList[position].childsNamePosition, lineWidth)
                     val dotsLayout = dots.layout as ViewGroup
                     val layoutparams1 = dotsLayout.layoutParams as ConstraintLayout.LayoutParams
                     layoutparams1.topToBottom = recyclerViewId
                     layoutparams1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
-                    layoutparams1.setMargins(0,round(10f*density).toInt(),0,0)
+                    layoutparams1.setMargins(0,round(4f * baseDensity).toInt(),0,0)
                     dotsLayout.layoutParams = layoutparams1
                     dotsLayout.setPadding(0,0,0,0)
                     holder.constraintLayout.addView(dotsLayout)
@@ -285,6 +292,7 @@ class CarouselsAdapter(private val context: Context, val addCardToCarousel: (Lon
                         val index = i
                         if (i < dotsContainer.childCount) {
                             dotsContainer.getChildAt(index).setOnClickListener {
+                                dotsContainer.requestFocus()
                                 updateActiveDot(index, holder.activeDotPosition, dots, holder.totalScrolledRecyclerView, holder.totalScrolledHorizontalScrollView, dots.numTextView, recycler, horizontalScrollView, position, layer)
                                 holder.activeDotPosition = index
                                 layer.activeDotPositionCarousels[getItem(position).position] = index
@@ -384,22 +392,30 @@ class CarouselsAdapter(private val context: Context, val addCardToCarousel: (Lon
                 }
                 var paddingHorizontal = getItem(position).paddingHorizontal
                 if (paddingHorizontal == null) {
-                    paddingHorizontal = 0
+                    paddingHorizontal = round(19f * baseDensity).toInt()
                 }
-                else {
-                    paddingHorizontal = round(paddingHorizontal.toFloat() * density).toInt()
-                }
-                val constraintLayout = createGridOfChilds(getItem(position).childs,  maxObjectsInOneLine, context, (screenWidth-paddingHorizontal*2), getItem(position))
+                val constraintLayout = createGridOfChilds(getItem(position).childs,  maxObjectsInOneLine, context, (lineWidth-paddingHorizontal*2), getItem(position))
                 val layoutparams1 = constraintLayout.layoutParams as ConstraintLayout.LayoutParams
                 layoutparams1.topToBottom = idOfTextObj
                 layoutparams1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
-                layoutparams1.setMargins(paddingHorizontal, round(15f*density).toInt(),paddingHorizontal,0)
+                layoutparams1.setMargins(paddingHorizontal, round(6f * baseDensity).toInt(),paddingHorizontal,0)
                 constraintLayout.layoutParams = layoutparams1
                 holder.constraintLayout.addView(constraintLayout)
                 holder.constraintLayoutGrid = constraintLayout
+                constraintLayout.setOnClickListener {
+                    constraintLayout.requestFocus()
+                }
+                for (i in 0 until constraintLayout.childCount) {
+                    val obj = constraintLayout.getChildAt(i)
+                    val objData = getItem(position).childs[i]
+                    obj.setOnClickListener {
+                        obj.requestFocus()
+                        clickOnItem(objData)
+                    }
+                }
             }
         }
-        else if (layer is Layer.MainPage){
+        else if (layer is Layer.MainPage) {
             if (holder.nameTextView != null) {
                 holder.nameTextView!!.apply {
                     if (getItem(position).name != null) {
@@ -413,24 +429,28 @@ class CarouselsAdapter(private val context: Context, val addCardToCarousel: (Lon
             if (holder.addButton != null) {
                 holder.addButton!!.setOnClickListener(null)
                 holder.addButton!!.setOnClickListener {
+                    holder.addButton!!.requestFocus()
                     addCardToCarousel(currentList[holder.position].id)
                 }
             }
             if (holder.editButton != null) {
                 holder.editButton!!.setOnClickListener(null)
                 holder.editButton!!.setOnClickListener {
+                    holder.editButton!!.requestFocus()
 //                    editCarousel(position, currentList)
                 }
             }
             if (holder.watchAllButton != null) {
                 holder.watchAllButton!!.setOnClickListener(null)
                 holder.watchAllButton!!.setOnClickListener {
+                    holder.watchAllButton!!.requestFocus()
 //                    watchAll(position, currentList)
                 }
             }
-            if (holder.recyclerView != null) {
+            if (holder.recyclerView != null && (getItem(position).layoutType == null || getItem(position).layoutType == 1)) {
                 val ad = holder.recyclerView!!.adapter as ChildAdapter
                 ad.submitList(getItem(position).childs)
+                ad.updateParent(getItem(position))
                 holder.recyclerView!!.clearOnScrollListeners()
                 holder.recyclerView!!.onFlingListener = null
                 holder.recyclerView!!.scrollTo(0,0)
@@ -456,27 +476,27 @@ class CarouselsAdapter(private val context: Context, val addCardToCarousel: (Lon
                     }
                 }
             }
-            if (holder.dotsLayout != null && holder.recyclerView != null) {
+            else if (holder.recyclerView != null) {
+                holder.constraintLayout.removeView(holder.recyclerView)
+            }
+            if (holder.dotsLayout != null && holder.recyclerView != null && getItem(position).dovodchik && getItem(position).showDovodchikDots) {
                 holder.constraintLayout.removeView(holder.dotsLayout)
                 holder.dotsLayout = null
                 if (getItem(position).dovodchik && getItem(position).showDovodchikDots) {
-                    var padding = round(50f*density).toInt()
+                    var padding = round(19f * baseDensity).toInt()
                     if (getItem(position).paddingHorizontal != null) {
-                        padding = round(getItem(position).paddingHorizontal!!.toFloat()*density).toInt()
+                        padding = getItem(position).paddingHorizontal!!
                     }
                     var marginBetweenElementsHorizontal = getItem(position).marginBetweenElementsHorizontal
                     if (marginBetweenElementsHorizontal == null) {
-                        marginBetweenElementsHorizontal = round(30f*density).toInt()
+                        marginBetweenElementsHorizontal = round(11f * baseDensity).toInt()
                     }
-                    else {
-                        marginBetweenElementsHorizontal = round(marginBetweenElementsHorizontal.toFloat()*density).toInt()
-                    }
-                    val dots = createDovodchikDots(context, getItem(position).childs, padding, marginBetweenElementsHorizontal, currentList[position].childsShowName, currentList[position].childsNamePosition)
+                    val dots = createDovodchikDots(context, getItem(position).childs, padding, marginBetweenElementsHorizontal, currentList[position].childsShowName, currentList[position].childsNamePosition, lineWidth)
                     val dotsLayout = dots.layout as ViewGroup
                     val layoutparams1 = dotsLayout.layoutParams as ConstraintLayout.LayoutParams
                     layoutparams1.topToBottom = holder.recyclerView!!.id
                     layoutparams1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
-                    layoutparams1.setMargins(0,round(10f*density).toInt(),0,0)
+                    layoutparams1.setMargins(0,round(4f * baseDensity).toInt(),0,0)
                     dotsLayout.layoutParams = layoutparams1
                     dotsLayout.setPadding(0,0,0,0)
                     holder.constraintLayout.addView(dotsLayout)
@@ -502,6 +522,7 @@ class CarouselsAdapter(private val context: Context, val addCardToCarousel: (Lon
                         val index = i
                         if (i < dotsContainer.childCount) {
                             dotsContainer.getChildAt(index).setOnClickListener {
+                                dotsContainer.requestFocus()
                                 updateActiveDot(index, holder.activeDotPosition, dots, holder.totalScrolledRecyclerView, holder.totalScrolledHorizontalScrollView, dots.numTextView, holder.recyclerView!!, horizontalScrollView, position, layer)
                                 holder.activeDotPosition = index
                                 layer.activeDotPositionCarousels[getItem(position).position] = index
@@ -542,10 +563,7 @@ class CarouselsAdapter(private val context: Context, val addCardToCarousel: (Lon
 
                             when (newState) {
                                 RecyclerView.SCROLL_STATE_IDLE -> {
-                                    // Пользователь отпустил и прокрутка остановилась
                                     val currentScroll = holder.totalScrolledRecyclerView
-
-                                    // Находим ближайшую точку
                                     val targetDot = dots.list.minByOrNull {
                                         Math.abs(it.second.itemPositionInPx - currentScroll)
                                     }
@@ -554,8 +572,6 @@ class CarouselsAdapter(private val context: Context, val addCardToCarousel: (Lon
                                         val targetIndex = dots.list.indexOf(it)
                                         val targetScroll = it.second.itemPositionInPx
                                         val distance = targetScroll - currentScroll
-
-                                        // Если не на месте - доводим
                                         if (Math.abs(distance) > 0) {
                                             recyclerView.smoothScrollBy(distance, 0)
                                             updateActiveDot(targetIndex, holder.activeDotPosition, dots, holder.totalScrolledRecyclerView, holder.totalScrolledHorizontalScrollView, dots.numTextView, holder.recyclerView!!, horizontalScrollView, position, layer)
@@ -589,7 +605,10 @@ class CarouselsAdapter(private val context: Context, val addCardToCarousel: (Lon
                     }
                 }
             }
-            if (holder.constraintLayoutGrid != null) {
+            else if (holder.dotsLayout != null) {
+                holder.constraintLayout.removeView(holder.dotsLayout)
+            }
+            if (holder.constraintLayoutGrid != null && getItem(position).layoutType != null && getItem(position).layoutType != 1) {
                 holder.constraintLayout.removeView(holder.constraintLayoutGrid)
                 holder.constraintLayoutGrid = null
                 var maxObjectsInOneLine: Int?
@@ -601,19 +620,30 @@ class CarouselsAdapter(private val context: Context, val addCardToCarousel: (Lon
                 }
                 var paddingHorizontal = getItem(position).paddingHorizontal
                 if (paddingHorizontal == null) {
-                    paddingHorizontal = 0
+                    paddingHorizontal = round(19f * baseDensity).toInt()
                 }
-                else {
-                    paddingHorizontal = round(paddingHorizontal.toFloat() * density).toInt()
-                }
-                val constraintLayout = createGridOfChilds(getItem(position).childs,  maxObjectsInOneLine, context, (screenWidth-paddingHorizontal*2), getItem(position))
+                val constraintLayout = createGridOfChilds(getItem(position).childs,  maxObjectsInOneLine, context, (lineWidth-paddingHorizontal*2), getItem(position))
                 val layoutparams1 = constraintLayout.layoutParams as ConstraintLayout.LayoutParams
                 layoutparams1.topToBottom = holder.nameTextView!!.id
                 layoutparams1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
-                layoutparams1.setMargins(paddingHorizontal, round(15f*density).toInt(),paddingHorizontal,0)
+                layoutparams1.setMargins(paddingHorizontal, round(6f * baseDensity).toInt(),paddingHorizontal,0)
                 constraintLayout.layoutParams = layoutparams1
                 holder.constraintLayout.addView(constraintLayout)
                 holder.constraintLayoutGrid = constraintLayout
+                constraintLayout.setOnClickListener {
+                    constraintLayout.requestFocus()
+                }
+                for (i in 0 until constraintLayout.childCount) {
+                    val obj = constraintLayout.getChildAt(i)
+                    val objData = getItem(position).childs[i]
+                    obj.setOnClickListener {
+                        obj.requestFocus()
+                        clickOnItem(objData)
+                    }
+                }
+            }
+            else if (holder.constraintLayoutGrid != null) {
+                holder.constraintLayout.removeView(holder.constraintLayoutGrid)
             }
         }
     }
@@ -638,7 +668,7 @@ class CarouselsAdapter(private val context: Context, val addCardToCarousel: (Lon
             if (layer.scrollPositionCarousels[getItem(position).position] == null) {
                 layer.scrollPositionCarousels[getItem(position).position] = 0
             }
-            val itemPositionInPx = calcItemPosInPxByPos(currentList,position, layer.scrollPositionCarousels[getItem(position).position]!!,context)
+            val itemPositionInPx = calcItemPosInPxByPos(currentList,position, layer.scrollPositionCarousels[getItem(position).position]!!,context, (customLineWidth ?: screenWidth))
             var dotPos = -1
             for (i in 0 until dots.size) {
                 if (dots[i].second.itemPositionInPx <= itemPositionInPx && i > dotPos) {

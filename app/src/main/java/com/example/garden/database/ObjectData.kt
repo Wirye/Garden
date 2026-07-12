@@ -3,7 +3,12 @@ package com.example.garden.database
 import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-
+enum class CollectionType {
+    FastChoiceMusic,
+}
+enum class CarouselType {
+    Anime, Music, Manga, Playlist, AnimeNManga, PlaylistNMusic
+}
 enum class SizeType {
     SMALL, MEDIUM, LARGE, XLARGE
 }
@@ -110,6 +115,8 @@ data class ObjectData(
     var type: String? = null,  // Аниме, манга, музыка и т.д
     var alreadyWatched: Long, // Минуты и секунды до куда досмотрел пользователь
     var length: Long,  // Минуты и секунды всей длинны
+    var carouselType: CarouselType? = null, // Тип карусели, нужен для того, чтобы знать, что туда можно класть (какие карточки добавлять)
+    var carouselCollectionType: CollectionType? = null, // Отвечает за подборки карточек
 
     // Размеры (для карточек)
     var width: Int? = null,

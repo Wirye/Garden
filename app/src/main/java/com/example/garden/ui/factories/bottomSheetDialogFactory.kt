@@ -1,7 +1,5 @@
 package com.example.garden.ui.factories
 
-import android.animation.ArgbEvaluator
-import android.animation.ValueAnimator
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.res.ColorStateList
@@ -9,12 +7,10 @@ import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.text.Editable
 import android.text.TextWatcher
-import android.util.Log
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
-import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -25,7 +21,6 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.widget.NestedScrollView
-import androidx.core.widget.addTextChangedListener
 import com.example.garden.BsdButtonsTags
 import com.example.garden.baseDensity
 import com.example.garden.ui.utils.createBSDButton
@@ -33,10 +28,10 @@ import com.example.garden.ui.utils.createDropdownRow
 import com.example.garden.ui.utils.createSegmentedButtonRow
 import com.example.garden.ui.utils.createSliderRow
 import com.example.garden.database.SizeType
-import com.example.garden.density
 import com.example.garden.ui.utils.getAdaptiveRadius
 import com.example.garden.screenHeight
 import com.example.garden.screenWidth
+import com.example.garden.ui.utils.createSwitchButtonRow
 import com.example.garden.ui.utils.mathExtensions.snapToStep
 import com.example.garden.ui.utils.segmentedButtonOptions
 import com.google.android.material.bottomsheet.BottomSheetBehavior
@@ -82,6 +77,13 @@ sealed class BottomSheetDialogElement {
         val alreadyValue: Float,
         val createTextInputView: Boolean = false
     ) : BottomSheetDialogElement()
+
+    data class SwitchButtonRow(
+        val tag: BsdButtonsTags,
+        val icoId: Int,
+        val text: String,
+        val alreadyValue: Boolean,
+    ) : BottomSheetDialogElement()
 }
 class bottomSheetDialogFactory(private val activity: Activity) {
     @SuppressLint("PrivateResource", "SetTextI18n")
@@ -91,8 +93,8 @@ class bottomSheetDialogFactory(private val activity: Activity) {
         val googleMaxWidthPx = round(googleMaxWidthDp.toFloat() * baseDensity).toInt()
 
         val elementWidth = min((min(screenWidth, screenHeight)), googleMaxWidthPx)
-        val elementHeight = (150f * density).toInt()
-        val pillRawHeight = (100f * density).toInt()
+        val elementHeight = (57f * baseDensity).toInt()
+        val pillRawHeight = (38f * baseDensity).toInt()
         val pillHeight = round(pillRawHeight.toFloat() / 4f).toInt()
 
         val container = LinearLayout(activity).apply {
@@ -127,7 +129,7 @@ class bottomSheetDialogFactory(private val activity: Activity) {
             val poloska = ImageView(activity).apply {
                 val lp1 = ConstraintLayout.LayoutParams(
                     elementWidth,
-                    round(3f*density).toInt()
+                    round(1f * baseDensity).toInt()
                 )
                 lp1.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID
                 lp1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
@@ -153,6 +155,7 @@ class bottomSheetDialogFactory(private val activity: Activity) {
                         buttonView.addView(poloska)
                     }
                     buttonView.setOnClickListener {
+                        buttonView.requestFocus()
                         callback(element.tag,0f)
                     }
                     container.addView(buttonView)
@@ -165,31 +168,9 @@ class bottomSheetDialogFactory(private val activity: Activity) {
                         height = elementHeight,
                         options = element.options,
                         icoId = element.icoId,
-                        textt = element.text
+                        textt = element.text,
+                        callback = { value -> callback(element.tag,value)}
                     )
-                    for (i in element.options.indices) {
-                        val currentValue = i.toFloat()
-                        val segment = segmentedView.findViewWithTag<View>("button_$i")
-                        segment?.setOnClickListener { clickedSegment ->
-                            callback(element.tag,currentValue)
-                            for (o in element.options.indices) {
-                                val segment1 = segmentedView.findViewWithTag<View>("button_$o") ?: continue
-                                val segment1Background = segment1.findViewWithTag<View>("button_bg").background as GradientDrawable
-                                val colorNow = segment1Background.color?.defaultColor ?: "#80EADDFF".toColorInt()
-                                val targetColor = if (segment1 == clickedSegment) {"#E8DEF8".toColorInt()} else {"#80EADDFF".toColorInt()}
-                                if (colorNow != targetColor) {
-                                    val animation = ValueAnimator.ofObject(ArgbEvaluator(), colorNow, targetColor).apply {
-                                        duration = 100
-                                        interpolator = AccelerateDecelerateInterpolator()
-                                        addUpdateListener { animator ->
-                                            segment1Background.setColor(animator.animatedValue as Int)
-                                        }
-                                    }
-                                    animation.start()
-                                }
-                            }
-                        }
-                    }
                     if (showPoloska) {
                         val poloska = createPoloska()
                         segmentedView.addView(poloska)
@@ -299,6 +280,23 @@ class bottomSheetDialogFactory(private val activity: Activity) {
                     }
                     container.addView(dropdownView)
                 }
+
+                is BottomSheetDialogElement.SwitchButtonRow -> {
+                    val switchButtonRow = createSwitchButtonRow(
+                        context = activity,
+                        isChecked = element.alreadyValue,
+                        width = elementWidth,
+                        height = elementHeight,
+                        name = element.text,
+                        icoId = element.icoId,
+                        callback1 = { value -> callback(element.tag,if (value) {1f} else {0f})}
+                    )
+                    if (showPoloska) {
+                        val poloska = createPoloska()
+                        switchButtonRow.addView(poloska)
+                    }
+                    container.addView(switchButtonRow)
+                }
             }
         }
         val radius = getAdaptiveRadius(elementWidth, SizeType.XLARGE)
@@ -328,7 +326,7 @@ class bottomSheetDialogFactory(private val activity: Activity) {
                             pillHeight
                         ).apply {
                             gravity = Gravity.CENTER_HORIZONTAL
-                            topMargin = round(12f * density).toInt()
+                            topMargin = round(5f * baseDensity).toInt()
                         }
                         layoutParams = lp
                         background = pillDrawable

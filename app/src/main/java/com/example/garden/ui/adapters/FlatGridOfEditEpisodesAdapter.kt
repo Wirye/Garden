@@ -25,7 +25,6 @@ import com.example.garden.baseDensity
 import com.example.garden.ui.utils.convertToStringTime
 import com.example.garden.database.ImageData
 import com.example.garden.database.SizeType
-import com.example.garden.density
 import com.example.garden.episodeInfo
 import com.example.garden.ui.utils.getAdaptiveRadius
 import com.example.garden.ui.utils.getTextSizeByHeight
@@ -87,7 +86,7 @@ class FlatGridOfEditEpisodesAdapter(private val context: Context, private val it
         val hTextColor = "#FFFFFF".toColorInt()
         val textColor = "#BFAFAFAF".toColorInt()
         val icoSize = round(itemHeightt.toFloat() / 1.5f).toInt()
-        val margin = round(20f*density).toInt()
+        val margin = round(8f * baseDensity).toInt()
         val deleateIcoSize = round(icoSize.toFloat() / 1.6f).toInt()
         val container = holder.constraintLayout
         val addBgDrawable = GradientDrawable().apply {
@@ -289,23 +288,19 @@ class FlatGridOfEditEpisodesAdapter(private val context: Context, private val it
         dragicoView.setOnTouchListener { _, event ->
             if (event.actionMasked == MotionEvent.ACTION_DOWN) {
                 touchHelper.startDrag(holder)
-                if (hTI.hasFocus()) {
-                    clearHTIFocus()
-                }
             }
             false
         }
         holder.constraintLayout.isFocusable = true
         holder.constraintLayout.isFocusableInTouchMode = true
         holder.constraintLayout.setOnClickListener {
+            holder.constraintLayout.requestFocus()
         }
         imageContainer.setOnClickListener {
+            imageContainer.requestFocus()
             val actualPosition = holder.adapterPosition
             if (actualPosition != RecyclerView.NO_POSITION) {
                 changeImage(actualPosition)
-            }
-            if (hTI.hasFocus()) {
-                clearHTIFocus()
             }
         }
     }

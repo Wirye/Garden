@@ -26,6 +26,11 @@ fun optimizeText(text: String, maxWidthPx: Int, textSizePx: Float, includeFontPa
         lineHeight = (paint.fontMetrics.descent - paint.fontMetrics.ascent).toInt()
     }
 
+    val minPaint = Paint().apply { this.textSize = textSizePx; this.typeface = typeface }
+    if (maxWidthPx <= minPaint.measureText("...").toInt()) {
+        return OptimizedTextResult("", "", lineHeight)
+    }
+
     // Разбиваем на слова
     val words = text.split(" ").filter { it.isNotEmpty() }
     if (words.isEmpty()) {

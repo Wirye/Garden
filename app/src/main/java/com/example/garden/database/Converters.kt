@@ -33,4 +33,9 @@ class Converters {
     fun fromElementType(value: ElementType): String = value.name
     @TypeConverter
     fun toElementType(value: String): ElementType = ElementType.valueOf(value)
+
+    @TypeConverter
+    fun fromCarouselType(value: CarouselType): String = value.name
+    @TypeConverter
+    fun toCarouselType(value: String): CarouselType = CarouselType.valueOf(value)
 }

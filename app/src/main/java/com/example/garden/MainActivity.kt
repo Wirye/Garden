@@ -13,6 +13,7 @@ import android.util.TypedValue
 import androidx.core.content.res.ResourcesCompat
 import android.content.Intent
 import android.content.res.Configuration
+import android.graphics.Rect
 import android.graphics.RenderEffect
 import android.graphics.Shader
 import android.graphics.drawable.GradientDrawable
@@ -50,6 +51,7 @@ import com.example.garden.viewmodel.MultiViewModelFactory
 import kotlin.getValue
 import android.media.MediaMetadataRetriever
 import android.net.Uri
+import android.widget.EditText
 import androidx.activity.result.contract.ActivityResultContracts
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
@@ -57,6 +59,8 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import com.example.garden.database.LinkType
 import androidx.core.net.toUri
+import com.example.garden.database.CarouselType
+import com.example.garden.database.CollectionType
 import com.example.garden.database.MusicGenre
 import com.example.garden.database.ObjectData
 import com.example.garden.players.AnimeVideoPlayer
@@ -88,6 +92,9 @@ import com.example.garden.ui.utils.getStatusBarHeight
 import com.example.garden.ui.utils.drawables.blobInit
 import com.example.garden.ui.utils.spaceItemDecorationInput
 import com.example.garden.ui.adapters.animePageSezonsAdapterListFormat
+import com.example.garden.ui.utils.system.hideKeyboardd
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.ensureActive
 
 var orientationOld = 0
 var orientationNow = 0
@@ -164,9 +171,9 @@ val musicGenreColors = mapOf(
 )
 var genreNames = mapOf<Genre, String>()
 var musicGenreNames = mapOf<MusicGenre, String>()
-var density = 0f
 var baseDensity = 0f
 var reversDensity = 0f
+var scaledDensity = 0f
 var statusBarHeight = 0
 var layersList = mutableListOf<Layer>()
 var lastElevation = 0
@@ -184,6 +191,7 @@ val bsdFlow = _bsdFlow.asSharedFlow()
 
 
 enum class BsdButtonsTags {
+    none,
     animePage_extraButton_changeAllEpisodesWatchedMark,
 }
 enum class LayerMode {
@@ -194,7 +202,8 @@ sealed class Layer {
         val elevation: Int,
         var mainRecyclerScrollPositionInPx: Int,
         val layoutObjId: Long,
-        var state: Int
+        var state: Int,
+        val activeJobs: MutableList<Job> = mutableListOf()
     ) : Layer()
     data class MainPage(
         val elevation: Int,
@@ -204,19 +213,22 @@ sealed class Layer {
         val scrollPositionsInPx: MutableMap<Int, Int>,
         var mainRecyclerScrollPositionInPx: Int,
         var mainRecyclerScrollPosition: Int,
-        var state: Int // У страниц будут свои состояния, они будут описаны в коде самой страницы
+        var state: Int, // У страниц будут свои состояния, они будут описаны в коде самой страницы
+        val activeJobs: MutableList<Job> = mutableListOf()
     ) : Layer()
     data class OverLay(
         val elevation: Int,
         val tag: pageTags,
-        val info: OverLayLayer
+        val info: OverLayLayer,
+        val activeJobs: MutableList<Job> = mutableListOf()
     ) : Layer()
     data class VideoPlayer(
         val elevation: Int,
         val id: Long,
         var isPlaying: Boolean,
         var playbackSpeed: Float = 1.0f,
-        var isControllerVisible: Boolean = true
+        var isControllerVisible: Boolean = true,
+        val activeJobs: MutableList<Job> = mutableListOf()
     ) : Layer()
 }
 data class episodeInfo(
@@ -260,6 +272,8 @@ data class objectData2(
     var type: String? = null,  // Аниме, манга, музыка и т.д
     var alreadyWatched: Long, // Минуты и секунды до куда досмотрел пользователь
     var length: Long,  // Минуты и секунды всей длинны
+    var carouselType: CarouselType? = null, // Тип карусели, нужен для того, чтобы знать, что туда можно класть (какие карточки добавлять)
+    var carouselCollectionType: CollectionType? = null, // Отвечает за подборки карточек
 
     // Размеры (для карточек)
     var width: Int? = null,
@@ -290,7 +304,7 @@ data class objectData2(
     var genre: List<Genre>? = null,
 )
 enum class pageTags {
-    animePage, createAnimePage, genreChoice, videoPlayer
+    animePage, createAnimePage, genreChoice, videoPlayer, createCarouselPage
 }
 sealed class infoOfPageToShow {
     data class infoOfAnimePage(
@@ -323,6 +337,8 @@ object ResultKeys {
     const val VIDEO_PLAYER_CHANGE_IS_CONTROLLER_VISIBLE = "VIDEO_PLAYER_CHANGE_IS_CONTROLLER_VISIBLE"
     const val VIDEO_PLAYER_CHANGE_IS_PLAYING = "VIDEO_PLAYER_CHANGE_IS_PLAYING"
     const val VIDEO_PLAYER_EDIT_EPISODE_ALREADY_WATCHED = "VIDEO_PLAYER_EDIT_EPISODE_ALREADY_WATCHED"
+    const val CREATE_CAROUSEL_PAGE_CHANGE_ICO = "CREATE_CAROUSEL_PAGE_CHANGE_ICO"
+    const val CREATE_CAROUSEL_APPLY = "CREATE_CAROUSEL_APPLY"
 }
 data class createCardApply(
     val name: String,
@@ -330,7 +346,8 @@ data class createCardApply(
     val description: String,
     val author: String,
     val genreList: List<Genre>,
-    val episodesList: List<episodeInfo>
+    val episodesList: List<episodeInfo>,
+    val parentId: Long
 )
 
 
@@ -351,7 +368,6 @@ class MainActivity : AppCompatActivity() {
             val uriString = it.toString()
             val takeFlags: Int = Intent.FLAG_GRANT_READ_URI_PERMISSION
             try {
-                // 2. Просим систему закрепить этот Uri за нами "пожизненно"
                 contentResolver.takePersistableUriPermission(it, takeFlags)
 
             } catch (e: SecurityException) {
@@ -397,12 +413,12 @@ class MainActivity : AppCompatActivity() {
         screenWidth = resources.displayMetrics.widthPixels
         screenHeight = resources.displayMetrics.heightPixels
         baseDensity = resources.displayMetrics.density
+        scaledDensity = resources.displayMetrics.scaledDensity
         screenWidthDp = round(screenWidth.toFloat() / baseDensity).toInt()
         screenHeightDp = round(screenHeight.toFloat() / baseDensity).toInt()
-        density = baseDensity / 2.625f
         reversDensity = 2.625f / baseDensity
 
-        steps = listOf(round(512f*density),round(256f*density),round(192f*density),round(128f*density),round(96f*density),round(64f*density), round(48f*density), round(40f*density), round(36f*density), round(32f*density), round(24f*density), round(20f*density), round(16f*density), round(12f*density))  // Это список возможных textSize
+        steps = listOf(round(195f * baseDensity),round(96f * baseDensity),round(73 * baseDensity),round(49 * baseDensity),round(37f * baseDensity),round(24 * baseDensity), round(18f * baseDensity), round(15f * baseDensity), round(14f * baseDensity), round(12f * baseDensity), round(9f * baseDensity), round(8f * baseDensity), round(6f * baseDensity), round(5f * baseDensity))  // Это список возможных textSize (соблюдается не всегда)
         val container = findViewById<ViewGroup>(R.id.main)
         val bsd = bottomSheetDialogFactory(this)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -414,7 +430,6 @@ class MainActivity : AppCompatActivity() {
             requestPermissions(arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), 101)
         }
         if (!alreadyCreated) {
-            // База данных
             viewModel.insert()
             viewModel.setChildsShowNameInSezonsRecycler(true)
             baseBlurEffectForBloobs = RenderEffect.createBlurEffect(
@@ -575,9 +590,9 @@ class MainActivity : AppCompatActivity() {
         onRotationChanged()
 
         // Адаптеры
-        val adapter1 = CarouselsAdapter(this, addCardToCarousel = { addCardToCarousel(it) }, clickOnItem = { showPage(infoOfPageToShow.infoOfAnimePage(it.id, true)) })
-        val animePageSezonsPageAdapter = AnimePageSezonsPageAdapter(this, clickOnCard = { showPage(infoOfPageToShow.infoOfAnimePage(it.id, true)) } )
-        val animePageAdapter = AnimePageAdapter(this, showShowAllText = { text, size, callback -> showShowAllText(text, size, callback) }, animePageSezonsPageAdapter, openVideo = { showPage(infoOfPageToShow.infoOfVideoPlayer(it, true)) })
+        val adapter1 = CarouselsAdapter(this, addCardToCarousel = { addCardToCarousel(it) }, clickOnItem = { showPage(infoOfPageToShow.infoOfAnimePage(it.id, true), null) })
+        val animePageSezonsPageAdapter = AnimePageSezonsPageAdapter(this, clickOnCard = { showPage(infoOfPageToShow.infoOfAnimePage(it.id, true), null) } )
+        val animePageAdapter = AnimePageAdapter(this, showShowAllText = { text, size, callback -> showShowAllText(text, size, callback) }, animePageSezonsPageAdapter, openVideo = { showPage(infoOfPageToShow.infoOfVideoPlayer(it, true), null) })
         val wrapper = objectData2(
             id = -1,
             page = 0,
@@ -617,7 +632,7 @@ class MainActivity : AppCompatActivity() {
             val newId = View.generateViewId()
             id = newId
             mainPageRecyclerId = newId
-            addItemDecoration(spaceItemDecoration(spaceItemDecorationInput(listOf(0,round(100f*density).toInt(),0,0), listOf(0, statusBarHeight,0,0))))
+            addItemDecoration(spaceItemDecoration(spaceItemDecorationInput(listOf(0,round(38f * baseDensity).toInt(),0,0), listOf(0, statusBarHeight,0,0), listOf(0, round(38f * baseDensity).toInt(),0,0))))
         }
         container.addView(recycler)
 
@@ -771,6 +786,78 @@ class MainActivity : AppCompatActivity() {
                                 val dataa = data as Pair<Long, Long>
                                 viewModel.editAlreadyWatched(dataa.first,dataa.second)
                             }
+                            ResultKeys.CREATE_CARD_APPLY -> {
+                                val dataa = data as createCardApply
+                                var length = 0L
+                                for (i in dataa.episodesList) {
+                                    length += i.length
+                                }
+                                val cardData = ObjectData(
+                                    0,
+                                    null,
+                                    0,
+                                    0,
+                                    dataa.name,
+                                    false,
+                                    null,
+                                    false,
+                                    false,
+                                    false,
+                                    null,
+                                    true,
+                                    dataa.image,
+                                    dataa.description,
+                                    if (dataa.author == "") null else dataa.author,
+                                    null,
+                                    0,
+                                    length,
+                                    null,
+                                    null,
+                                    520,
+                                    743,
+                                    null,
+                                    null,
+                                    false,
+                                    false,
+                                    null,
+                                    null,
+                                    null,
+                                    null,
+                                    null,
+                                    null,
+                                    LinkData(LinkType.SELF,null,null),
+                                    ElementType.Anime,
+                                    dataa.genreList
+                                )
+                                viewModel.insertCardWithEpisodes(cardData,dataa.episodesList, dataa.parentId)
+                                hideLayer()
+                            }
+
+                            ResultKeys.CREATE_CAROUSEL_APPLY -> {
+                                val dataa = data as OverLayLayer.CreateCarouselPage
+                                val carouselData = ObjectData(
+                                    id = 0,
+                                    page = dataa.page,
+                                    position = 0,
+                                    name = dataa.name,
+                                    childsShowName = dataa.childsShowName,
+                                    childsCornerRadius = dataa.childsCornerRadius,
+                                    childsNamePosition = dataa.childsNamePosition,
+                                    childsShowAlreadyWatchedLine = dataa.childsShowAlreadyWatchedLine,
+                                    alreadyWatched = 0,
+                                    length = 0,
+                                    layoutType = dataa.layoutType,
+                                    carouselType = dataa.carouselType,
+                                    carouselCollectionType = dataa.carouselCollectionType,
+                                    dovodchik = dataa.dovodchik,
+                                    showDovodchikDots = true,
+                                    elementType = ElementType.Carousel,
+                                    maxLines = dataa.maxLines,
+                                    maxObjectsInOneLine = dataa.maxObjectsInOneLine,
+                                )
+                                viewModel.insertCarousel(carouselData, dataa.page)
+                                hideLayer()
+                            }
                         }
                     }
                     }
@@ -782,6 +869,21 @@ class MainActivity : AppCompatActivity() {
             hideLayer()
         }
         restoreLayer()
+    }
+
+    override fun dispatchTouchEvent(ev: MotionEvent?): Boolean {
+        if (ev?.action == MotionEvent.ACTION_DOWN) {
+            val v = currentFocus
+            if (v is EditText) {
+                val outRect = Rect()
+                v.getGlobalVisibleRect(outRect)
+                if (!outRect.contains(ev.rawX.toInt(), ev.rawY.toInt())) {
+                    v.clearFocus()
+                    hideKeyboardd(v)
+                }
+            }
+        }
+        return super.dispatchTouchEvent(ev)
     }
 
     private var playerSubscriptionJob: kotlinx.coroutines.Job? = null
@@ -866,21 +968,28 @@ class MainActivity : AppCompatActivity() {
     fun bsdButtonActions(tag: BsdButtonsTags, value: Float) {
         when (tag) {
             BsdButtonsTags.animePage_extraButton_changeAllEpisodesWatchedMark -> {Log.d("VALUE", "$value")}
+            BsdButtonsTags.none -> {}
         }
+    }
+    fun addCarouselToPage(page: Int) {
+        val infoOfPageToShow = infoOfPageToShow.infoOfOverlayLayer(
+            info = OverLayLayer.CreateCarouselPage("Превью", page, SizeType.SMALL, true, 0, true, null, true,null,null,true,true, CarouselType.Anime, null),
+            true
+        )
+        showPage(infoOfPageToShow, null)
     }
     fun restoreLayer() {
         for (i in layersList) {
             when (i) {
                 is Layer.MainPage -> {}
-                is Layer.AnimePage -> {showPage(infoOfPageToShow.infoOfAnimePage(i.layoutObjId, false))}
-                is Layer.OverLay -> {showPage(infoOfPageToShow.infoOfOverlayLayer(i.info, false))}
-                is Layer.VideoPlayer -> {showPage(infoOfPageToShow.infoOfVideoPlayer(i.id, false))}
+                is Layer.AnimePage -> {showPage(infoOfPageToShow.infoOfAnimePage(i.layoutObjId, false), i)}
+                is Layer.OverLay -> {showPage(infoOfPageToShow.infoOfOverlayLayer(i.info, false), i)}
+                is Layer.VideoPlayer -> {showPage(infoOfPageToShow.infoOfVideoPlayer(i.id, false), i)}
             }
         }
     }
     fun hideLayer() {
         if (layersList.isNotEmpty()) {
-            Log.d("LS", "$layersList")
             var layer = layersList.last()
             for (i in 0 until layersList.size) {
                 val la = layersList[i]
@@ -926,19 +1035,42 @@ class MainActivity : AppCompatActivity() {
                 else {
                     when (layer) {
                         is Layer.MainPage -> {}
-                        is Layer.AnimePage -> {hidePage(pageTags.animePage)}
-                        is Layer.OverLay -> {hidePage(layer.tag)}
-                        is Layer.VideoPlayer -> {hidePage(pageTags.videoPlayer)}
+                        is Layer.AnimePage -> {
+                            layer.activeJobs.forEach { job ->
+                                if (job.isActive) {
+                                    job.cancel()
+                                }
+                            }
+                            layer.activeJobs.clear()
+                            hidePage(pageTags.animePage)
+                        }
+                        is Layer.OverLay -> {
+                            layer.activeJobs.forEach { job ->
+                                if (job.isActive) {
+                                    job.cancel()
+                                }
+                            }
+                            layer.activeJobs.clear()
+                            hidePage(layer.tag)
+                        }
+                        is Layer.VideoPlayer -> {
+                            layer.activeJobs.forEach { job ->
+                                if (job.isActive) {
+                                    job.cancel()
+                                }
+                            }
+                            layer.activeJobs.clear()
+                            hidePage(pageTags.videoPlayer)
+                        }
                     }
                     when (previousLayer) {
                         is Layer.MainPage -> {}
-                        is Layer.AnimePage -> {showPage(infoOfPageToShow.infoOfAnimePage(previousLayer.layoutObjId, false))}
+                        is Layer.AnimePage -> {showPage(infoOfPageToShow.infoOfAnimePage(previousLayer.layoutObjId, false), previousLayer)}
                         is Layer.OverLay -> {}
                         is Layer.VideoPlayer -> {}
                     }
                 }
                 layersList.remove(layer)
-                Log.d("LLL", "$layer")
             }
         }
         else {
@@ -968,7 +1100,7 @@ class MainActivity : AppCompatActivity() {
         pickFiles.launch(fileTypesString)
     }
     @SuppressLint("ClickableViewAccessibility")
-    fun showPage(info: infoOfPageToShow) {
+    fun showPage(info: infoOfPageToShow, layer: Layer?) {
         when (info) {
             is infoOfPageToShow.infoOfAnimePage -> {
                 animePageObjectId = info.id
@@ -984,7 +1116,9 @@ class MainActivity : AppCompatActivity() {
                     is OverLayLayer.CreateAnimePage -> {
                         if (info.isItNewLayer) {
                             layersList.add(Layer.OverLay(lastElevation+1, pageTags.createAnimePage, info.info))
+                            lastElevation += 1
                         }
+                        val layer = if (info.isItNewLayer || layer == null) {layersList.last()} else {layer}
                         val mainContainer = findViewById<ViewGroup>(R.id.main)
                         var bannerImageData: ImageData? = null
                         val createAnimePageContainerView = createOvDialog.CreateAnimePage(this, info.info, resultSenderViewModel,
@@ -997,9 +1131,7 @@ class MainActivity : AppCompatActivity() {
                                     val authorInput = con.findViewWithTag<ConstraintLayout>("author_input").getChildAt(0) as TextInputLayout
                                     val authorInputt = authorInput.findViewWithTag<TextInputEditText>("edit_text")
                                     val descriptionInput = con.findViewWithTag<TextInputLayout>("description_input").findViewWithTag<TextInputEditText>("edit_text")
-                                    Log.d("RES", "name = ${nameInput.text}  author = ${authorInputt.text}  description = ${descriptionInput.text} genres = ${info.info.genreList} bannerImage = $bannerImageData episodes = $it")
-//                                info.info.apply()
-                                    val data = createCardApply(nameInput.text.toString(), bannerImageData, authorInputt.text.toString(), descriptionInput.text.toString(), info.info.genreList, it)
+                                    val data = createCardApply(nameInput.text.toString(), bannerImageData, authorInputt.text.toString(), descriptionInput.text.toString(), info.info.genreList, it, info.info.parentId)
                                     resultSenderViewModel.sendResult(ResultKeys.CREATE_CARD_APPLY,data)
                                 }
                             },
@@ -1015,8 +1147,8 @@ class MainActivity : AppCompatActivity() {
                                     }
                                     fullGenreList.add(Pair(isActive, i.key))
                                 }
-                                showPage(infoOfPageToShow.infoOfOverlayLayer(OverLayLayer.GenreChoice(fullGenreList, ResultKeys.CREATE_CARD_GENRE_CHOICE),true))
-                            })
+                                showPage(infoOfPageToShow.infoOfOverlayLayer(OverLayLayer.GenreChoice(fullGenreList, ResultKeys.CREATE_CARD_GENRE_CHOICE),true), null)
+                            }, layer)
                         createAnimePageContainerView.tag = "create_anime_page_container"
                         createAnimePageContainerView.isFocusable = true
                         createAnimePageContainerView.isFocusableInTouchMode = true
@@ -1028,9 +1160,11 @@ class MainActivity : AppCompatActivity() {
                         val addEpisodeButton = addEpisodeBlockContainer.findViewWithTag<ConstraintLayout>("add_episode_button")
                         addEpisodeButton.setOnClickListener {
                             selectFiles(listOf(fileType.VIDEO), ResultKeys.CREATE_CARD_ADD_EPISODES)
+                            addEpisodeButton.requestFocus()
                         }
-                        lifecycleScope.launch {
+                        val job = lifecycleScope.launch {
                             resultSenderViewModel.results.collect { (key, data) -> run {
+                                ensureActive()
                                 when (key) {
                                     ResultKeys.CREATE_CARD_CHANGE_IMAGE -> run {
                                         val dataa = data as Pair<String, Int>
@@ -1081,6 +1215,9 @@ class MainActivity : AppCompatActivity() {
                                 }
                             } }
                         }
+                        if (layer is Layer.OverLay) {
+                            layer.activeJobs.add(job)
+                        }
 
                         val fullscreenview = createBlockBackgroundVieww()
                         fullscreenview.tag = "create_anime_page_fsv"
@@ -1108,6 +1245,7 @@ class MainActivity : AppCompatActivity() {
                         if (info.isItNewLayer) {
                             layersList.add(Layer.OverLay(lastElevation+1, pageTags.genreChoice, info.info))
                         }
+                        val layer = if (info.isItNewLayer || layer == null) {layersList.last()} else {layer}
                         val genreChoiceContainerView = createOvDialog.GenreChoice(this, info.info, resultSenderViewModel, deny = {hideLayer()})
                         genreChoiceContainerView.tag = "genre_choice_container"
                         val lp1 = genreChoiceContainerView.layoutParams as ConstraintLayout.LayoutParams
@@ -1137,7 +1275,44 @@ class MainActivity : AppCompatActivity() {
                             true
                         }
                     }
-                    is OverLayLayer.CreateCarouselPage -> {}
+                    is OverLayLayer.CreateCarouselPage -> {
+                        if (info.isItNewLayer) {
+                            layersList.add(Layer.OverLay(lastElevation+1, pageTags.createCarouselPage, info.info))
+                            lastElevation += 1
+                        }
+                        val layer = if (info.isItNewLayer || layer == null) {layersList.last()} else {layer}
+                        val createCarouselPageContainerView = createOvDialog.createCarouselPage(context = this, startsInfo = info.info, layer = layer, resultSenderViewModel = resultSenderViewModel, choiceIco = {
+                            run {
+                                selectFile(fileType.IMAGE, ResultKeys.CREATE_CAROUSEL_PAGE_CHANGE_ICO, null)
+                            }
+                        }, apply = {
+                            info -> run { resultSenderViewModel.sendResult(ResultKeys.CREATE_CAROUSEL_APPLY, info) }
+                        })
+                        createCarouselPageContainerView.tag = "create_carousel_page_container"
+                        val main = findViewById<ViewGroup>(R.id.main)
+                        createCarouselPageContainerView.elevation = 100000f
+                        val lp1 = createCarouselPageContainerView.layoutParams as ConstraintLayout.LayoutParams
+                        lp1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
+                        lp1.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
+                        createCarouselPageContainerView.layoutParams = lp1
+                        val fullScreenView = createBlockBackgroundVieww()
+                        fullScreenView.tag = "create_carousel_page_fsv"
+                        var alreadyClosed = false
+                        fullScreenView.setOnTouchListener { _, event ->
+                            when (event.action) {
+                                MotionEvent.ACTION_DOWN -> {}
+                                MotionEvent.ACTION_UP -> {
+                                    if (!alreadyClosed) {
+                                        hideLayer()
+                                        alreadyClosed = true
+                                    }
+                                }
+                            }
+                            true
+                        }
+                        main?.addView(fullScreenView)
+                        main?.addView(createCarouselPageContainerView)
+                    }
                 }
             }
             is infoOfPageToShow.infoOfVideoPlayer -> {
@@ -1183,6 +1358,17 @@ class MainActivity : AppCompatActivity() {
                 changeOrientation(this,true)
                 toggleSystemBars(true,this)
                 closeVideoPlayer()
+            }
+
+            pageTags.createCarouselPage -> {
+                val createCarouselPageContainerView: ViewGroup? = mainContainer.findViewWithTag<ViewGroup>("create_carousel_page_container")
+                val fullScreenView: View? = mainContainer.findViewWithTag<View>("create_carousel_page_fsv")
+                if (createCarouselPageContainerView != null) {
+                    mainContainer.removeView(createCarouselPageContainerView)
+                }
+                if (fullScreenView != null) {
+                    mainContainer.removeView(fullScreenView)
+                }
             }
         }
 
@@ -1234,60 +1420,11 @@ class MainActivity : AppCompatActivity() {
                     "",
                     mutableListOf(),
                     mutableListOf(),
-                    ElementType.Anime,),
-                true)
+                    ElementType.Anime,
+                    parentId),
+                true),
+                null
             )
-            lifecycleScope.launch {
-                resultSenderViewModel.results.collect { (key, data) -> run {
-                    when (key) {
-                        ResultKeys.CREATE_CARD_APPLY -> {
-                            val dataa = data as createCardApply
-                            var length = 0L
-                            for (i in dataa.episodesList) {
-                                length += i.length
-                            }
-                            val cardData = ObjectData(
-                                0,
-                                null,
-                                0,
-                                0,
-                                dataa.name,
-                                false,
-                                null,
-                                false,
-                                false,
-                                false,
-                                null,
-                                true,
-                                dataa.image,
-                                dataa.description,
-                                dataa.author,
-                                null,
-                                0,
-                                length,
-                                520,
-                                743,
-                                null,
-                                null,
-                                false,
-                                false,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                LinkData(LinkType.SELF,null,null),
-                                ElementType.Anime,
-                                dataa.genreList
-                            )
-                            viewModel.insertCardWithEpisodes(cardData,dataa.episodesList, parentId)
-                            hideLayer()
-                        }
-                    }
-                }
-                }
-            }
         }
     }
     fun createBlockBackgroundVieww(): ImageView {
@@ -1370,7 +1507,7 @@ class MainActivity : AppCompatActivity() {
         )
         val cssWidth = css.measuredWidth
         var cssHeight = css.measuredHeight
-        val nameOnFullScreenMargin = round(30f*density).toInt()
+        val nameOnFullScreenMargin = round(11f * baseDensity).toInt()
         val maxCssWidth = (screenWidth.toFloat() / 1.25f).toInt() - nameOnFullScreenMargin*2
         val maxCssHeight = (screenHeight.toFloat() / 1.5f).toInt() - nameOnFullScreenMargin
         if (cssWidth > maxCssWidth) {
