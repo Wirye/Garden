@@ -35,6 +35,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.round
 import android.view.GestureDetector
+import com.example.garden.leftInsetWidth
+import com.example.garden.navigationBarHeight
+import com.example.garden.rightInsetWidth
+import com.example.garden.statusBarHeight
 import com.example.garden.ui.utils.system.changeOrientation
 import com.example.garden.ui.utils.system.toggleSystemBars
 import kotlinx.coroutines.delay
@@ -94,7 +98,8 @@ class AnimeVideoPlayer(context: Context, private val resultSenderViewModel: Resu
     var currentEpisodeId: Long? = null
     private fun createUI(info: Triple<ObjectData?, List<ObjectData>, Int>): ConstraintLayout {
         val contrainer = ConstraintLayout(context).apply {
-            layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT)
+            layoutParams = LayoutParams(screenWidth + leftInsetWidth + rightInsetWidth, screenHeight + statusBarHeight + navigationBarHeight)
+            setPadding(leftInsetWidth, statusBarHeight, rightInsetWidth, navigationBarHeight)
         }
         uiContainer = contrainer
         val boldFont = context.resources.getFont(R.font.google_sans_bold)

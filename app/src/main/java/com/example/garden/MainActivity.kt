@@ -52,6 +52,7 @@ import kotlin.getValue
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.widget.EditText
+import android.widget.FrameLayout
 import androidx.activity.result.contract.ActivityResultContracts
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
@@ -59,6 +60,12 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import com.example.garden.database.LinkType
 import androidx.core.net.toUri
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.doOnAttach
+import androidx.core.view.setMargins
+import androidx.core.view.setPadding
+import androidx.window.layout.WindowMetricsCalculator
 import com.example.garden.database.CarouselType
 import com.example.garden.database.CollectionType
 import com.example.garden.database.MusicGenre
@@ -88,7 +95,6 @@ import com.example.garden.ui.utils.system.changeOrientation
 import com.example.garden.ui.utils.system.toggleSystemBars
 import com.example.garden.ui.utils.viewExtensions.loadImage
 import com.example.garden.ui.utils.viewExtensions.lifecycleOwner
-import com.example.garden.ui.utils.getStatusBarHeight
 import com.example.garden.ui.utils.drawables.blobInit
 import com.example.garden.ui.utils.spaceItemDecorationInput
 import com.example.garden.ui.adapters.animePageSezonsAdapterListFormat
@@ -172,9 +178,11 @@ val musicGenreColors = mapOf(
 var genreNames = mapOf<Genre, String>()
 var musicGenreNames = mapOf<MusicGenre, String>()
 var baseDensity = 0f
-var reversDensity = 0f
 var scaledDensity = 0f
 var statusBarHeight = 0
+var navigationBarHeight = 0
+var leftInsetWidth = 0
+var rightInsetWidth = 0
 var layersList = mutableListOf<Layer>()
 var lastElevation = 0
 var animePageObjectId: Long = -1
@@ -409,466 +417,482 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContentView(R.layout.mainactivity)
-        statusBarHeight = getStatusBarHeight(this)
-        screenWidth = resources.displayMetrics.widthPixels
-        screenHeight = resources.displayMetrics.heightPixels
-        baseDensity = resources.displayMetrics.density
-        scaledDensity = resources.displayMetrics.scaledDensity
-        screenWidthDp = round(screenWidth.toFloat() / baseDensity).toInt()
-        screenHeightDp = round(screenHeight.toFloat() / baseDensity).toInt()
-        reversDensity = 2.625f / baseDensity
-
-        steps = listOf(round(195f * baseDensity),round(96f * baseDensity),round(73 * baseDensity),round(49 * baseDensity),round(37f * baseDensity),round(24 * baseDensity), round(18f * baseDensity), round(15f * baseDensity), round(14f * baseDensity), round(12f * baseDensity), round(9f * baseDensity), round(8f * baseDensity), round(6f * baseDensity), round(5f * baseDensity))  // Это список возможных textSize (соблюдается не всегда)
         val container = findViewById<ViewGroup>(R.id.main)
-        val bsd = bottomSheetDialogFactory(this)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            // Для Android 13+ (API 33+)
-            requestPermissions(arrayOf(Manifest.permission.READ_MEDIA_IMAGES), 101)
-        }
-        else {
-            // Для Android 12 и ниже
-            requestPermissions(arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), 101)
-        }
-        if (!alreadyCreated) {
-            viewModel.insert()
-            viewModel.setChildsShowNameInSezonsRecycler(true)
-            baseBlurEffectForBloobs = RenderEffect.createBlurEffect(
-                150f, 150f,
-                Shader.TileMode.MIRROR
-            )
-            dotDrawables = createDotDrawables()
-            orientationOld = resources.configuration.orientation
-            orientationNow = resources.configuration.orientation
-            genreNames = mapOf(
-                Pair(Genre.Drama, resources.getString(R.string.Drama)),
-                Pair(Genre.Comedy, resources.getString(R.string.Comedy)),
-                Pair(Genre.Romance, resources.getString(R.string.Romance)),
-                Pair(Genre.EverydayLife, resources.getString(R.string.EverydayLife)),
-                Pair(Genre.School, resources.getString(R.string.School)),
-                Pair(Genre.Psychological, resources.getString(R.string.Psychological)),
-                Pair(Genre.Shonen, resources.getString(R.string.Shonen)),
-                Pair(Genre.ActionMovie, resources.getString(R.string.ActionMovie)),
-                Pair(Genre.MartialArts, resources.getString(R.string.MartialArts)),
-                Pair(Genre.Action, resources.getString(R.string.Action)),
-                Pair(Genre.Adventures, resources.getString(R.string.Adventures)),
-                Pair(Genre.Shoujo, resources.getString(R.string.Shoujo)),
-                Pair(Genre.Fantasy, resources.getString(R.string.Fantasy)),
-                Pair(Genre.Isekai, resources.getString(R.string.Isekai)),
-                Pair(Genre.ScienceFiction, resources.getString(R.string.ScienceFiction)),
-                Pair(Genre.Cyberpunk, resources.getString(R.string.Cyberpunk)),
-                Pair(Genre.Fantastic, resources.getString(R.string.Fantastic)),
-                Pair(Genre.Supernatural, resources.getString(R.string.Supernatural)),
-                Pair(Genre.PostApocalypse, resources.getString(R.string.PostApocalypse)),
-                Pair(Genre.Detective, resources.getString(R.string.Detective)),
-                Pair(Genre.Thriller, resources.getString(R.string.Thriller)),
-                Pair(Genre.Horrors, resources.getString(R.string.Horrors)),
-                Pair(Genre.Mysticism, resources.getString(R.string.Mysticism)),
-                Pair(Genre.Etty, resources.getString(R.string.Etty)),
-                Pair(Genre.Harem, resources.getString(R.string.Harem)),
-                Pair(Genre.Age, "Возраст"),
-                Pair(Genre.Year, "Год"),
-                Pair(Genre.Sezon, "Сезон года"),
-                Pair(Genre.Episodes, "Кол-во эпизодов")
+        container.doOnAttach {
+            val windowMetrics = WindowMetricsCalculator.getOrCreate().computeCurrentWindowMetrics(this)
+            val screenSizes = windowMetrics.bounds
+            val insets = ViewCompat.getRootWindowInsets(window.decorView)?.getInsets(WindowInsetsCompat.Type.systemBars())
+            navigationBarHeight = insets?.bottom ?: 0
+            statusBarHeight = insets?.top ?: 0
+            leftInsetWidth = insets?.left ?: 0
+            rightInsetWidth = insets?.right ?: 0
+            Log.d("INSETS", "$leftInsetWidth $rightInsetWidth $statusBarHeight $navigationBarHeight $insets")
+            screenWidth = screenSizes.width() - rightInsetWidth - leftInsetWidth
+            screenHeight = screenSizes.height() - statusBarHeight - navigationBarHeight
+            baseDensity = resources.displayMetrics.density
+            scaledDensity = resources.displayMetrics.scaledDensity
+            screenWidthDp = round(screenWidth.toFloat() / baseDensity).toInt()
+            screenHeightDp = round(screenHeight.toFloat() / baseDensity).toInt()
+            val containerlp1 = container.layoutParams as FrameLayout.LayoutParams
+            containerlp1.width = screenWidth + leftInsetWidth + rightInsetWidth
+            containerlp1.height = screenHeight + statusBarHeight + navigationBarHeight
+            container.layoutParams = containerlp1
 
-            )
-            musicGenreNames = mapOf(
-                Pair(MusicGenre.Rock, resources.getString(R.string.Rock)),
-                Pair(MusicGenre.Pop, resources.getString(R.string.Pop)),
-                Pair(MusicGenre.HipHop, resources.getString(R.string.HipHop)),
-                Pair(MusicGenre.Electronic, resources.getString(R.string.Electronic)),
-                Pair(MusicGenre.Metal, resources.getString(R.string.Metal)),
-                Pair(MusicGenre.Country, resources.getString(R.string.Country)),
-                Pair(MusicGenre.Jazz, resources.getString(R.string.Jazz)),
-                Pair(MusicGenre.Classical, resources.getString(R.string.Classical)),
-                Pair(MusicGenre.LoFi, resources.getString(R.string.LoFi)),
-                Pair(MusicGenre.Ambient, resources.getString(R.string.Ambient))
-            )
-            alreadyCreated = true
-        }
+            steps = listOf(round(195f * baseDensity),round(96f * baseDensity),round(73 * baseDensity),round(49 * baseDensity),round(37f * baseDensity),round(24 * baseDensity), round(18f * baseDensity), round(15f * baseDensity), round(14f * baseDensity), round(12f * baseDensity), round(9f * baseDensity), round(8f * baseDensity), round(6f * baseDensity), round(5f * baseDensity))  // Это список возможных textSize (соблюдается не всегда)
 
-        // Base blobs init
-        blob12OvalSize = round(screenWidth.toFloat() * 1.09f).toInt()
-        blob12FullSize = round((blob12OvalSize.toFloat() * delitRad) / 2f).toInt()
-
-        blob3OvalSize = round(screenWidth.toFloat() * 1.022f).toInt()
-        blob3FullSize = round((blob3OvalSize.toFloat() * delitRad) / 2f).toInt()
-
-        blob1MarginEnd = round(screenWidth.toFloat() / 3.303f).toInt() - ((blob12FullSize.toFloat() - blob12OvalSize.toFloat()) / 2f).toInt()
-        blob1MarginTop = -(floor(blob12FullSize.toFloat() / 2f).toInt())
-
-        blob2MarginStart = round(screenWidth.toFloat() / 3.54f).toInt() - ((blob12FullSize.toFloat() - blob12OvalSize.toFloat()) / 2f).toInt()
-        blob2MarginTop = -(ceil(screenWidth.toFloat() / 3.07f).toInt()) - ((blob12FullSize.toFloat() - blob12OvalSize.toFloat()) / 2f).toInt()
-
-        blob3MarginEnd = round(screenWidth.toFloat() / 4.84f).toInt() - ((blob12FullSize.toFloat() - blob12OvalSize.toFloat()) / 2f).toInt()
-        blob3MarginTop = -round(screenWidth.toFloat() / 18.62f).toInt() - ((blob12FullSize.toFloat() - blob12OvalSize.toFloat()) / 2f).toInt()
-
-        baseBlob1 = blobInit(blob12FullSize, "#B694FF")
-        baseBlob2 = blobInit(blob12FullSize, "#97FF9A")
-        baseBlob3 = blobInit(blob3FullSize, "#FFF374")
-        // Base blobs init finish
-
-        // Create base blobs
-        val blob1 = ImageView(this).apply {
-            val layoutparams1 = ConstraintLayout.LayoutParams(
-                blob12FullSize,
-                blob12FullSize
-            )
-            layoutparams1.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
-            layoutparams1.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
-            layoutparams1.setMargins(0,blob1MarginTop, blob1MarginEnd,0)
-            layoutParams = layoutparams1
-            val newId = View.generateViewId()
-            id = newId
-            baseblob1Id = newId
-            if (newId !in blobsNeedToHideOnAlbomOrientationIdsList) {
-                blobsNeedToHideOnAlbomOrientationIdsList.add(newId)
+            val bsd = bottomSheetDialogFactory(this)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                // Для Android 13+ (API 33+)
+                requestPermissions(arrayOf(Manifest.permission.READ_MEDIA_IMAGES), 101)
             }
-            background = baseBlob1
-        }
-        val blob2 = ImageView(this).apply {
-            val layoutparams1 = ConstraintLayout.LayoutParams(
-                blob12FullSize,
-                blob12FullSize
-            )
-            layoutparams1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
-            layoutparams1.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
-            layoutparams1.setMargins(blob2MarginStart, blob2MarginTop, 0,0)
-            layoutParams = layoutparams1
-            val newId = View.generateViewId()
-            id = newId
-            baseblob2Id = newId
-            if (newId !in blobsNeedToHideOnAlbomOrientationIdsList) {
-                blobsNeedToHideOnAlbomOrientationIdsList.add(newId)
+            else {
+                // Для Android 12 и ниже
+                requestPermissions(arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), 101)
             }
-            background = baseBlob2
-        }
-        val blob3 = ImageView(this).apply {
-            val layoutparams1 = ConstraintLayout.LayoutParams(
-                blob3FullSize,
-                blob3FullSize
-            )
-            layoutparams1.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
-            layoutparams1.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
-            layoutparams1.setMargins(0, blob3MarginTop, blob3MarginEnd,0)
-            layoutParams = layoutparams1
-            val newId = View.generateViewId()
-            id = newId
-            baseblob3Id = newId
-            if (newId !in blobsNeedToHideOnAlbomOrientationIdsList) {
-                blobsNeedToHideOnAlbomOrientationIdsList.add(newId)
-            }
-            background = baseBlob3
-        }
-        blob1.setRenderEffect(baseBlurEffectForBloobs)
-        blob2.setRenderEffect(baseBlurEffectForBloobs)
-        blob3.setRenderEffect(baseBlurEffectForBloobs)
-        container.addView(blob2)
-        container.addView(blob3)
-        container.addView(blob1)
+            if (!alreadyCreated) {
+                viewModel.insert()
+                viewModel.setChildsShowNameInSezonsRecycler(true)
+                baseBlurEffectForBloobs = RenderEffect.createBlurEffect(
+                    150f, 150f,
+                    Shader.TileMode.MIRROR
+                )
+                dotDrawables = createDotDrawables()
+                orientationOld = resources.configuration.orientation
+                orientationNow = resources.configuration.orientation
+                genreNames = mapOf(
+                    Pair(Genre.Drama, resources.getString(R.string.Drama)),
+                    Pair(Genre.Comedy, resources.getString(R.string.Comedy)),
+                    Pair(Genre.Romance, resources.getString(R.string.Romance)),
+                    Pair(Genre.EverydayLife, resources.getString(R.string.EverydayLife)),
+                    Pair(Genre.School, resources.getString(R.string.School)),
+                    Pair(Genre.Psychological, resources.getString(R.string.Psychological)),
+                    Pair(Genre.Shonen, resources.getString(R.string.Shonen)),
+                    Pair(Genre.ActionMovie, resources.getString(R.string.ActionMovie)),
+                    Pair(Genre.MartialArts, resources.getString(R.string.MartialArts)),
+                    Pair(Genre.Action, resources.getString(R.string.Action)),
+                    Pair(Genre.Adventures, resources.getString(R.string.Adventures)),
+                    Pair(Genre.Shoujo, resources.getString(R.string.Shoujo)),
+                    Pair(Genre.Fantasy, resources.getString(R.string.Fantasy)),
+                    Pair(Genre.Isekai, resources.getString(R.string.Isekai)),
+                    Pair(Genre.ScienceFiction, resources.getString(R.string.ScienceFiction)),
+                    Pair(Genre.Cyberpunk, resources.getString(R.string.Cyberpunk)),
+                    Pair(Genre.Fantastic, resources.getString(R.string.Fantastic)),
+                    Pair(Genre.Supernatural, resources.getString(R.string.Supernatural)),
+                    Pair(Genre.PostApocalypse, resources.getString(R.string.PostApocalypse)),
+                    Pair(Genre.Detective, resources.getString(R.string.Detective)),
+                    Pair(Genre.Thriller, resources.getString(R.string.Thriller)),
+                    Pair(Genre.Horrors, resources.getString(R.string.Horrors)),
+                    Pair(Genre.Mysticism, resources.getString(R.string.Mysticism)),
+                    Pair(Genre.Etty, resources.getString(R.string.Etty)),
+                    Pair(Genre.Harem, resources.getString(R.string.Harem)),
+                    Pair(Genre.Age, "Возраст"),
+                    Pair(Genre.Year, "Год"),
+                    Pair(Genre.Sezon, "Сезон года"),
+                    Pair(Genre.Episodes, "Кол-во эпизодов")
 
-        // Регистрируем поворот экрана для функции onRotationChanged()
-        displayManager = getSystemService(DISPLAY_SERVICE) as DisplayManager
-        val handler = Handler(Handler.Callback {
-            val currentRotation = windowManager.defaultDisplay.rotation
-            if (currentRotation != lastRotation) {
-                lastRotation = currentRotation
-                onRotationChanged()
+                )
+                musicGenreNames = mapOf(
+                    Pair(MusicGenre.Rock, resources.getString(R.string.Rock)),
+                    Pair(MusicGenre.Pop, resources.getString(R.string.Pop)),
+                    Pair(MusicGenre.HipHop, resources.getString(R.string.HipHop)),
+                    Pair(MusicGenre.Electronic, resources.getString(R.string.Electronic)),
+                    Pair(MusicGenre.Metal, resources.getString(R.string.Metal)),
+                    Pair(MusicGenre.Country, resources.getString(R.string.Country)),
+                    Pair(MusicGenre.Jazz, resources.getString(R.string.Jazz)),
+                    Pair(MusicGenre.Classical, resources.getString(R.string.Classical)),
+                    Pair(MusicGenre.LoFi, resources.getString(R.string.LoFi)),
+                    Pair(MusicGenre.Ambient, resources.getString(R.string.Ambient))
+                )
+                alreadyCreated = true
             }
-            true
-        })
-        displayManager.registerDisplayListener(
-            object : DisplayManager.DisplayListener {
-                override fun onDisplayAdded(displayId: Int) {}
-                override fun onDisplayRemoved(displayId: Int) {}
-                override fun onDisplayChanged(displayId: Int) {
-                    // Это вызовется на ЛЮБОЙ поворот, включая 180°
-                    handler.sendEmptyMessage(0)
+
+            // Base blobs init
+            blob12OvalSize = round(screenWidth.toFloat() * 1.09f).toInt()
+            blob12FullSize = round((blob12OvalSize.toFloat() * delitRad) / 2f).toInt()
+
+            blob3OvalSize = round(screenWidth.toFloat() * 1.022f).toInt()
+            blob3FullSize = round((blob3OvalSize.toFloat() * delitRad) / 2f).toInt()
+
+            blob1MarginEnd = round(screenWidth.toFloat() / 3.303f).toInt() - ((blob12FullSize.toFloat() - blob12OvalSize.toFloat()) / 2f).toInt()
+            blob1MarginTop = -(floor(blob12FullSize.toFloat() / 2f).toInt())
+
+            blob2MarginStart = round(screenWidth.toFloat() / 3.54f).toInt() - ((blob12FullSize.toFloat() - blob12OvalSize.toFloat()) / 2f).toInt()
+            blob2MarginTop = -(ceil(screenWidth.toFloat() / 3.07f).toInt()) - ((blob12FullSize.toFloat() - blob12OvalSize.toFloat()) / 2f).toInt()
+
+            blob3MarginEnd = round(screenWidth.toFloat() / 4.84f).toInt() - ((blob12FullSize.toFloat() - blob12OvalSize.toFloat()) / 2f).toInt()
+            blob3MarginTop = -round(screenWidth.toFloat() / 18.62f).toInt() - ((blob12FullSize.toFloat() - blob12OvalSize.toFloat()) / 2f).toInt()
+
+            baseBlob1 = blobInit(blob12FullSize, "#B694FF")
+            baseBlob2 = blobInit(blob12FullSize, "#97FF9A")
+            baseBlob3 = blobInit(blob3FullSize, "#FFF374")
+            // Base blobs init finish
+
+            // Create base blobs
+            val blob1 = ImageView(this).apply {
+                val layoutparams1 = ConstraintLayout.LayoutParams(
+                    blob12FullSize,
+                    blob12FullSize
+                )
+                layoutparams1.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
+                layoutparams1.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
+                layoutparams1.setMargins(0,blob1MarginTop, blob1MarginEnd,0)
+                layoutParams = layoutparams1
+                val newId = View.generateViewId()
+                id = newId
+                baseblob1Id = newId
+                if (newId !in blobsNeedToHideOnAlbomOrientationIdsList) {
+                    blobsNeedToHideOnAlbomOrientationIdsList.add(newId)
                 }
-            },
-            handler
-        )
-        onRotationChanged()
-
-        // Адаптеры
-        val adapter1 = CarouselsAdapter(this, addCardToCarousel = { addCardToCarousel(it) }, clickOnItem = { showPage(infoOfPageToShow.infoOfAnimePage(it.id, true), null) })
-        val animePageSezonsPageAdapter = AnimePageSezonsPageAdapter(this, clickOnCard = { showPage(infoOfPageToShow.infoOfAnimePage(it.id, true), null) } )
-        val animePageAdapter = AnimePageAdapter(this, showShowAllText = { text, size, callback -> showShowAllText(text, size, callback) }, animePageSezonsPageAdapter, openVideo = { showPage(infoOfPageToShow.infoOfVideoPlayer(it, true), null) })
-        val wrapper = objectData2(
-            id = -1,
-            page = 0,
-            position = 0,
-            name = null,
-            author = null,
-            showName = false,
-            namePosition = 0,
-            width = null,
-            height = null,
-            paddingVertical = null,
-            paddingHorizontal = null,
-            marginBetweenElementsHorizontal = null,
-            marginBetweenElementsVertical = null,
-            layoutType = 0,
-            childs = listOf(),
-            showDovodchikDots = false,
-            dovodchik = false,
-            maxObjectsInOneLine = null,
-            maxLines = null,
-            alreadyWatched = 0.toLong(),
-            elementType = ElementType.Anime,
-            length = 0.toLong(),
-        )
-
-        // Создаём главный recycler view
-        recycler = RecyclerView(this).apply {
-            val layoutparams1 = ConstraintLayout.LayoutParams(
-                ConstraintLayout.LayoutParams.MATCH_PARENT,
-                screenHeight
-            )
-            layoutparams1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
-            layoutparams1.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
-            layoutParams = layoutparams1
-            layoutManager = LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false)
-            adapter = adapter1
-            val newId = View.generateViewId()
-            id = newId
-            mainPageRecyclerId = newId
-            addItemDecoration(spaceItemDecoration(spaceItemDecorationInput(listOf(0,round(38f * baseDensity).toInt(),0,0), listOf(0, statusBarHeight,0,0), listOf(0, round(38f * baseDensity).toInt(),0,0))))
-        }
-        container.addView(recycler)
-
-        var mainHomePageLayer: Layer.MainPage?
-        if (findMainPageLayerByPageId(0) == null) {
-            layersList.add(Layer.MainPage(lastElevation+1, 0, mutableMapOf<Int,Int>(), mutableMapOf<Int,Int>(), mutableMapOf<Int,Int>(), 0, 0, 0))
-            lastElevation += 1
-            mainHomePageLayer = layersList.findLast { it is Layer.MainPage } as? Layer.MainPage
-        }
-        else {
-            mainHomePageLayer = layersList[layersList.indexOf(findMainPageLayerByPageId(0))] as? Layer.MainPage
-        }
-
-        recycler.addOnScrollListener(object : RecyclerView.OnScrollListener() {
-            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
-                super.onScrolled(recyclerView, dx, dy)
-                val layoutManager = recycler.layoutManager as LinearLayoutManager
-                val firstVisible = layoutManager.findFirstVisibleItemPosition()
-                if (mainHomePageLayer != null) {
-                    mainHomePageLayer.mainRecyclerScrollPosition = firstVisible
-                    mainHomePageLayer.mainRecyclerScrollPositionInPx += dy
-                    if (mainHomePageLayer.mainRecyclerScrollPositionInPx in 0..(screenHeight.toFloat() / 7f).toInt()) {
-                        val delitel = ((screenHeight.toFloat() / 7f).toInt()).toFloat() / 100f
-                        val procenti = ((100 - (mainHomePageLayer.mainRecyclerScrollPositionInPx.toFloat() / delitel).toInt()).toFloat() / 100f)
-                        changeBaseBlobsAlpha(procenti)
-                    }
-                    else {
-                        changeBaseBlobsAlpha(0f)
-                    }
-                }
+                background = baseBlob1
             }
-        })
-        animePage = RecyclerView(this).apply {
-            val layoutparams1 = ConstraintLayout.LayoutParams(
-                ConstraintLayout.LayoutParams.MATCH_PARENT,
-                ConstraintLayout.LayoutParams.MATCH_PARENT
+            val blob2 = ImageView(this).apply {
+                val layoutparams1 = ConstraintLayout.LayoutParams(
+                    blob12FullSize,
+                    blob12FullSize
+                )
+                layoutparams1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
+                layoutparams1.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
+                layoutparams1.setMargins(blob2MarginStart, blob2MarginTop, 0,0)
+                layoutParams = layoutparams1
+                val newId = View.generateViewId()
+                id = newId
+                baseblob2Id = newId
+                if (newId !in blobsNeedToHideOnAlbomOrientationIdsList) {
+                    blobsNeedToHideOnAlbomOrientationIdsList.add(newId)
+                }
+                background = baseBlob2
+            }
+            val blob3 = ImageView(this).apply {
+                val layoutparams1 = ConstraintLayout.LayoutParams(
+                    blob3FullSize,
+                    blob3FullSize
+                )
+                layoutparams1.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
+                layoutparams1.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
+                layoutparams1.setMargins(0, blob3MarginTop, blob3MarginEnd,0)
+                layoutParams = layoutparams1
+                val newId = View.generateViewId()
+                id = newId
+                baseblob3Id = newId
+                if (newId !in blobsNeedToHideOnAlbomOrientationIdsList) {
+                    blobsNeedToHideOnAlbomOrientationIdsList.add(newId)
+                }
+                background = baseBlob3
+            }
+            blob1.setRenderEffect(baseBlurEffectForBloobs)
+            blob2.setRenderEffect(baseBlurEffectForBloobs)
+            blob3.setRenderEffect(baseBlurEffectForBloobs)
+            container.addView(blob2)
+            container.addView(blob3)
+            container.addView(blob1)
+
+            // Регистрируем поворот экрана для функции onRotationChanged()
+            displayManager = getSystemService(DISPLAY_SERVICE) as DisplayManager
+            val handler = Handler(Handler.Callback {
+                val currentRotation = windowManager.defaultDisplay.rotation
+                if (currentRotation != lastRotation) {
+                    lastRotation = currentRotation
+                    onRotationChanged()
+                }
+                true
+            })
+            displayManager.registerDisplayListener(
+                object : DisplayManager.DisplayListener {
+                    override fun onDisplayAdded(displayId: Int) {}
+                    override fun onDisplayRemoved(displayId: Int) {}
+                    override fun onDisplayChanged(displayId: Int) {
+                        // Это вызовется на ЛЮБОЙ поворот, включая 180°
+                        handler.sendEmptyMessage(0)
+                    }
+                },
+                handler
             )
-            layoutparams1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
-            layoutparams1.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
-            layoutParams = layoutparams1
-            layoutManager = LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false)
-            adapter = animePageAdapter
-            visibility = View.GONE
-            background = resources.getDrawable(R.drawable.activity_main_nav_header_background)
-            val newId = View.generateViewId()
-            id = newId
-            animePageRecyclerId = newId
-            itemAnimator = null
-        }
-        animePage.addOnScrollListener(object : RecyclerView.OnScrollListener() {
-            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
-                super.onScrolled(recyclerView, dx, dy)
-                val layer = findLayerByLayerObjectId(animePageObjectId).first
-                if (layer != null) {
-                    if (layer is Layer.AnimePage) {
-                        layer.mainRecyclerScrollPositionInPx += dy
+            onRotationChanged()
+
+            // Адаптеры
+            val adapter1 = CarouselsAdapter(this, addCardToCarousel = { addCarouselToPage(0) }, clickOnItem = { showPage(infoOfPageToShow.infoOfAnimePage(it.id, true), null) })
+            val animePageSezonsPageAdapter = AnimePageSezonsPageAdapter(this, clickOnCard = { showPage(infoOfPageToShow.infoOfAnimePage(it.id, true), null) } )
+            val animePageAdapter = AnimePageAdapter(this, showShowAllText = { text, size, callback -> showShowAllText(text, size, callback) }, animePageSezonsPageAdapter, openVideo = { showPage(infoOfPageToShow.infoOfVideoPlayer(it, true), null) })
+            val wrapper = objectData2(
+                id = -1,
+                page = 0,
+                position = 0,
+                name = null,
+                author = null,
+                showName = false,
+                namePosition = 0,
+                width = null,
+                height = null,
+                paddingVertical = null,
+                paddingHorizontal = null,
+                marginBetweenElementsHorizontal = null,
+                marginBetweenElementsVertical = null,
+                layoutType = 0,
+                childs = listOf(),
+                showDovodchikDots = false,
+                dovodchik = false,
+                maxObjectsInOneLine = null,
+                maxLines = null,
+                alreadyWatched = 0.toLong(),
+                elementType = ElementType.Anime,
+                length = 0.toLong(),
+            )
+
+            // Создаём главный recycler view
+            recycler = RecyclerView(this).apply {
+                val layoutparams1 = ConstraintLayout.LayoutParams(
+                    screenWidth + leftInsetWidth + rightInsetWidth,
+                    screenHeight + statusBarHeight + navigationBarHeight
+                )
+                layoutparams1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
+                layoutparams1.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
+                setPadding(leftInsetWidth, statusBarHeight, rightInsetWidth, navigationBarHeight)
+                layoutParams = layoutparams1
+                clipToPadding = false
+                layoutManager = LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false)
+                adapter = adapter1
+                val newId = View.generateViewId()
+                id = newId
+                mainPageRecyclerId = newId
+                addItemDecoration(spaceItemDecoration(spaceItemDecorationInput(listOf(0,round(38f * baseDensity).toInt(),0,0), listOf(0,0,0,0), listOf(0, round(38f * baseDensity).toInt(),0,0))))
+            }
+            container.addView(recycler)
+
+            var mainHomePageLayer: Layer.MainPage?
+            if (findMainPageLayerByPageId(0) == null) {
+                layersList.add(Layer.MainPage(lastElevation+1, 0, mutableMapOf<Int,Int>(), mutableMapOf<Int,Int>(), mutableMapOf<Int,Int>(), 0, 0, 0))
+                lastElevation += 1
+                mainHomePageLayer = layersList.findLast { it is Layer.MainPage } as? Layer.MainPage
+            }
+            else {
+                mainHomePageLayer = layersList[layersList.indexOf(findMainPageLayerByPageId(0))] as? Layer.MainPage
+            }
+
+            recycler.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+                override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                    super.onScrolled(recyclerView, dx, dy)
+                    val layoutManager = recycler.layoutManager as LinearLayoutManager
+                    val firstVisible = layoutManager.findFirstVisibleItemPosition()
+                    if (mainHomePageLayer != null) {
+                        mainHomePageLayer.mainRecyclerScrollPosition = firstVisible
+                        mainHomePageLayer.mainRecyclerScrollPositionInPx += dy
+                        if (mainHomePageLayer.mainRecyclerScrollPositionInPx in 0..(screenHeight.toFloat() / 7f).toInt()) {
+                            val delitel = ((screenHeight.toFloat() / 7f).toInt()).toFloat() / 100f
+                            val procenti = ((100 - (mainHomePageLayer.mainRecyclerScrollPositionInPx.toFloat() / delitel).toInt()).toFloat() / 100f)
+                            changeBaseBlobsAlpha(procenti)
+                        }
+                        else {
+                            changeBaseBlobsAlpha(0f)
+                        }
                     }
                 }
+            })
+            animePage = RecyclerView(this).apply {
+                val layoutparams1 = ConstraintLayout.LayoutParams(
+                    screenWidth + leftInsetWidth + rightInsetWidth,
+                    screenHeight + statusBarHeight + navigationBarHeight
+                )
+                layoutparams1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
+                layoutparams1.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
+                layoutParams = layoutparams1
+                clipToPadding = false
+                layoutManager = LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false)
+                adapter = animePageAdapter
+                visibility = View.GONE
+                background = resources.getDrawable(R.drawable.activity_main_nav_header_background)
+                val newId = View.generateViewId()
+                id = newId
+                animePageRecyclerId = newId
+                itemAnimator = null
             }
-        })
-        container.addView(animePage)
+            animePage.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+                override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                    super.onScrolled(recyclerView, dx, dy)
+                    val layer = findLayerByLayerObjectId(animePageObjectId).first
+                    if (layer != null) {
+                        if (layer is Layer.AnimePage) {
+                            layer.mainRecyclerScrollPositionInPx += dy
+                        }
+                    }
+                }
+            })
+            container.addView(animePage)
 
-        lifecycleScope.launch {
-            repeatOnLifecycle(Lifecycle.State.STARTED) {
-                launch {
-                    viewModel.uiDataFlow.collect {
-                            newList -> run {
-                        objectsList = newList
-                        adapter1.submitList(newList)
-                        if (newList.isNotEmpty()) {
-                            val page = newList[0].page
-                            var qq = 0
-                            var mainHomePageLayer: Layer.MainPage? = null
-                            if (findMainPageLayerByPageId(page) == null) {
-                                layersList.add(Layer.MainPage(lastElevation+1, 0, mutableMapOf<Int,Int>(), mutableMapOf<Int,Int>(), mutableMapOf<Int,Int>(), 0, 0, 0))
-                                lastElevation += 1
-                                mainHomePageLayer = layersList.findLast { it is Layer.MainPage } as? Layer.MainPage
-                            }
-                            if (mainHomePageLayer != null) {
-                                qq = mainHomePageLayer.mainRecyclerScrollPosition
-                                mainHomePageLayer.mainRecyclerScrollPositionInPx = 0
-                            }
+            lifecycleScope.launch {
+                repeatOnLifecycle(Lifecycle.State.STARTED) {
+                    launch {
+                        viewModel.uiDataFlow.collect {
+                                newList -> run {
+                            objectsList = newList
+                            adapter1.submitList(newList)
+                            if (newList.isNotEmpty()) {
+                                val page = newList[0].page
+                                var qq = 0
+                                var mainHomePageLayer: Layer.MainPage? = null
+                                if (findMainPageLayerByPageId(page) == null) {
+                                    layersList.add(Layer.MainPage(lastElevation+1, 0, mutableMapOf<Int,Int>(), mutableMapOf<Int,Int>(), mutableMapOf<Int,Int>(), 0, 0, 0))
+                                    lastElevation += 1
+                                    mainHomePageLayer = layersList.findLast { it is Layer.MainPage } as? Layer.MainPage
+                                }
+                                if (mainHomePageLayer != null) {
+                                    qq = mainHomePageLayer.mainRecyclerScrollPosition
+                                    mainHomePageLayer.mainRecyclerScrollPositionInPx = 0
+                                }
 
-                            recycler.post {
-                                var scrollV = 0
-                                val r = if (objectsList.size < qq) {objectsList.size} else {qq}   // qq - Это mainRecyclerScrollPosition с.м чуть выше от recycler.addOnScrollListener
-                                for (i in 0 until r) {
-                                    var pdV = objectsList[i].paddingVertical
-                                    if (pdV == null) {
-                                        pdV = 100
+                                recycler.post {
+                                    var scrollV = 0
+                                    val r = if (objectsList.size < qq) {objectsList.size} else {qq}   // qq - Это mainRecyclerScrollPosition с.м чуть выше от recycler.addOnScrollListener
+                                    for (i in 0 until r) {
+                                        var pdV = objectsList[i].paddingVertical
+                                        if (pdV == null) {
+                                            pdV = 100
+                                        }
+                                        val textViewHeight = optimizeText(
+                                            if (objectsList[i].name != null) {
+                                                objectsList[i].name!!
+                                            } else {
+                                                "Молчаливая ведьма"
+                                            }, 200, 50f, false, null, 1
+                                        ).totalHeight
+                                        val itemHeight = calcRecyclerViewHeight(objectsList, i) + pdV + 15 + if (textViewHeight > 72) {textViewHeight} else {72} + if (objectsList[i].dovodchik && objectsList[i].showDovodchikDots && objectsList[i].childs.isNotEmpty() && (objectsList[i].layoutType == null || objectsList[i].layoutType == 1)) {45} else {0}  // 15 - Это marginTop у recycler view 72 - это высота кнопок add и edit  45 - это высота точек
+                                        scrollV += itemHeight
                                     }
-                                    val textViewHeight = optimizeText(
-                                        if (objectsList[i].name != null) {
-                                            objectsList[i].name!!
-                                        } else {
-                                            "Молчаливая ведьма"
-                                        }, 200, 50f, false, null, 1
-                                    ).totalHeight
-                                    val itemHeight = calcRecyclerViewHeight(objectsList, i) + pdV + 15 + if (textViewHeight > 72) {textViewHeight} else {72} + if (objectsList[i].dovodchik && objectsList[i].showDovodchikDots && objectsList[i].childs.isNotEmpty() && (objectsList[i].layoutType == null || objectsList[i].layoutType == 1)) {45} else {0}  // 15 - Это marginTop у recycler view 72 - это высота кнопок add и edit  45 - это высота точек
-                                    scrollV += itemHeight
+                                    recycler.scrollTo(0,scrollV)
                                 }
-                                recycler.scrollTo(0,scrollV)
                             }
+                            viewModel.updateAnimePageAdapter(animePageObjectId, newList)
                         }
-                        viewModel.updateAnimePageAdapter(animePageObjectId, newList)
+                        }
                     }
-                    }
-                }
-                launch {
-                    viewModel.animePageFlow.collect {
-                        run {
-                            val obj = it.animeData
-                            groupsList = it.groups
-                            animeSezonsSettingsState = it.settingsState
+                    launch {
+                        viewModel.animePageFlow.collect {
+                            run {
+                                val obj = it.animeData
+                                groupsList = it.groups
+                                animeSezonsSettingsState = it.settingsState
 
-                            var ls = animePageSezonsPageAdapter.currentList as MutableList<animePageSezonsAdapterListFormat>
-                            val objects = viewModel.getGroupObjectsByIdOfOne(animePageObjectId, objectsList, groupsList)
-                            wrapper.childs = objects
-                            if (ls.isNotEmpty()) {
-                                ls[0].settingsState = animeSezonsSettingsState
-                                ls[0].obj = wrapper
-                            }
-                            else {
-                                ls = mutableListOf(animePageSezonsAdapterListFormat(wrapper, animeSezonsSettingsState))
-                            }
-                            animePageAdapter.submitList(if (obj != null) {listOf(obj)} else {null})
-                            animePageSezonsPageAdapter.submitList(ls)
-                            var layer: Layer.AnimePage? = null
-                            var qq = 0
-                            if (animePageObjectId != -1L && findLayerByLayerObjectId(animePageObjectId).first == null) {
-                                layersList.add(Layer.AnimePage(lastElevation+1, 0, animePageObjectId, 0))
-                                lastElevation += 1
-                                layer = layersList.findLast { it is Layer.AnimePage } as? Layer.AnimePage
-                            }
-                            if (layer != null) {
-                                qq = layer.mainRecyclerScrollPositionInPx
-                            }
-                            animePage.scrollTo(0, qq)
-                        }
-                    }
-                }
-                launch {
-                    bsdFlow.collect {
-                        bsd.createDialog(it, callback = { tag, value -> bsdButtonActions(tag, value)})
-                    }
-                }
-                launch {
-                    resultSenderViewModel.results.collect { (key, data) -> run {
-                        when (key) {
-                            ResultKeys.VIDEO_PLAYER_EDIT_EPISODE_ALREADY_WATCHED -> {
-                                val dataa = data as Pair<Long, Long>
-                                viewModel.editAlreadyWatched(dataa.first,dataa.second)
-                            }
-                            ResultKeys.CREATE_CARD_APPLY -> {
-                                val dataa = data as createCardApply
-                                var length = 0L
-                                for (i in dataa.episodesList) {
-                                    length += i.length
+                                var ls = animePageSezonsPageAdapter.currentList as MutableList<animePageSezonsAdapterListFormat>
+                                val objects = viewModel.getGroupObjectsByIdOfOne(animePageObjectId, objectsList, groupsList)
+                                wrapper.childs = objects
+                                if (ls.isNotEmpty()) {
+                                    ls[0].settingsState = animeSezonsSettingsState
+                                    ls[0].obj = wrapper
                                 }
-                                val cardData = ObjectData(
-                                    0,
-                                    null,
-                                    0,
-                                    0,
-                                    dataa.name,
-                                    false,
-                                    null,
-                                    false,
-                                    false,
-                                    false,
-                                    null,
-                                    true,
-                                    dataa.image,
-                                    dataa.description,
-                                    if (dataa.author == "") null else dataa.author,
-                                    null,
-                                    0,
-                                    length,
-                                    null,
-                                    null,
-                                    520,
-                                    743,
-                                    null,
-                                    null,
-                                    false,
-                                    false,
-                                    null,
-                                    null,
-                                    null,
-                                    null,
-                                    null,
-                                    null,
-                                    LinkData(LinkType.SELF,null,null),
-                                    ElementType.Anime,
-                                    dataa.genreList
-                                )
-                                viewModel.insertCardWithEpisodes(cardData,dataa.episodesList, dataa.parentId)
-                                hideLayer()
-                            }
-
-                            ResultKeys.CREATE_CAROUSEL_APPLY -> {
-                                val dataa = data as OverLayLayer.CreateCarouselPage
-                                val carouselData = ObjectData(
-                                    id = 0,
-                                    page = dataa.page,
-                                    position = 0,
-                                    name = dataa.name,
-                                    childsShowName = dataa.childsShowName,
-                                    childsCornerRadius = dataa.childsCornerRadius,
-                                    childsNamePosition = dataa.childsNamePosition,
-                                    childsShowAlreadyWatchedLine = dataa.childsShowAlreadyWatchedLine,
-                                    alreadyWatched = 0,
-                                    length = 0,
-                                    layoutType = dataa.layoutType,
-                                    carouselType = dataa.carouselType,
-                                    carouselCollectionType = dataa.carouselCollectionType,
-                                    dovodchik = dataa.dovodchik,
-                                    showDovodchikDots = true,
-                                    elementType = ElementType.Carousel,
-                                    maxLines = dataa.maxLines,
-                                    maxObjectsInOneLine = dataa.maxObjectsInOneLine,
-                                )
-                                viewModel.insertCarousel(carouselData, dataa.page)
-                                hideLayer()
+                                else {
+                                    ls = mutableListOf(animePageSezonsAdapterListFormat(wrapper, animeSezonsSettingsState))
+                                }
+                                animePageAdapter.submitList(if (obj != null) {listOf(obj)} else {null})
+                                animePageSezonsPageAdapter.submitList(ls)
+                                var layer: Layer.AnimePage? = null
+                                var qq = 0
+                                if (animePageObjectId != -1L && findLayerByLayerObjectId(animePageObjectId).first == null) {
+                                    layersList.add(Layer.AnimePage(lastElevation+1, 0, animePageObjectId, 0))
+                                    lastElevation += 1
+                                    layer = layersList.findLast { it is Layer.AnimePage } as? Layer.AnimePage
+                                }
+                                if (layer != null) {
+                                    qq = layer.mainRecyclerScrollPositionInPx
+                                }
+                                animePage.scrollTo(0, qq)
                             }
                         }
                     }
+                    launch {
+                        bsdFlow.collect {
+                            bsd.createDialog(it, callback = { tag, value -> bsdButtonActions(tag, value)})
+                        }
+                    }
+                    launch {
+                        resultSenderViewModel.results.collect { (key, data) -> run {
+                            when (key) {
+                                ResultKeys.VIDEO_PLAYER_EDIT_EPISODE_ALREADY_WATCHED -> {
+                                    val dataa = data as Pair<Long, Long>
+                                    viewModel.editAlreadyWatched(dataa.first,dataa.second)
+                                }
+                                ResultKeys.CREATE_CARD_APPLY -> {
+                                    val dataa = data as createCardApply
+                                    var length = 0L
+                                    for (i in dataa.episodesList) {
+                                        length += i.length
+                                    }
+                                    val cardData = ObjectData(
+                                        0,
+                                        null,
+                                        0,
+                                        0,
+                                        dataa.name.ifEmpty { "Без имени" },
+                                        false,
+                                        null,
+                                        false,
+                                        false,
+                                        false,
+                                        null,
+                                        true,
+                                        dataa.image,
+                                        dataa.description,
+                                        if (dataa.author == "") null else dataa.author,
+                                        null,
+                                        0,
+                                        length,
+                                        null,
+                                        null,
+                                        520,
+                                        743,
+                                        null,
+                                        null,
+                                        false,
+                                        false,
+                                        null,
+                                        null,
+                                        null,
+                                        null,
+                                        null,
+                                        null,
+                                        LinkData(LinkType.SELF,null,null),
+                                        ElementType.Anime,
+                                        dataa.genreList
+                                    )
+                                    viewModel.insertCardWithEpisodes(cardData,dataa.episodesList, dataa.parentId)
+                                    hideLayer()
+                                }
+
+                                ResultKeys.CREATE_CAROUSEL_APPLY -> {
+                                    val dataa = data as OverLayLayer.CreateCarouselPage
+                                    val carouselData = ObjectData(
+                                        id = 0,
+                                        page = dataa.page,
+                                        position = 0,
+                                        name = dataa.name.ifEmpty { "Без имени" },
+                                        childsShowName = dataa.childsShowName,
+                                        childsCornerRadius = dataa.childsCornerRadius,
+                                        childsNamePosition = dataa.childsNamePosition,
+                                        childsShowAlreadyWatchedLine = dataa.childsShowAlreadyWatchedLine,
+                                        alreadyWatched = 0,
+                                        length = 0,
+                                        layoutType = dataa.layoutType,
+                                        carouselType = dataa.carouselType,
+                                        carouselCollectionType = dataa.carouselCollectionType,
+                                        dovodchik = dataa.dovodchik,
+                                        showDovodchikDots = true,
+                                        elementType = ElementType.Carousel,
+                                        maxLines = dataa.maxLines,
+                                        maxObjectsInOneLine = dataa.maxObjectsInOneLine,
+                                    )
+                                    viewModel.insertCarousel(carouselData, dataa.page)
+                                    hideLayer()
+                                }
+                            }
+                        }
+                        }
                     }
                 }
             }
-        }
 
-        onBackPressedDispatcher.addCallback(this) {
-            hideLayer()
+            onBackPressedDispatcher.addCallback(this) {
+                hideLayer()
+            }
+            restoreLayer()
         }
-        restoreLayer()
     }
 
     override fun dispatchTouchEvent(ev: MotionEvent?): Boolean {
@@ -1253,6 +1277,7 @@ class MainActivity : AppCompatActivity() {
                         lp1.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
                         lp1.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
                         lp1.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID
+                        lp1.setMargins(leftInsetWidth, statusBarHeight, rightInsetWidth, navigationBarHeight)
                         genreChoiceContainerView.layoutParams = lp1
                         val fullscreenview = createBlockBackgroundVieww()
                         fullscreenview.tag = "genre_choice_fsv"
@@ -1291,10 +1316,6 @@ class MainActivity : AppCompatActivity() {
                         createCarouselPageContainerView.tag = "create_carousel_page_container"
                         val main = findViewById<ViewGroup>(R.id.main)
                         createCarouselPageContainerView.elevation = 100000f
-                        val lp1 = createCarouselPageContainerView.layoutParams as ConstraintLayout.LayoutParams
-                        lp1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
-                        lp1.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
-                        createCarouselPageContainerView.layoutParams = lp1
                         val fullScreenView = createBlockBackgroundVieww()
                         fullScreenView.tag = "create_carousel_page_fsv"
                         var alreadyClosed = false

@@ -4,6 +4,8 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Color
 import android.graphics.text.LineBreaker
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.util.TypedValue
 import android.view.View
@@ -59,6 +61,8 @@ class CarouselsAdapter(private val context: Context, val addCardToCarousel: (Lon
         var dotsLayout: ViewGroup? = null
     }
 
+    var firstHolderHeightCallback: ((Int) -> Unit)? = null
+
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         return ViewHolder(ConstraintLayout(context).apply {
@@ -109,7 +113,7 @@ class CarouselsAdapter(private val context: Context, val addCardToCarousel: (Lon
                 lineWidth
             } - pdH - buttonsSize*2 - watchButtonWidth - watchButtonMarginRight
             val textView = OptimizedTextView(context).apply {
-                if (getItem(position).name != null) {
+                if (getItem(position).name != null &&  getItem(position).name!!.isNotEmpty()) {
                     text = getItem(position).name
                 }
                 else {
@@ -203,7 +207,7 @@ class CarouselsAdapter(private val context: Context, val addCardToCarousel: (Lon
                 var recyclerViewId = 0
                 val recycler = RecyclerView(context).apply {
                     val layoutParams1 = ConstraintLayout.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        lineWidth,
                         calcRecyclerViewHeight(currentList,position, lineWidth)
                     )
                     layoutParams1.topToBottom = idOfTextObj
@@ -214,6 +218,7 @@ class CarouselsAdapter(private val context: Context, val addCardToCarousel: (Lon
                     adapter = ChildAdapter(context, getItem(position), clickOnCard = {
                         clickOnItem(it)
                     }, lineWidth)
+                    clipToPadding = false
                     val newId = View.generateViewId()
                     id = newId
                     recyclerViewId = newId
@@ -418,7 +423,7 @@ class CarouselsAdapter(private val context: Context, val addCardToCarousel: (Lon
         else if (layer is Layer.MainPage) {
             if (holder.nameTextView != null) {
                 holder.nameTextView!!.apply {
-                    if (getItem(position).name != null) {
+                    if (getItem(position).name != null && getItem(position).name!!.isNotEmpty()) {
                         text = getItem(position).name
                     }
                     else {
@@ -448,6 +453,9 @@ class CarouselsAdapter(private val context: Context, val addCardToCarousel: (Lon
                 }
             }
             if (holder.recyclerView != null && (getItem(position).layoutType == null || getItem(position).layoutType == 1)) {
+                val recyclerViewlp1 = holder.recyclerView!!.layoutParams as ConstraintLayout.LayoutParams
+                recyclerViewlp1.height = calcRecyclerViewHeight(currentList,position, lineWidth)
+                holder.recyclerView!!.layoutParams = recyclerViewlp1
                 val ad = holder.recyclerView!!.adapter as ChildAdapter
                 ad.submitList(getItem(position).childs)
                 ad.updateParent(getItem(position))
@@ -644,6 +652,17 @@ class CarouselsAdapter(private val context: Context, val addCardToCarousel: (Lon
             }
             else if (holder.constraintLayoutGrid != null) {
                 holder.constraintLayout.removeView(holder.constraintLayoutGrid)
+            }
+        }
+        holder.constraintLayout.post {
+            if (position == 0) {
+                holder.constraintLayout.measure(
+                    View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
+                    View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+                )
+                if (firstHolderHeightCallback != null) {
+                    firstHolderHeightCallback!!(holder.constraintLayout.measuredHeight)
+                }
             }
         }
     }

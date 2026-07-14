@@ -191,22 +191,6 @@ class FlatGridOfEditEpisodesAdapter(private val context: Context, private val it
             }
         }
 
-        fun clearHTIFocus() {
-            val actualPosition = holder.adapterPosition
-            if (actualPosition != RecyclerView.NO_POSITION) {
-                hTI.clearFocus()
-                hideKeyboardd(hTI)
-                changeEpisodeName(hTI.text.toString(), actualPosition)
-            }
-        }
-        hTI.setOnEditorActionListener { v, actionId, _ ->
-            if (actionId == EditorInfo.IME_ACTION_DONE) {
-                clearHTIFocus()
-                true
-            } else {
-                false
-            }
-        }
         hTI.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {

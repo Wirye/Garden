@@ -92,6 +92,9 @@ import kotlin.math.min
 import kotlin.math.round
 import kotlin.math.roundToInt
 import androidx.core.view.isGone
+import com.example.garden.leftInsetWidth
+import com.example.garden.navigationBarHeight
+import com.example.garden.rightInsetWidth
 import com.example.garden.ui.utils.system.hideKeyboardd
 
 fun createCard(width: Int?, height: Int?, showName: Boolean, namePosition: Int?, image: ImageData?, name: String?, author: String?, alreadyWatched: Long, length: Long, showAlreadyWatchedLine: Boolean, context: Context, items: List<objectData2>, cornerRadius: SizeType?, optimizateCardSize: Boolean = true, gridMode: Boolean = false, lineWidth: Int? = null, paddingHorizontal: Int? = null, marginBetweenElementsHorizontal: Int? = null): Triple<List<View>, Int, Pair<Int, Int>> {
@@ -387,7 +390,7 @@ fun createGridOfChilds(objList: List<objectData2>, maxObjectsInOneLine: Int?, co
     var height = 0
     for (i in 0 until maxObjects) {
         val objData = objList[i]
-        val views = createCard(size.first, size.second, parent.childsShowName, parent.childsNamePosition, objData.image, objData.name, objData.author, objData.alreadyWatched, objData.length, parent.showAlreadyWatchedLine, context, objList, parent.childsCornerRadius,false, true, marginBetweenElementsHorizontal = parent.marginBetweenElementsHorizontal, paddingHorizontal = parent.paddingHorizontal)
+        val views = createCard(size.first, size.second, parent.childsShowName, parent.childsNamePosition, objData.image, if (objData.name != null && objData.name != "") objData.name else "Без имени", objData.author, objData.alreadyWatched, objData.length, parent.showAlreadyWatchedLine, context, objList, parent.childsCornerRadius,false, true, marginBetweenElementsHorizontal = parent.marginBetweenElementsHorizontal, paddingHorizontal = parent.paddingHorizontal)
         val cardContainer = ConstraintLayout(context).apply {
             val font = ResourcesCompat.getFont(context, R.font.google_sans_medium)
             val textSizee = floor(15f * baseDensity) // в px
@@ -2291,9 +2294,16 @@ object createOvDialog {
         }
         val container = ConstraintLayout(context).apply {
             layoutParams = ConstraintLayout.LayoutParams(
-                ConstraintLayout.LayoutParams.MATCH_PARENT,
-                ConstraintLayout.LayoutParams.MATCH_PARENT
-            )
+                screenWidth + leftInsetWidth + rightInsetWidth,
+                screenHeight + statusBarHeight + navigationBarHeight
+            ).apply {
+                startToStart = ConstraintLayout.LayoutParams.PARENT_ID
+                endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
+                topToTop = ConstraintLayout.LayoutParams.PARENT_ID
+                bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID
+            }
+            setPadding(0, statusBarHeight, 0, navigationBarHeight)
+            clipToPadding = false
             setBackgroundColor("#181619".toColorInt())
             setOnClickListener {
                 requestFocus()
@@ -2319,7 +2329,7 @@ object createOvDialog {
             lp1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
             lp1.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
             lp1.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
-            lp1.setMargins(0,marginTop+statusBarHeight,0,0)
+            lp1.setMargins(0,marginTop,0,0)
             setTextColor("#FFFFFF".toColorInt())
             setTextSize(TypedValue.COMPLEX_UNIT_PX, hTextSizee)
             typeface = boldFont
@@ -2335,9 +2345,29 @@ object createOvDialog {
         }
         container.addView(hText)
 
+        val scrollContainerr = ScrollView(context).apply {
+            val lp1 = ConstraintLayout.LayoutParams(
+                ConstraintLayout.LayoutParams.MATCH_PARENT,
+                screenHeight - previewContainerMarginTop - marginTop - hText.measuredHeight
+            )
+            lp1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
+            lp1.topToBottom = hText.id
+            lp1.setMargins(0,previewContainerMarginTop,0,0)
+            layoutParams = lp1
+            val paddingHorizontal = if (screenWidth > maxPageWidth) round((screenWidth - maxPageWidth).toFloat() / 2f).toInt() else 0
+            setPadding(leftInsetWidth + paddingHorizontal,0,rightInsetWidth + paddingHorizontal,hBtn + (marginTop*2))
+        }
+        val constraintLayoutInsideScrolConainerr = ConstraintLayout(context).apply {
+            val lp1 = ConstraintLayout.LayoutParams(
+                actualWidth,
+                ConstraintLayout.LayoutParams.WRAP_CONTENT
+            )
+            layoutParams = lp1
+        }
+
         val previewContainerWidth = actualWidth - marginLeft*2
-        val previewContainerHeight = round(previewContainerWidth / 1.258f).toInt() + (marginTop * 2)
-        val scrollContainerHeight = screenHeight - statusBarHeight - marginTop - hText.measuredHeight - (previewContainerMarginTop*2) - previewContainerHeight - hBtn - (marginTop*2)
+        val previewContainerHeight = round(previewContainerWidth / 1.258f).toInt() + (marginTop * 2).coerceIn(0, round(350f*baseDensity).toInt())
+        val scrollContainerHeight = if (screenHeight > screenWidth) screenHeight - marginTop - hText.measuredHeight - (previewContainerMarginTop*2) - previewContainerHeight - hBtn - (marginTop*2) else round(previewContainerWidth / 2.516f).toInt() + (marginTop * 2).coerceIn(0, round(250f*baseDensity).toInt())
 
         val previewContainerForeground = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
@@ -2356,9 +2386,9 @@ object createOvDialog {
                 previewContainerHeight
             )
             layoutparams1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
+            layoutparams1.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
             layoutparams1.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
-            layoutparams1.topToBottom = hText.id
-            layoutparams1.setMargins(0,previewContainerMarginTop,0,0)
+            layoutparams1.setMargins(0,0,0,0)
             layoutParams = layoutparams1
             background = previewContainerBackground
             foreground = previewContainerForeground
@@ -2374,7 +2404,11 @@ object createOvDialog {
             layoutparams1.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
             layoutparams1.setMargins(0,round(marginTop*1.5f).toInt(),0,0)
             layoutParams = layoutparams1
-            layoutManager = LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false)
+            layoutManager = object : LinearLayoutManager(context, VERTICAL, false) {
+                override fun canScrollVertically(): Boolean {
+                    return false
+                }
+            }
             adapter = previewAdapter
             val newId = View.generateViewId()
             id = newId
@@ -2444,7 +2478,20 @@ object createOvDialog {
             )
             previewAdapter.submitList(listOf<objectData2>(carouselWrapper))
         }
-        container.addView(previewContainer)
+        previewAdapter.firstHolderHeightCallback = {height -> run {
+            val previewContainerlp1 = previewContainer.layoutParams as ConstraintLayout.LayoutParams
+            val newHeight = height.coerceIn(0, round(450f * baseDensity).toInt())
+            previewContainerlp1.height = newHeight + (marginTop*2)
+            previewContainer.layoutParams = previewContainerlp1
+            val recyclerViewlp1 = recyclerView.layoutParams as ConstraintLayout.LayoutParams
+            recyclerViewlp1.height = newHeight
+            recyclerView.layoutParams = recyclerViewlp1
+            recyclerView.requestLayout()
+            recyclerView.invalidate()
+            previewContainer.requestLayout()
+            previewContainer.invalidate()
+        }}
+        constraintLayoutInsideScrolConainerr.addView(previewContainer)
         createCarouselPreview(startsInfo)
 
         val scrollContainerBackgroundDrawable = GradientDrawable().apply {
@@ -2452,64 +2499,29 @@ object createOvDialog {
             cornerRadius = getAdaptiveRadius(previewContainerWidth, SizeType.MEDIUM)
             setColor("#29262C".toColorInt())
         }
-        val scrollContainerBackground = ImageView(context).apply {
-            val layoutparams1 = ConstraintLayout.LayoutParams(
-                previewContainerWidth,
-                scrollContainerHeight
-            )
-            layoutparams1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
-            layoutparams1.topToBottom = previewContainer.id
-            layoutparams1.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
-            layoutparams1.setMargins(0,previewContainerMarginTop,0,0)
-            layoutParams = layoutparams1
-            background = scrollContainerBackgroundDrawable
-        }
-        container.addView(scrollContainerBackground)
-        val scrollContainer = ScrollView(context).apply {
-            val layoutparams1 = ConstraintLayout.LayoutParams(
-                ConstraintLayout.LayoutParams.MATCH_PARENT,
-                scrollContainerHeight
-            )
-            layoutparams1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
-            layoutparams1.topToBottom = previewContainer.id
-            layoutparams1.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
-            layoutparams1.setMargins(0,previewContainerMarginTop,0,0)
-            layoutParams = layoutparams1
-            isVerticalScrollBarEnabled = false
-            isHorizontalScrollBarEnabled = false
-            val paddingHorizontal = round((screenWidth-previewContainerWidth).toFloat() / 2f).toInt()
-            setPadding(paddingHorizontal, 0, paddingHorizontal,0)
-            id = View.generateViewId()
-        }
-        container.addView(scrollContainer)
 
         val scrollContainerForegroundDrawable = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
             cornerRadius = getAdaptiveRadius(previewContainerWidth, SizeType.MEDIUM)
             setStroke(round(1f*baseDensity).toInt(), "#809C9C9C".toColorInt())
         }
-        val scrollContainerForeground = ImageView(context).apply {
-            val layoutparams1 = ConstraintLayout.LayoutParams(
-                previewContainerWidth,
-                scrollContainerHeight
-            )
-            layoutparams1.startToStart = scrollContainer.id
-            layoutparams1.topToTop = scrollContainer.id
-            layoutparams1.endToEnd = scrollContainer.id
-            layoutParams = layoutparams1
-            foreground = scrollContainerForegroundDrawable
-        }
-        container.addView(scrollContainerForeground)
 
         val containerInsideScrollContainer = ConstraintLayout(context).apply {
-            val layoutparams1 = LinearLayout.LayoutParams(
+            val layoutparams1 = ConstraintLayout.LayoutParams(
                 previewContainerWidth,
                 ConstraintLayout.LayoutParams.WRAP_CONTENT
             )
+            layoutparams1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
+            layoutparams1.topToBottom = previewContainer.id
+            layoutparams1.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
+            layoutparams1.setMargins(0,previewContainerMarginTop,0,0)
             layoutParams = layoutparams1
-        }
-        scrollContainer.addView(containerInsideScrollContainer)
+            id = View.generateViewId()
+            background = scrollContainerBackgroundDrawable
+            foreground = scrollContainerForegroundDrawable
 
+        }
+        constraintLayoutInsideScrolConainerr.addView(containerInsideScrollContainer)
 
         var choiceIcoRow: ConstraintLayout? = null
         var presetsRow: ConstraintLayout? = null
@@ -2699,7 +2711,7 @@ object createOvDialog {
         nameInputt?.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                info.name = nameInputt.text.toString()
+                info.name = nameInputt.text.toString().trim()
                 createCarouselPreview(info)
             }
             override fun afterTextChanged(s: Editable?) {}
@@ -2848,12 +2860,14 @@ object createOvDialog {
         lastDropAndLiftAnimForRowsId += 1
         carouselMaketType = createSegmentedButtonRow(context, previewContainerWidth, elementHeight, listOf(
             segmentedButtonOptions("Обычный", null, startsInfo.layoutType == 1 || startsInfo.layoutType == null),
+//            segmentedButtonOptions("Из сеток", null, (startsInfo.layoutType == 1 || startsInfo.layoutType == null) && startsInfo.maxLines != null),
             segmentedButtonOptions("Сетка", null, startsInfo.layoutType == 0)
         ), null, "Тип макета карусели", callback = {
             value -> run {
                 info.layoutType = if (value == 1f) 0 else 1
                 createCarouselPreview(info)
                 dropAndLiftAnimForRows(carouselMaketType, gridSizes, gridSizeslp1, showCardsName, showCardsNamelp1, if (value == 1f) true else false, carouselMaketTypeAnimId)
+
             }
         })
 
@@ -3100,6 +3114,10 @@ object createOvDialog {
 //        showDovodchikDots.layoutParams = showDovodchikDotslp1
 //        containerInsideScrollContainer.addView(showDovodchikDots)
 
+
+
+        scrollContainerr.addView(constraintLayoutInsideScrolConainerr)
+        container.addView(scrollContainerr)
         val addButtonBg = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
             cornerRadius = getAdaptiveRadius(previewContainerWidth, SizeType.SMALL)
@@ -3167,6 +3185,8 @@ object createOvDialog {
             layer.activeJobs.add(job)
         }
 
+        constraintLayoutInsideScrolConainerr.requestLayout()
+        constraintLayoutInsideScrolConainerr.invalidate()
         return container
     }
     @SuppressLint("ClickableViewAccessibility")
@@ -3197,10 +3217,8 @@ object createOvDialog {
                 break
             }
         }
-        val inputLayoutsList = mutableListOf<View>()
-        val buttonsList = mutableListOf<View>()
         val containerWidth = actualWidth
-        val containerHeight = screenHeight - statusBarHeight
+        val containerHeight = screenHeight
         val containerBackgroundDrawable = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
             setColor("#08040D".toColorInt())
@@ -3213,14 +3231,16 @@ object createOvDialog {
 
         val containerr = ConstraintLayout(context).apply {
             val layoutparams1 = ConstraintLayout.LayoutParams(
-                screenWidth,
-                containerHeight + statusBarHeight
+                screenWidth + leftInsetWidth + rightInsetWidth,
+                screenHeight + statusBarHeight + navigationBarHeight
             )
             layoutparams1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
             layoutparams1.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
             layoutparams1.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID
             layoutparams1.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
             layoutParams = layoutparams1
+            setPadding(0, statusBarHeight, 0, navigationBarHeight)
+            clipToPadding = false
             elevation = 100f
             background = containerBackgroundDrawable
         }
@@ -3248,7 +3268,7 @@ object createOvDialog {
             layoutparams1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
             layoutparams1.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
             layoutparams1.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
-            layoutparams1.setMargins(0, marginTop+statusBarHeight, 0, 0)
+            layoutparams1.setMargins(0, marginTop, 0, 0)
             layoutParams = layoutparams1
             maxLines = 1
             setTextSize(TypedValue.COMPLEX_UNIT_PX, hTextSize)
@@ -3303,11 +3323,10 @@ object createOvDialog {
             )
             layoutparams1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
             layoutparams1.topToBottom = hTextId
-            layoutparams1.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
             layoutparams1.setMargins(0,bannerMarginTop,0,0)
             layoutParams = layoutparams1
             val paddingHorizontal = ((screenWidth - scrollContainerWidth).toFloat() / 2f).toInt()
-            setPadding(paddingHorizontal,0,paddingHorizontal,(bannerMarginTop+hBtn))
+            setPadding(paddingHorizontal + leftInsetWidth,0,paddingHorizontal + rightInsetWidth,(bannerMarginTop+hBtn))
             tag = "scroll_container"
             isVerticalScrollBarEnabled = false
             isHorizontalScrollBarEnabled = false
@@ -3406,7 +3425,6 @@ object createOvDialog {
         nameInput.id = nameInputId
         nameInput.tag = "name_input"
         container.addView(nameInput)
-        inputLayoutsList.add(nameInput)
         var nameInputt: TextInputEditText? = null
         for (k in 0 until nameInput.childCount) {
             val obj = nameInput.getChildAt(k)
@@ -3427,7 +3445,7 @@ object createOvDialog {
         nameInputt?.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                startsInfo.name = nameInputt.text.toString()
+                startsInfo.name = nameInputt.text.toString().trim()
             }
             override fun afterTextChanged(s: Editable?) {}
         })
@@ -3465,10 +3483,8 @@ object createOvDialog {
             scaleType = ImageView.ScaleType.CENTER_CROP
             layoutParams = layoutparams1
         }
-        buttonsList.add(authorInputIco)
         authorInputContainer.addView(authorInputIco)
         container.addView(authorInputContainer)
-        inputLayoutsList.add(authorInput)
         var authorInputt: TextInputEditText? = null
         for (k in 0 until authorInput.childCount) {
             val obj = authorInput.getChildAt(k)
@@ -3618,7 +3634,6 @@ object createOvDialog {
         }
         genreContainer.addView(genreGridView)
         container.addView(genreContainer)
-        buttonsList.add(genreContainer)
 
         fun updateGenreList(newGenreList: List<Pair<Boolean, Genre>>) {
             val ls = mutableListOf<Genre>()
@@ -3731,11 +3746,6 @@ object createOvDialog {
             genreContainer.addView(genreGridView)
             addGenreButtonContainer.setOnClickListener {
                 container.requestFocus()
-                val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-                for (i in inputLayoutsList) {
-                    i.clearFocus()
-                    imm.hideSoftInputFromWindow(i.windowToken, 0)
-                }
                 val key = ResultKeys.CREATE_CARD_GENRE_CHOICE
                 openGenreChoice(key)
             }
@@ -3779,7 +3789,6 @@ object createOvDialog {
         }
         editBannerButtonContainer.addView(editBannerButtonIco)
         container.addView(editBannerButtonContainer)
-        buttonsList.add(editBannerButtonContainer)
 
         val searchBannerContainerWidth = bannerW - editBannerButtonSize - marginBetweenInfoElements
         val searchButtonContainerDrawable = GradientDrawable().apply {
@@ -3836,7 +3845,6 @@ object createOvDialog {
         searchButtonContainer.addView(searchButtonText)
         searchButtonContainer.addView(searchButtonIco)
         container.addView(searchButtonContainer)
-        buttonsList.add(searchButtonContainer)
 
 
         var episodesList: MutableList<episodeInfo> = startsInfo.episodesList as MutableList<episodeInfo>
@@ -3854,7 +3862,6 @@ object createOvDialog {
             descriptionInput.id = descriptionInputId
             descriptionInput.tag = "description_input"
             container.addView(descriptionInput)
-            inputLayoutsList.add(descriptionInput)
 
             var descriptionInputt: TextInputEditText? = null
             for (k in 0 until descriptionInput.childCount) {
@@ -4090,7 +4097,6 @@ object createOvDialog {
             }
             addTrackButton.addView(addTrackIco)
             container.addView(addTrackButton)
-            buttonsList.add(addTrackButton)
 
             val searchTrackButton = ConstraintLayout(context).apply {
                 val layoutparams1 = ConstraintLayout.LayoutParams(
@@ -4118,7 +4124,6 @@ object createOvDialog {
             }
             searchTrackButton.addView(searchTrackIco)
             container.addView(searchTrackButton)
-            buttonsList.add(searchTrackButton)
             val addVerticalVideoBackgroundDrawable = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
                 cornerRadius = getAdaptiveRadius(nameInputHeight*3, SizeType.SMALL)
@@ -4161,13 +4166,13 @@ object createOvDialog {
 
         val addCardButtonContainer = ConstraintLayout(context).apply {
             val layoutparams1 = ConstraintLayout.LayoutParams(
-                scrollContainerWidth,
+                actualWidth - (marginLeft*2),
                 nameInputHeight
             )
             layoutparams1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
             layoutparams1.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID
             layoutparams1.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
-            layoutparams1.setMargins(marginLeft,0,0,marginTop)
+            layoutparams1.setMargins(0,0,0,marginTop)
             layoutParams = layoutparams1
             background = addCardButtonBg
             tag = "add_card_button"
@@ -4196,19 +4201,6 @@ object createOvDialog {
 
         addCardButtonContainer.addView(addCardButtonText)
         containerr.addView(addCardButtonContainer)
-        buttonsList.add(addCardButtonContainer)
-        buttonsList.add(containerr)
-        for (i in buttonsList) {
-            i.setOnClickListener {
-                i.requestFocus()
-                val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-                for (j in inputLayoutsList) {
-                    j.clearFocus()
-                    imm.hideSoftInputFromWindow(j.windowToken, 0)
-                }
-            }
-        }
-
 
         with(container) {
             isFocusableInTouchMode = true
@@ -4280,7 +4272,7 @@ object createOvDialog {
         val font = context.resources.getFont(R.font.google_sans_regular)
         val boldFont = context.resources.getFont(R.font.google_sans_bold)
         val containerWidth = min(round(420f*baseDensity).toInt(), round(screenWidth.toFloat() / 1.25f).toInt())
-        val textHeight = round(max(screenHeight,screenWidth).toFloat() / 30f).toInt()
+        val textHeight = round(max(screenHeight,screenWidth).toFloat() / 30f).toInt().coerceIn(0, round(30f * baseDensity).toInt())
         val hTextSizee = getTextSizeByHeight(textHeight,boldFont)
         val marginBetweenInfoElements = round(containerWidth.toFloat() / 57.6f).toInt()
         val gridWidth = containerWidth - marginBetweenInfoElements*4
@@ -4592,4 +4584,11 @@ fun createDotDrawables(): MutableList<GradientDrawable> {
     }
 
     return drawables
+}
+data class createNavbarsReturn(
+    val headerNavbar: ConstraintLayout,
+    val footerNavbar: ConstraintLayout,
+)
+fun createNavbars() {
+
 }

@@ -40,7 +40,7 @@ class ChildAdapter(private val context: Context, private val parentt: objectData
         holder.constraintLayout.removeAllViews()
         // Обычная карточка
         if (getItem(position).layoutType == null || getItem(position).layoutType == 1 || getItem(position).childs.isEmpty()) {
-            val views = createCard(getItem(position).width, getItem(position).height, parent.childsShowName, parent.childsNamePosition, getItem(position).image, getItem(position).name, getItem(position).author, getItem(position).alreadyWatched, getItem(position).length, parent.childsShowAlreadyWatchedLine, context, currentList, parent.childsCornerRadius, lineWidth = elementWidth, paddingHorizontal = parent.paddingHorizontal, marginBetweenElementsHorizontal = parent.marginBetweenElementsHorizontal)
+            val views = createCard(getItem(position).width, getItem(position).height, parent.childsShowName, parent.childsNamePosition, getItem(position).image, if (getItem(position).name != "" && getItem(position).name != null) getItem(position).name else "Без имени", getItem(position).author, getItem(position).alreadyWatched, getItem(position).length, parent.childsShowAlreadyWatchedLine, context, currentList, parent.childsCornerRadius, lineWidth = elementWidth, paddingHorizontal = parent.paddingHorizontal, marginBetweenElementsHorizontal = parent.marginBetweenElementsHorizontal)
             val layoutparams2 = RecyclerView.LayoutParams(
                 if (!parent.childsShowName || parent.childsShowName && parent.namePosition == 1) {
                     views.third.first

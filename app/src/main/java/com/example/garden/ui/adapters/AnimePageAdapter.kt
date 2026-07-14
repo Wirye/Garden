@@ -52,6 +52,7 @@ import com.example.garden.blob3MarginTop
 import com.example.garden.ui.utils.convertToStringTime
 import com.example.garden.ui.utils.createGridOfGenres
 import com.example.garden.database.Genre
+import com.example.garden.database.ImageData
 import com.example.garden.database.ImageSource
 import com.example.garden.database.LinkType
 import com.example.garden.database.SizeType
@@ -60,13 +61,15 @@ import com.example.garden.ui.utils.findLayerByLayerObjectId
 import com.example.garden.ui.utils.getAdaptiveRadius
 import com.example.garden.ui.utils.colors.getDeepDarkColor
 import com.example.garden.layersList
+import com.example.garden.leftInsetWidth
 import com.example.garden.ui.utils.viewExtensions.loadImage
 import com.example.garden.objectData2
+import com.example.garden.rightInsetWidth
 import com.example.garden.ui.utils.optimizeText
 import com.example.garden.screenHeight
 import com.example.garden.screenWidth
-import com.example.garden.ui.utils.segmentedButtonOptions
 import com.example.garden.statusBarHeight
+import com.example.garden.ui.utils.segmentedButtonOptions
 import com.example.garden.steps
 import com.example.garden.ui.adapters.objectDiffCallbacks.ObjectDiffCallback
 import java.io.File
@@ -88,7 +91,7 @@ class AnimePageAdapter(private val context: Context, private val showShowAllText
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         return ViewHolder(ConstraintLayout(context).apply {
             val layoutParams1 = RecyclerView.LayoutParams(
-                ConstraintLayout.LayoutParams.MATCH_PARENT,
+                screenWidth + leftInsetWidth + rightInsetWidth,
                 ConstraintLayout.LayoutParams.WRAP_CONTENT
             )
             layoutParams = layoutParams1
@@ -176,7 +179,10 @@ class AnimePageAdapter(private val context: Context, private val showShowAllText
         val maxPageWidth = round(1000f * baseDensity).toInt() // Лимит для планшетов
         if (screenWidth > maxPageWidth) {
             val paddingHorizontal = round((screenWidth-maxPageWidth).toFloat() / 2f).toInt()
-            container.setPadding(paddingHorizontal,0,paddingHorizontal,0)
+            container.setPadding(paddingHorizontal+ leftInsetWidth,0,paddingHorizontal+ rightInsetWidth,0)
+        }
+        else {
+            container.setPadding(leftInsetWidth,0,rightInsetWidth,0)
         }
         val actualWidth = min(screenWidth, maxPageWidth)
         val marginLeft = round(16f * baseDensity).toInt()
@@ -203,7 +209,7 @@ class AnimePageAdapter(private val context: Context, private val showShowAllText
                 bannerW,
                 bannerH
             )
-            layoutparams1.setMargins(marginLeft, marginTop+statusBarHeight,0,0)
+            layoutparams1.setMargins(marginLeft, marginTop + statusBarHeight,0,0)
             layoutparams1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
             layoutparams1.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
             layoutParams = layoutparams1
@@ -242,7 +248,7 @@ class AnimePageAdapter(private val context: Context, private val showShowAllText
             val textSizee = steps[i]
             val res = optimizeText("Продолжить смотреть",  textWidth, textSizee, false, null, 1)
             val resStr = res.firstLine
-            if ((resStr[resStr.lastIndex].toString() != ".") && res.totalHeight <= (playIcoSize.toFloat() * 1.3f).toInt()) {
+            if ((if (resStr.isNotEmpty()) resStr[resStr.lastIndex].toString() != "." else false) && res.totalHeight <= (playIcoSize.toFloat() * 1.3f).toInt()) {
                 textHeight = res.totalHeight
                 textSize = textSizee
                 break
@@ -1266,7 +1272,7 @@ class AnimePageAdapter(private val context: Context, private val showShowAllText
         }
 
         val drawBackgroundBlobs = ImageRequest.Builder(context)
-            .data(if (parentCard.image != null) { if (parentCard.image!!.source == ImageSource.URL) {parentCard.image!!.value}  else if (parentCard.image!!.source == ImageSource.DEVICE)  {if (parentCard.image!!.value.startsWith("content://")) parentCard.image!!.value.toUri() else File(parentCard.image!!.value)} else {parentCard.image!!.value.toInt()} } else {R.drawable.anime_1})
+            .data(if (parentCard.image != null) { if (parentCard.image!!.source == ImageSource.URL) {parentCard.image!!.value}  else if (parentCard.image!!.source == ImageSource.DEVICE)  {if (parentCard.image!!.value.startsWith("content://")) parentCard.image!!.value.toUri() else File(parentCard.image!!.value)} else {parentCard.image!!.value.toInt()} } else {R.drawable.placeholder})
             .allowHardware(false)
             .target { drawable ->
                 // Картинка загрузилась, превращаем в Bitmap
@@ -1328,16 +1334,14 @@ class AnimePageAdapter(private val context: Context, private val showShowAllText
             .listener(
                 onError = { _, result ->
                     Log.e("CoilError", "Ошибка загрузки: ${result.throwable}")
-//                    bannerContainer.setBackgroundColor(Color.parseColor("#59AFAFAF"))
                 }
             )
             .listener(
                 onStart = {
-                    banner.setBackgroundColor("#AFAFAF".toColorInt())
+                    banner.loadImage(ImageData(ImageSource.SELF, R.drawable.placeholder.toString()))
                 }
             )
             .build()
         context.imageLoader.enqueue(drawBackgroundBlobs)
     }
-
 }

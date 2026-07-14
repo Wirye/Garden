@@ -42,11 +42,10 @@ fun cardScaleCalcFree(objList: List<objectData2>, marginStartAndEnd: Int, margin
         var amountCards: Float
         var prres: Int
 
-        if (baseWidth >= 840) {
+        if (baseWidth >= round(320f * baseDensity).toInt()) {
             amountCards = round(((lineWidth.toFloat()-((marginStartAndEnd*3)+marginStartAndEnd-margin))/baseWidth))
             prres = round(((lineWidth.toFloat() - (marginStartAndEnd*3) - (margin * (amountCards-1))) / amountCards)).toInt()
         }
-        // For small or normal cards (like activity_main_anime_homepage_carousel_scrolly_1 cards)
         else {
             amountCards = round((lineWidth.toFloat()-(marginStartAndEnd + (marginStartAndEnd - margin)))/baseWidth)
             prres = round(((lineWidth.toFloat() - (marginStartAndEnd*2) - (margin * (amountCards-1))) / amountCards)).toInt()

@@ -170,7 +170,7 @@ class MainViewModel(private val dao: ObjectDataDao, private val groupDao: Groups
                 height = null,
                 childsCornerRadius = null,
                 layoutType = null,
-                dovodchik = true,
+                dovodchik = false,
                 showDovodchikDots = true,
                 maxObjectsInOneLine = null,
                 maxLines = null,
@@ -270,6 +270,183 @@ class MainViewModel(private val dao: ObjectDataDao, private val groupDao: Groups
                 genre = null
             )
             dao.insert(cd2)
+            val cr2 = ObjectData(
+                id = 4,
+                page = 0,
+                parentId = null,
+                position = 1,
+                name = "Любимая музыка",
+                showName = true,
+                namePosition = 0,
+                showAlreadyWatchedLine = true,
+                showAvatar = false,
+                childsShowName = true,
+                childsNamePosition = 0,
+                childsShowAlreadyWatchedLine = true,
+                image = null,
+                description = null,
+                author = null,
+                type = null,
+                alreadyWatched = 0,
+                length = 0,
+                width = null,
+                height = null,
+                childsCornerRadius = null,
+                layoutType = null,
+                dovodchik = true,
+                showDovodchikDots = true,
+                maxObjectsInOneLine = null,
+                maxLines = null,
+                paddingHorizontal = null,
+                paddingVertical = null,
+                marginBetweenElementsHorizontal = null,
+                marginBetweenElementsVertical = null,
+                link = null,
+                elementType = ElementType.Carousel,
+                genre = null
+            )
+            val cd3 = ObjectData(
+                id = 5,
+                page = 0,
+                parentId = 4,
+                position = 0,
+                name = "Звёздное дитя 3",
+                showName = true,
+                namePosition = 0,
+                showAlreadyWatchedLine = false,
+                showAvatar = false,
+                childsShowName = false,
+                childsNamePosition = 0,
+                childsShowAlreadyWatchedLine = false,
+                image = ImageData(
+                    source = ImageSource.URL,
+                    value = "https://anilibria.top/storage/releases/posters/10089/PKg3Ru0WTMgTSSXhIpJICXjdE5DNvvLE.webp"
+                ),
+                description = null,
+                author = null,
+                type = null,
+                alreadyWatched = 32,
+                length = 50,
+                width = 308,
+                height = 308,
+                childsCornerRadius = null,
+                layoutType = null,
+                dovodchik = false,
+                showDovodchikDots = false,
+                maxObjectsInOneLine = null,
+                maxLines = null,
+                paddingHorizontal = null,
+                paddingVertical = null,
+                marginBetweenElementsHorizontal = null,
+                marginBetweenElementsVertical = null,
+                link = LinkData(
+                    type = LinkType.SELF,
+                    targetId = null,
+                    contentPath = null
+                ),
+                elementType = ElementType.Anime,
+                genre = listOf(
+                    Genre.Drama,
+                    Genre.Detective,
+                    Genre.Shonen
+                )
+            )
+            val cd4 = ObjectData(
+                id = 6,
+                page = 0,
+                parentId = 4,
+                position = 0,
+                name = "Звёздное дитя 3",
+                showName = true,
+                namePosition = 0,
+                showAlreadyWatchedLine = false,
+                showAvatar = false,
+                childsShowName = false,
+                childsNamePosition = 0,
+                childsShowAlreadyWatchedLine = false,
+                image = ImageData(
+                    source = ImageSource.URL,
+                    value = "https://anilibria.top/storage/releases/posters/10089/PKg3Ru0WTMgTSSXhIpJICXjdE5DNvvLE.webp"
+                ),
+                description = null,
+                author = null,
+                type = null,
+                alreadyWatched = 32,
+                length = 50,
+                width = 308,
+                height = 308,
+                childsCornerRadius = null,
+                layoutType = null,
+                dovodchik = false,
+                showDovodchikDots = false,
+                maxObjectsInOneLine = null,
+                maxLines = null,
+                paddingHorizontal = null,
+                paddingVertical = null,
+                marginBetweenElementsHorizontal = null,
+                marginBetweenElementsVertical = null,
+                link = LinkData(
+                    type = LinkType.SELF,
+                    targetId = null,
+                    contentPath = null
+                ),
+                elementType = ElementType.Anime,
+                genre = listOf(
+                    Genre.Drama,
+                    Genre.Detective,
+                    Genre.Shonen
+                )
+            )
+            val cd5 = ObjectData(
+                id = 7,
+                page = 0,
+                parentId = 4,
+                position = 0,
+                name = "Звёздное дитя 3",
+                showName = true,
+                namePosition = 0,
+                showAlreadyWatchedLine = false,
+                showAvatar = false,
+                childsShowName = false,
+                childsNamePosition = 0,
+                childsShowAlreadyWatchedLine = false,
+                image = ImageData(
+                    source = ImageSource.URL,
+                    value = "https://anilibria.top/storage/releases/posters/10089/PKg3Ru0WTMgTSSXhIpJICXjdE5DNvvLE.webp"
+                ),
+                description = null,
+                author = null,
+                type = null,
+                alreadyWatched = 32,
+                length = 50,
+                width = 308,
+                height = 308,
+                childsCornerRadius = null,
+                layoutType = null,
+                dovodchik = false,
+                showDovodchikDots = false,
+                maxObjectsInOneLine = null,
+                maxLines = null,
+                paddingHorizontal = null,
+                paddingVertical = null,
+                marginBetweenElementsHorizontal = null,
+                marginBetweenElementsVertical = null,
+                link = LinkData(
+                    type = LinkType.SELF,
+                    targetId = null,
+                    contentPath = null
+                ),
+                elementType = ElementType.Anime,
+                genre = listOf(
+                    Genre.Drama,
+                    Genre.Detective,
+                    Genre.Shonen
+                )
+            )
+            dao.insert(cr2)
+            dao.insert(cd3)
+            dao.insert(cd4)
+            dao.insert(cd5)
             groupDao.deleteAll()
             groupDao.insert(GroupsData(0,0, 2, 0))
             groupDao.insert(GroupsData(0,0,3,1))
