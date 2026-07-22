@@ -9,16 +9,14 @@ import kotlin.math.round
 
 data class OptimizedTextResult(
     val firstLine: String,
-    val secondLine: String,  // пустая строка если нет второй строки
-    val totalHeight: Int      // высота в пикселях
+    val secondLine: String,
+    val totalHeight: Int
 )
 fun optimizeText(text: String, maxWidthPx: Int, textSizePx: Float, includeFontPadding: Boolean, typeface: Typeface? = null, maxLines: Int = 2 ): OptimizedTextResult {
     val paint = Paint().apply {
         this.textSize = textSizePx
-        // Устанавливаем шрифт если указан
         this.typeface = typeface
     }
-    // Получаем высоту одной строки
     var lineHeight = 0
     if (includeFontPadding == true) {
         lineHeight = (paint.fontMetrics.bottom - paint.fontMetrics.top).toInt()
@@ -173,29 +171,15 @@ private fun ellipsizeText(paint: Paint, text: String, maxWidth: Int): String {
     return result + "..."
 }
 
-
-/**
- * Вычисляет параметры для отображения цифры в квадрате
- * @param squareSize Размер стороны квадрата в пикселях
- * @param digit Цифра для отображения
- * @param context Контекст для доступа к ресурсам
- * @return Triple(textSize, paddingLeft, paddingTop) - размер шрифта и отступы для точного центрирования
- */
 fun calculateDigitParams(squareSize: Int, digit: Char, context: Context): Triple<Float, Int, Int> {
-    // Желаемая высота цифры = 3/4 от высоты квадрата
     val desiredHeight = squareSize * 0.75f
-
-    // Создаем Paint для измерения
     val paint = Paint().apply {
         isAntiAlias = true
         typeface = ResourcesCompat.getFont(context, R.font.google_sans_medium)
         textAlign = Paint.Align.LEFT
     }
-
-    // Бинарный поиск оптимального размера шрифта
-    // Максимальный размер - высота квадрата (чтобы точно не вылезло)
     var low = 1f
-    var high = squareSize.toFloat()  // Ограничиваем максимальным размером квадрата
+    var high = squareSize.toFloat()
     var bestSize = desiredHeight
 
     repeat(20) {
@@ -218,31 +202,14 @@ fun calculateDigitParams(squareSize: Int, digit: Char, context: Context): Triple
 
     bestSize = low
     paint.textSize = bestSize
-
-    // Измеряем ширину текста
     val textWidth = paint.measureText(digit.toString())
-
-    // Вычисляем горизонтальные отступы для центрирования
     val totalHorizontalPadding = squareSize - textWidth
     val paddingLeft = (totalHorizontalPadding / 2f).coerceAtLeast(0f)
-
-    // Вычисляем вертикальные отступы для центрирования
     val fontMetrics = paint.fontMetrics
-
-    // Высота текста для проверки
     val textHeight = fontMetrics.descent - fontMetrics.ascent
-
-    // Центр текста относительно baseline
     val textCenter = (fontMetrics.ascent + fontMetrics.descent) / 2f
-
-    // Позиция baseline, чтобы центр текста оказался в центре квадрата
     val baselinePosition = squareSize / 2f - textCenter
-
-    // Преобразуем baseline в paddingTop
-    // baselinePosition - это расстояние от верха квадрата до baseline
-    // Нам нужно paddingTop, который будет отступом до baseline
     var paddingTop = baselinePosition.toInt().coerceAtLeast(0)
-
     paddingTop = round((squareSize - paddingTop).toFloat() / 2f).toInt()
 
     return Triple(bestSize, paddingLeft.toInt(), paddingTop)

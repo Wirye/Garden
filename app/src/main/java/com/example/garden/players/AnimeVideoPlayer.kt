@@ -42,7 +42,9 @@ import com.example.garden.statusBarHeight
 import com.example.garden.ui.utils.system.changeOrientation
 import com.example.garden.ui.utils.system.toggleSystemBars
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.isActive
+import kotlin.time.Duration.Companion.milliseconds
 
 class AnimeVideoPlayer(context: Context, private val resultSenderViewModel: ResultSenderViewModel) : FrameLayout(context) {
     private var exoPlayer: ExoPlayer? = null
@@ -51,14 +53,12 @@ class AnimeVideoPlayer(context: Context, private val resultSenderViewModel: Resu
     private var uiContainer: ConstraintLayout? = null // Ссылка на наш UI
     private val uiFadeDuration = 300L
     private var isPlayingState = true
-    // Создаем визуальную часть
     private val playerView: PlayerView = PlayerView(context).apply {
         layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT)
-        useController = false // Мы сделаем свои кнопки позже!
+        useController = false
         isClickable = true
         isFocusable = true
-        // Чтобы наверняка не пропускал клики к нижним слоям
-        setOnClickListener { /* Пусто, просто ловим клик */ requestFocus() }
+        setOnClickListener {requestFocus()}
         setOnTouchListener { _, _ -> true }
     }
     private var playerSubscriptionJob: kotlinx.coroutines.Job? = null
@@ -68,7 +68,6 @@ class AnimeVideoPlayer(context: Context, private val resultSenderViewModel: Resu
         val scope = context.lifecycleOwner?.lifecycleScope
         playerSubscriptionJob = scope?.launch {
             resultSenderViewModel.results.collect { (key, data) ->
-                // Используй withContext(Dispatchers.Main) чтобы UI не лагал
                 withContext(Dispatchers.Main) {
                     when (key) {
                         ResultKeys.VIDEO_PLAYER_ANIME_EPISODE_INFORMATION -> {
@@ -88,10 +87,8 @@ class AnimeVideoPlayer(context: Context, private val resultSenderViewModel: Resu
 
     private fun setupPlayer() {
         exoPlayer = ExoPlayer.Builder(context).build().also { player ->
-            playerView.player = player // Привязываем "мозг" к "глазу"
-
-            // Настройки по умолчанию
-            player.playWhenReady = true // Автозапуск после загрузки
+            playerView.player = player
+            player.playWhenReady = true
         }
     }
 
@@ -127,7 +124,7 @@ class AnimeVideoPlayer(context: Context, private val resultSenderViewModel: Resu
         var nameTextSize = round(20f*baseDensity)
         val maxNameTextHeight = round(screenHeight.toFloat() / 10f).toInt()
         if (optimizeText("j", screenWidth, nameTextSize, false, mediumFont).totalHeight > maxNameTextHeight) {
-            nameTextSize = getTextSizeByHeight(maxNameTextHeight, boldFont)
+            nameTextSize = getTextSizeByHeight(maxNameTextHeight, boldFont, context = context)
         }
         val lengthTextTextSize = round(nameTextSize / 1.3f)
         val closeButton = ConstraintLayout(context).apply {
@@ -475,11 +472,9 @@ class AnimeVideoPlayer(context: Context, private val resultSenderViewModel: Resu
         var lastSavedPosition = 0L
         val saveIntervalMs = 2000L // 10 секунд
         var k = 0L
-        // 1. ЛОГИКА ОБНОВЛЕНИЯ PROGRESS (Корутина)
         context.lifecycleOwner?.lifecycleScope?.launch {
+            ensureActive()
             while (isActive) {
-                // Добавляем проверку: если видео почти кончилось, тоже обновляем,
-                // даже если isPlaying уже может быть false
                 if (exoPlayer?.isPlaying == true) {
                     val current = exoPlayer?.currentPosition ?: 0L
                     val total = exoPlayer?.duration ?: totalDuration
@@ -494,7 +489,7 @@ class AnimeVideoPlayer(context: Context, private val resultSenderViewModel: Resu
                     }
                     k += 50
                 }
-                delay(50) // Обновление ~20 раз в секунду
+                delay(50.milliseconds)
             }
         }
 
@@ -637,7 +632,8 @@ class AnimeVideoPlayer(context: Context, private val resultSenderViewModel: Resu
     private fun resetHideTimer() {
         hideUiJob?.cancel()
         hideUiJob = context.lifecycleOwner?.lifecycleScope?.launch {
-            delay(4000)
+            ensureActive()
+            delay(4000.milliseconds)
             withContext(Dispatchers.Main) {
                 showUi(false)
             }

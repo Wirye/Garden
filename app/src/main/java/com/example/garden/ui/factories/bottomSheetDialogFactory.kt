@@ -5,9 +5,8 @@ import android.app.Activity
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
-import android.text.Editable
-import android.text.TextWatcher
 import android.view.Gravity
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
@@ -28,11 +27,11 @@ import com.example.garden.ui.utils.createDropdownRow
 import com.example.garden.ui.utils.createSegmentedButtonRow
 import com.example.garden.ui.utils.createSliderRow
 import com.example.garden.database.SizeType
+import com.example.garden.navigationBarHeight
 import com.example.garden.ui.utils.getAdaptiveRadius
 import com.example.garden.screenHeight
 import com.example.garden.screenWidth
 import com.example.garden.ui.utils.createSwitchButtonRow
-import com.example.garden.ui.utils.mathExtensions.snapToStep
 import com.example.garden.ui.utils.segmentedButtonOptions
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
@@ -40,8 +39,6 @@ import com.google.android.material.shape.CornerFamily
 import com.google.android.material.shape.MaterialShapeDrawable
 import com.google.android.material.shape.ShapeAppearanceModel
 import com.google.android.material.slider.Slider
-import com.google.android.material.textfield.TextInputEditText
-import com.google.android.material.textfield.TextInputLayout
 import kotlin.math.min
 import kotlin.math.round
 
@@ -88,7 +85,12 @@ sealed class BottomSheetDialogElement {
 class bottomSheetDialogFactory(private val activity: Activity) {
     @SuppressLint("PrivateResource", "SetTextI18n")
     fun createDialog(list: List<BottomSheetDialogElement>, callback: (tag: BsdButtonsTags, value: Float) -> Unit) {
-        val dialog = BottomSheetDialog(activity)
+        val dialog = object : BottomSheetDialog(activity) {
+            override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
+                com.example.garden.ui.utils.dispatchTouchEventHideKeyboard(ev,currentFocus)
+                return super.dispatchTouchEvent(ev)
+            }
+        }
         val googleMaxWidthDp = round(640f * baseDensity).toInt()
         val googleMaxWidthPx = round(googleMaxWidthDp.toFloat() * baseDensity).toInt()
 
@@ -116,6 +118,8 @@ class bottomSheetDialogFactory(private val activity: Activity) {
             addView(container)
             layoutparams1.setMargins(0,pillRawHeight,0,0)
             layoutParams = layoutparams1
+            setPadding(0,0,0,navigationBarHeight)
+            clipToPadding = false
         }
         dialog.setContentView(scrollContainer)
         val pillDrawable = GradientDrawable().apply {
@@ -196,62 +200,7 @@ class bottomSheetDialogFactory(private val activity: Activity) {
                     val slider1 = slider.getChildAt(0) as ConstraintLayout
                     val slider2 = slider1.getChildAt(0) as ConstraintLayout
                     val sliderr = slider2.getChildAt(0) as Slider
-                    val textInputLayout = if (element.createTextInputView) {slider.getChildAt(1) as TextInputLayout} else {null}
-                    var textInputEditText: TextInputEditText? = null
-                    if (element.createTextInputView) {
-                        for (k in 0 until textInputLayout!!.childCount) {
-                            val obj = textInputLayout.getChildAt(k)
-                            if (obj is TextInputEditText) {
-                                textInputEditText = obj
-                                break
-                            }
-                            else if (obj is FrameLayout) {
-                                for (h in 0 until obj.childCount) {
-                                    val objj = obj.getChildAt(h)
-                                    if (objj is TextInputEditText) {
-                                        textInputEditText = objj
-                                        break
-                                    }
-                                }
-                            }
-                        }
-                        textInputEditText?.addTextChangedListener (object : TextWatcher {
-                            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-                            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                                val rawText = textInputEditText.text.toString().trim().replace(',', '.')
-                                var newSliderValue = rawText.toFloatOrNull() ?: 0f
-                                val minSliderValue = element.stops[0].first
-                                val maxSliderValue = element.stops[element.stops.lastIndex].first
-                                if (element.createSteps) {
-                                    val stepSize = if(element.stops.size > 2) {(maxSliderValue - minSliderValue) / (element.stops.size.toFloat() - 1f)} else {maxSliderValue - minSliderValue}
-                                    newSliderValue = newSliderValue.snapToStep(minSliderValue, stepSize)
-                                }
-                                newSliderValue = newSliderValue.coerceIn(minSliderValue, maxSliderValue)
-                                sliderr.value = "%.2f".format(newSliderValue).trim().replace(",", ".").toFloat()
-                            }
-                            override fun afterTextChanged(s: Editable?) {
-                                val minSliderValue = element.stops[0].first
-                                val maxSliderValue = element.stops[element.stops.lastIndex].first
-                                val text = textInputEditText.text.toString().trim().replace(',', '.')
-                                val textValue = text.toFloatOrNull() ?: return
-                                if (textValue > maxSliderValue) {
-                                    textInputEditText.setText("%.2f".format(maxSliderValue).trim().replace(",", "."))
-                                }
-                                else if (textValue < minSliderValue) {
-                                    textInputEditText.setText("%.2f".format(minSliderValue).trim().replace(",", "."))
-                                }
-                                else if (element.createSteps) {
-                                    val stepSize = if(element.stops.size > 2) {(maxSliderValue - minSliderValue) / (element.stops.size.toFloat() - 1f)} else {maxSliderValue - minSliderValue}
-                                    val snappedTextValue = textValue.snapToStep(minSliderValue, stepSize)
-                                    if (snappedTextValue != textValue) {
-                                        textInputEditText.setText("%.2f".format(snappedTextValue).trim().replace(",", "."))
-                                    }
-                                }
-                            }
-                        })
-                    }
                     sliderr.addOnChangeListener { _, value, _ ->
-                        textInputEditText?.setText("%.2f".format(sliderr.value).trim().replace(",","."))
                         callback(element.tag,value)
                     }
                     if (showPoloska) {

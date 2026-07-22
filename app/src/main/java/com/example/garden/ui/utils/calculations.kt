@@ -1,9 +1,9 @@
 package com.example.garden.ui.utils
 
-import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Color
 import android.graphics.Typeface
+import android.util.Log
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
@@ -12,6 +12,7 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.res.ResourcesCompat
 import com.example.garden.R
 import com.example.garden.baseDensity
+import com.example.garden.database.ElementType
 import com.example.garden.database.SizeType
 import com.example.garden.listDot
 import com.example.garden.objectData2
@@ -19,6 +20,7 @@ import com.example.garden.screenWidth
 import com.example.garden.steps
 import kotlin.math.ceil
 import kotlin.math.floor
+import kotlin.math.max
 import kotlin.math.pow
 import kotlin.math.round
 import kotlin.math.roundToInt
@@ -71,13 +73,15 @@ fun cardScaleCalcForGrid(width: Int?, height: Int?, lineWidth: Int, margin: Int,
     }
     return Triple(res, res2, amountCards)
 }
-fun calcRecyclerViewHeight(items: List<objectData2>, position: Int, lineWidth: Int? = null): Int {
+fun calcRecyclerViewHeight(context: Context, items: List<objectData2>, position: Int, lineWidth: Int? = null): Int {
     val lineW = lineWidth ?: screenWidth
     val parent = items[position]
-    val items = parent.childs
+    val items = uploadLayoutTypeToCarouselChilds(parent.childs, parent, lineW)
     var res = -1
+    val font = ResourcesCompat.getFont(context, R.font.google_sans_medium)
+    val textSizee = floor(15f * baseDensity)
     for (i in 0 until items.size) {
-        var height: Int
+        var height = 0
         if (items[i].layoutType == null || items[i].layoutType == 1 || items[i].childs.isEmpty()) {
             val size = cardScaleCalcFree(items, round(19f * baseDensity).toInt(), round(11f * baseDensity).toInt(), items[i].width, items[i].height, lineW)
             height = size.second
@@ -90,7 +94,7 @@ fun calcRecyclerViewHeight(items: List<objectData2>, position: Int, lineWidth: I
             var size = Triple(0,0,0f)
             val objList = items[i].childs
             val lineWidth = (lineW-paddingHorizontal*2)
-            val maxObjectsInOneLine = items[i].maxObjectsInOneLine
+            val maxObjectsInOneLine = items[i].objectsInOneLine
             var margin = round(4f * baseDensity).toInt()
             if (items[i].marginBetweenElementsHorizontal != null) {
                 margin = items[i].marginBetweenElementsHorizontal!!
@@ -102,6 +106,8 @@ fun calcRecyclerViewHeight(items: List<objectData2>, position: Int, lineWidth: I
             for (i in objList) {
                 if (i.width != null && i.height != null) {
                     size = cardScaleCalcForGrid(i.width, i.height, lineWidth, margin, maxObjectsInOneLine)
+                    val extraHeightSize = 0 + (optimizeText(context.getString(R.string.StringForMaxHeightCalculate), size.first, textSizee, false, font).totalHeight) * (0 + if (parent.childsShowName) 1 else 0 + if (parent.childsShowAuthor) 1 else 0)
+                    size = Triple(size.first, size.second + extraHeightSize, size.third)
                     break
                 }
             }
@@ -128,8 +134,8 @@ fun calcRecyclerViewHeight(items: List<objectData2>, position: Int, lineWidth: I
 }
 fun calcItemPosInPxByPos(items: List<objectData2>, position: Int, itemPosition: Int, context: Context, lineWidth: Int? = null): Int {
     val parent = items[position]
-    val items = parent.childs
     val lineW = lineWidth ?: screenWidth
+    val items = uploadLayoutTypeToCarouselChilds(parent.childs, parent, lineW)
     var paddingHorizontal = parent.paddingHorizontal
     if (paddingHorizontal == null) {
         paddingHorizontal = round(19f * baseDensity).toInt()
@@ -146,12 +152,13 @@ fun calcItemPosInPxByPos(items: List<objectData2>, position: Int, itemPosition: 
         val height = obj.height
         val author = obj.author
         val showName = parent.childsShowName
+        val showAuthor = parent.childsShowAuthor
         val namePosition = parent.childsNamePosition
         val name = obj.name
         val font = ResourcesCompat.getFont(context, R.font.google_sans_medium)
         val textSizee = round(25f*baseDensity)
         if (obj.layoutType == null || obj.layoutType == 1 || obj.childs.isEmpty()) {
-            val cardWidth = calculateCardWidth(items, font, showName, namePosition, i, lineW, paddingHorizontal, marginBetweenElementsHorizontal)
+            val cardWidth = calculateCardWidth(items, font, showName, showAuthor, namePosition, i, context, lineW, paddingHorizontal, marginBetweenElementsHorizontal)
             res += cardWidth + marginBetweenElementsHorizontal
         }
         else {
@@ -179,46 +186,37 @@ fun listOptimizate(list: List<objectData2>): List<objectData2> {
     }
     return res
 }
-fun calculateAmountOfDots(items: List<objectData2>, paddingHorizontal: Int, marginBetweenElementsHorizontal: Int, context: Context, showName: Boolean, namePosition: Int?, lineWidth: Int): List<listDot> {
+fun calculateAmountOfDots(items: List<objectData2>, paddingHorizontal: Int, marginBetweenElementsHorizontal: Int, context: Context, showName: Boolean, showAuthor: Boolean, namePosition: Int?, lineWidth: Int): List<listDot> {
     // Инициализируем список точек, первая точка всегда находится в позиции 0 (начало)
     val res = mutableListOf<listDot>(listDot(0))
     var sumWidth = paddingHorizontal
     var lastDotPosInPx = 0
-    var lastElementPositionInPx = paddingHorizontal
+    var lastElementPositionInPx: Int
     val font = ResourcesCompat.getFont(context, R.font.google_sans_medium)
-    val textSizee = round(25f*baseDensity)
-    var lastType = 0
-    var lastPaddingHorizontal = 0
 
     // ЭТАП 1: Расчет полной ширины всего контента (sumWidth)
     // Это необходимо для определения границ прокрутки и финальной точки.
+    var layoutType = 1
     for (i in 0 until  items.size) {
         var width: Int
-        width = calculateCardWidth(items, font, showName, namePosition, i, lineWidth)
+        width = calculateCardWidth(items, font, showName, showAuthor, namePosition, i, context,lineWidth)
         // Если элемент — сетка (layoutType == 0), рассчитываем ширину всей группы
         if (items[i].layoutType == 0) {
+            layoutType = 0
             if (items[i].childs.isNotEmpty()) {
-                val paddingHorizontal = paddingHorizontal
-                lastPaddingHorizontal = paddingHorizontal
-                width = if (i > 0) { if (items[i-1].layoutType == 0) {lineWidth} else {lineWidth - (marginBetweenElementsHorizontal)}}  else {lineWidth-marginBetweenElementsHorizontal-paddingHorizontal}
+                width = lineWidth
             }
-            lastType = 0
-        }
-        else {
-            lastType = 1
         }
         // Накапливаем общую ширину с учетом горизонтальных отступов
-        sumWidth += width + marginBetweenElementsHorizontal
+        sumWidth += width + if (items[i].layoutType != 0) marginBetweenElementsHorizontal else 0
     }
 
     // Корректируем sumWidth, убирая лишние отступы в конце
-    sumWidth -= marginBetweenElementsHorizontal
-    if (lastType == 0) {
-        sumWidth -= lastPaddingHorizontal
-    }
+    sumWidth -= if (layoutType != 0) marginBetweenElementsHorizontal else paddingHorizontal
+    lastElementPositionInPx = if (layoutType != 0) paddingHorizontal else 0
 
     // ЭТАП 2: Определение позиций точек
-    var sumWidth2 = paddingHorizontal
+    var sumWidth2 = if (layoutType != 0) paddingHorizontal else 0
     var lastElementPosition = 0
     while (true) {
         // Создаём виртуальное "окно", каждый новый срез начинается в позиции последней точки
@@ -229,12 +227,10 @@ fun calculateAmountOfDots(items: List<objectData2>, paddingHorizontal: Int, marg
         // Проходим по элементам, начиная с последней точки
         for (i in lastElementPosition until items.size) {
             var width: Int
-            width = calculateCardWidth(items, font, showName, namePosition, i, lineWidth)
-            var size: Triple<Int, Int, Float>
+            width = calculateCardWidth(items, font, showName, showAuthor, namePosition, i, context,lineWidth)
             if (items[i].layoutType == 0) {
                 if (items[i].childs.isNotEmpty()) {
-                    val paddingHorizontal = paddingHorizontal
-                    width = if (i > 0) { if (items[i-1].layoutType == 0) {lineWidth} else {lineWidth - (marginBetweenElementsHorizontal)}}  else {lineWidth-marginBetweenElementsHorizontal-paddingHorizontal}
+                    width = lineWidth
                 }
             }
 
@@ -249,21 +245,21 @@ fun calculateAmountOfDots(items: List<objectData2>, paddingHorizontal: Int, marg
                 var k = false
                 // Проверяем, нет ли уже точки в этой позиции
                 for (o in 0 until res.size) {
-                    if (res[o].itemPositionInPx == sumWidth2 - marginBetweenElementsHorizontal) {
+                    if (res[o].itemPositionInPx == sumWidth2 - if (layoutType != 0) marginBetweenElementsHorizontal else 0) {
                         k = true
                     }
                 }
 
                 // Если начало элемента попадает в текущий срез и точки еще нет
-                if (sumWidth2 - marginBetweenElementsHorizontal in srez && !k) {
-                    val itemPositionInPx = sumWidth2 - marginBetweenElementsHorizontal
+                if (sumWidth2 - (if (layoutType != 0) marginBetweenElementsHorizontal else 0) in srez && !k) {
+                    val itemPositionInPx = sumWidth2 - if (layoutType != 0) marginBetweenElementsHorizontal else 0
                     // Проверяем, чтобы при прокрутке к этой точке мы не увидели "пустоту" за пределами контента
-                    if ((sumWidth + paddingHorizontal) - itemPositionInPx >= lineWidth) {
+                    if ((sumWidth + ( if (layoutType != 0) paddingHorizontal else 0)) - itemPositionInPx >= lineWidth) {
                         res.add(listDot(itemPositionInPx))
                     }
                     else {
                         // Если контент заканчивается, ставим точку так, чтобы экран упирался в правый край
-                        res.add(listDot(sumWidth + paddingHorizontal - lineWidth))
+                        res.add(listDot(sumWidth + (if (layoutType != 0) paddingHorizontal else 0) - lineWidth))
                     }
                     lastDotPosInPx = itemPositionInPx
                     lastElementPosition = i
@@ -273,11 +269,11 @@ fun calculateAmountOfDots(items: List<objectData2>, paddingHorizontal: Int, marg
                 else {
                     // Иначе ставим точку по самому краю текущего среза
                     val itemPositionInPx = srez.last
-                    if ((sumWidth + paddingHorizontal) - itemPositionInPx >= lineWidth) {
+                    if ((sumWidth + (if (layoutType != 0) paddingHorizontal else 0)) - itemPositionInPx >= lineWidth) {
                         res.add(listDot(itemPositionInPx))
                     }
                     else {
-                        res.add(listDot(sumWidth + paddingHorizontal - lineWidth))
+                        res.add(listDot(sumWidth + (if (layoutType != 0) paddingHorizontal else 0) - lineWidth))
                     }
                     lastDotPosInPx = itemPositionInPx
                     lastElementPosition = i
@@ -288,10 +284,10 @@ fun calculateAmountOfDots(items: List<objectData2>, paddingHorizontal: Int, marg
 
             // Двигаем "курсор" текущей позиции ширины
             if (sumWidth2 != lastElementPositionInPx) {
-                sumWidth2 = lastElementPositionInPx + width + marginBetweenElementsHorizontal
+                sumWidth2 = lastElementPositionInPx + width + if (layoutType != 0) marginBetweenElementsHorizontal else 0
             }
             else {
-                sumWidth2 += width + marginBetweenElementsHorizontal
+                sumWidth2 += width + if (layoutType != 0) marginBetweenElementsHorizontal else 0
             }
             lastElementPositionInPx = sumWidth2
         }
@@ -332,36 +328,25 @@ fun convertToStringTime(seconds: Long): String {
     }
 }
 fun getAdaptiveRadius(widthPx: Int, type: SizeType): Float {
-    // 1. Переводим ширину в DP, чтобы формула работала одинаково на разных экранах
     val widthDp = widthPx / baseDensity
-
-    // 2. Базовый коэффициент для типа скругления
     val multiplier = when (type) {
         SizeType.SMALL -> 1.5f
         SizeType.MEDIUM -> 2.4f
         SizeType.LARGE -> 3.6f
         SizeType.XLARGE -> 5.2f
     }
-
-    // 3. Вычисляем корень третьей степени (степень 0.33)
-    // Это дает плавный рост: ширина выросла в 8 раз -> радиус вырос только в 2 раза
     val adaptiveFactor = widthDp.toDouble().pow(0.33).toFloat()
-
-    // 4. Итоговый результат в PX
     val resultRadius = multiplier * adaptiveFactor * baseDensity
-
-    // 5. Ограничители (Clamp), чтобы не было "овалов" на экстремально мелких объектах
     val minLimit = when(type) {
         SizeType.SMALL -> 2f * baseDensity
         else -> 4f * baseDensity
     }
-
     return resultRadius.coerceAtLeast(minLimit)
 }
-fun getTextSizeByHeight(height: Int, font: Typeface? = null): Float {
+fun getTextSizeByHeight(height: Int, font: Typeface? = null, context: Context): Float {
     var textSizee = steps[7]
     for (i in steps) {
-        val res = optimizeText("СъешьжеещёHj", 1000, i, false, font, 1)
+        val res = optimizeText(context.getString(R.string.StringForMaxHeightCalculate), 1000, i, false, font, 1)
         if (res.totalHeight <= height) {
             textSizee = i
             break
@@ -369,7 +354,8 @@ fun getTextSizeByHeight(height: Int, font: Typeface? = null): Float {
     }
     return textSizee
 }
-fun calculateCardWidth(items: List<objectData2>, font: Typeface?, showName: Boolean, namePosition: Int?, position: Int, lineWidth: Int? = null, paddingHorizontal: Int? = null, marginBetweenElementsHorizontal: Int? = null): Int {
+fun calculateCardWidth(items: List<objectData2>, font: Typeface?, showName: Boolean, showAuthor: Boolean, namePosition: Int?, position: Int, context: Context, lineWidth: Int? = null, paddingHorizontal: Int? = null, marginBetweenElementsHorizontal: Int? = null): Int {
+    if (items[position].layoutType == 0) return 0
     val lineW = lineWidth ?: screenWidth
     var width: Int
     var cardHeight: Int
@@ -378,20 +364,20 @@ fun calculateCardWidth(items: List<objectData2>, font: Typeface?, showName: Bool
     val textSizee = floor(15f * baseDensity)
     // Рассчитываем размеры карточки в зависимости от её типа и отображаемых элементов (имя, автор). Скрипт из createCard
     val size1 = cardScaleCalcFree(items, (paddingHorizontal ?: (round(19f * baseDensity).toInt())), (marginBetweenElementsHorizontal ?: round(11f * baseDensity).toInt()), items[position].width, items[position].height, lineW)
-    if (items[position].author != null && items[position].name != null && showName && namePosition == 0) {
+    if (showAuthor && showName && namePosition == 0) {
         // Карточка с именем и автором под ней
         cardHeight = size1.second - optimizeText(
-            items[position].name!!,
+            context.getString(R.string.StringForMaxHeightCalculate),
             size1.first,
             textSizee,
             false,
             font
         ).totalHeight * 3
         cardWidth = (cardHeight.toFloat() * (size1.first.toFloat() / size1.second)).toInt()
-    } else if (items[position].author == null && items[position].name != null && showName && namePosition == 0) {
+    } else if (!showAuthor && showName && namePosition == 0) {
         // Карточка только с именем под ней
         cardHeight = size1.second - optimizeText(
-            items[position].name!!,
+            context.getString(R.string.StringForMaxHeightCalculate),
             size1.first,
             textSizee,
             false,
@@ -403,21 +389,7 @@ fun calculateCardWidth(items: List<objectData2>, font: Typeface?, showName: Bool
         cardWidth = size1.first
         cardHeight = size1.second
     }
-    var res2 = cardWidth
-    if (showName && namePosition == 1) {
-        res2 = size1.first
-    }
-    width = res2
-    return width
-}
-@SuppressLint("InternalInsetResource")
-fun getStatusBarHeight(context: Context): Int {
-    var result = 0
-    val resourceId = context.resources.getIdentifier("status_bar_height", "dimen", "android")
-    if (resourceId > 0) {
-        result = context.resources.getDimensionPixelSize(resourceId)
-    }
-    return result
+    return cardWidth
 }
 
 sealed class CalculateIdealButtonWidthByHeightInput {
@@ -441,7 +413,6 @@ sealed class CalculateIdealButtonWidthByHeightInput {
         val height: Int
     ) : CalculateIdealButtonWidthByHeightInput()
 }
-
 fun calculateIdealButtonWidthByHeight(context: Context, buttonInfo: CalculateIdealButtonWidthByHeightInput, paddingHorizontal: Int): Int {
 
     return when (buttonInfo) {
@@ -457,7 +428,7 @@ fun calculateIdealButtonWidthByHeight(context: Context, buttonInfo: CalculateIde
             }
 
             val textHeight = (buttonHeight / textRatio).roundToInt()
-            val textSize = getTextSizeByHeight(textHeight, buttonInfo.font)
+            val textSize = getTextSizeByHeight(textHeight, buttonInfo.font, context = context)
             val icoSize = (textSize * 1.5f).roundToInt().coerceIn(0, buttonHeight)
             val arrowMarginRight = (1.4f * baseDensity * textRatio).roundToInt()
 
@@ -569,4 +540,67 @@ fun calculateIdealWidthForOutlinedTextFieldForOvDialog(textSizee: Float, hintTex
     }
     val textWidth = tempTextView.measuredWidth
     return paddingLeft + paddingRight + textWidth
+}
+fun calculateObjectsInOneLineAndMaxLinesForAdaptiveGridSize(parent: objectData2, objectsInOneLine: Int): Pair<Int, Int?> {
+    val objectsInOneLine2 = objectsInOneLine.coerceIn(parent.objectsInOneLine ?: 1, parent.maxObjectsInOneLineForAdaptiveSize ?: Int.MAX_VALUE)
+    var maxLines = parent.maxLines
+    if (objectsInOneLine2 == parent.maxObjectsInOneLineForAdaptiveSize) {
+        maxLines = parent.maxLinesForAdaptiveSize
+    }
+    else if (objectsInOneLine2 == parent.objectsInOneLine) {
+        maxLines = parent.maxLines
+    }
+    else if (parent.maxObjectsInOneLineForAdaptiveSize == null && parent.objectsInOneLine == null) {
+        maxLines = parent.maxLinesForAdaptiveSize
+    }
+    else if (parent.maxObjectsInOneLineForAdaptiveSize != null && parent.objectsInOneLine == null) {
+        maxLines = parent.maxLines
+    }
+    else if (parent.maxObjectsInOneLineForAdaptiveSize == null && parent.objectsInOneLine != null) {
+        maxLines = parent.maxLinesForAdaptiveSize
+    }
+    else {
+        val maxObjectsInOneLineForAdaptiveSize = parent.maxObjectsInOneLineForAdaptiveSize!!
+        val objectsInOneLinee = parent.objectsInOneLine!!
+        val maxLinesForAdaptiveSize = parent.maxLinesForAdaptiveSize!!
+        val maxLiness = parent.maxLines!!
+        val steps = maxObjectsInOneLineForAdaptiveSize - objectsInOneLinee
+        val currentStep = objectsInOneLine2 - objectsInOneLinee
+        val pr = currentStep.toFloat() / steps.toFloat()
+        val linesSteps = maxLinesForAdaptiveSize - maxLiness
+        val interpolatedLines = linesSteps.toFloat() * pr
+        maxLines = round(maxLiness.toFloat() + interpolatedLines).toInt()
+    }
+    return Pair(objectsInOneLine2, maxLines)
+}
+fun calculateBaseCardSize(elementType: ElementType, sizeType: SizeType): Pair<Int?, Int?> {
+    return when (elementType) {
+        ElementType.Anime, ElementType.Manga -> {
+            when (sizeType) {
+                SizeType.SMALL -> Pair(round(116f * baseDensity).toInt(), round(166f * baseDensity).toInt())
+                SizeType.MEDIUM -> Pair(round(160f * baseDensity).toInt(), round(229f * baseDensity).toInt())
+                SizeType.LARGE -> Pair(round(239f * baseDensity).toInt(), round(342 * baseDensity).toInt())
+                SizeType.XLARGE -> Pair(round(239f * baseDensity).toInt(), round(342f * baseDensity).toInt())
+            }
+        }
+        ElementType.Playlist, ElementType.Music -> {
+            when (sizeType) {
+                SizeType.SMALL -> Pair(round(166f * baseDensity).toInt(), round(166f * baseDensity).toInt())
+                SizeType.MEDIUM -> Pair(round(229f * baseDensity).toInt(), round(229f * baseDensity).toInt())
+                SizeType.LARGE -> Pair(round(308f * baseDensity).toInt(), round(308f * baseDensity).toInt())
+                SizeType.XLARGE -> Pair(round(308f * baseDensity).toInt(), round(308f * baseDensity).toInt())
+            }
+        }
+        ElementType.Episode -> {
+            when (sizeType) {
+                SizeType.SMALL -> Pair(round(162f * baseDensity).toInt(), round(91f * baseDensity).toInt())
+                SizeType.MEDIUM -> Pair(round(228f * baseDensity).toInt(), round(128f * baseDensity).toInt())
+                SizeType.LARGE -> Pair(round(308f * baseDensity).toInt(), round(173f * baseDensity).toInt())
+                SizeType.XLARGE -> Pair(round(308f * baseDensity).toInt(), round(173f * baseDensity).toInt())
+            }
+        }
+        else -> {
+            Pair(null, null)
+        }
+    }
 }

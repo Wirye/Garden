@@ -24,8 +24,10 @@ interface ObjectDataDao {
     @Query("UPDATE objectData SET alreadyWatched = :alreadyWatched WHERE id = :id")
     suspend fun editAlreadyWatched(id: Long, alreadyWatched: Long)
 
-    @Query("SELECT MAX(position) FROM objectData WHERE parentId = :parentId")
+    @Query("SELECT MAX(position) FROM objectData WHERE (:parentId IS NULL AND parentId IS NULL) OR parentId = :parentId")
     suspend fun getMaxPosition(parentId: Long?): Int?
+    @Query("SELECT MAX(position) FROM objectData WHERE ((:parentId IS NULL AND parentId IS NULL) OR parentId = :parentId) AND page = :page")
+    suspend fun getMaxPositionOnPage(parentId: Long?, page: Int): Int?
     @Query("SELECT * FROM objectData WHERE id = :id")
     suspend fun getById(id: Long): ObjectData?
 

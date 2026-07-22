@@ -14,7 +14,7 @@ enum class SizeType {
 }
 enum class ImageSource {
     SELF,      // Встроенное изображение R.drawable
-    DEVICE,     // Изображение на устройстве по пути (например: C:/ауаууау/enfavuabvyububafafa.jpg)
+    DEVICE,     // Изображение на устройстве по пути
     URL
 }
 enum class Genre {
@@ -81,8 +81,6 @@ data class ImageData(
 data class LinkData(
     val type: LinkType,       // SELF, INSERT, CONTENT || self - брать данные отсюда, insert - брать данные из другого элемента, content - сразу воспроизвести
     val targetId: Long?,       // ID элемента в БД, куда мы идём (нужно, чтобы взять данные из него) (используется для insert)
-    // (playlist1 - это макет когда заходишь на страницу какого-то аниме,
-    // playlist2 - это плейлист самих аниме (это пример) (для музыки playlist1 не используется)
     val contentPath: String?   // Путь (содержит путь к нужному файлу) (используется для content)
 )
 @Entity(tableName = "objectData", indices = [androidx.room.Index(value = ["parentId", "position", "lnk_targetId"])])
@@ -97,13 +95,12 @@ data class ObjectData(
 
     // Имя
     var name: String? = null,   // Название (для карусели или карточки)
-    var showName: Boolean = false, // Показывать ли название
-    var namePosition: Int? = 0, // 1 - Внутри карточки 0 - снаружи
     var showAlreadyWatchedLine: Boolean = true,
-    var showAvatar: Boolean = false,  // Это для каруселей, чтобы показывать рядом с названием карусели ник и аву пользователя
+    var showIco: Boolean = false,  // Это для каруселей, чтобы показывать рядом с названием карусели ник и аву пользователя
     var childsShowName: Boolean = false, // Показывать ли название
     var childsNamePosition: Int? = 0, // 1 - Внутри карточки 0 - снаружи
     var childsShowAlreadyWatchedLine: Boolean = true,
+    var childsShowAuthor: Boolean = false,
 
     // Изображение (оно же превью)
     @Embedded(prefix = "img_")
@@ -122,6 +119,8 @@ data class ObjectData(
     var width: Int? = null,
     var height: Int? = null,
     var childsCornerRadius: SizeType? = null,
+    var childsBaseWidth: Int? = null,
+    var childsBaseHeight: Int? = null,
 
     var layoutType: Int? = null,  // 0 - сетка (т.е constraint layout с расположенными в виде сетки view вместо recycler view, 1 - с recycler view.
     // Распостраняется и на карточки (0 - карточка - это сетка из карточек (у такой карточки должны быть childs, именно они выступают в роли карточек в сетке, если их нету карточка считается обычной), 1 - обычная карточка)
@@ -129,8 +128,11 @@ data class ObjectData(
     var showDovodchikDots: Boolean = false,
 
     // Для layout type 0
-    var maxObjectsInOneLine: Int? = null,
+    var objectsInOneLine: Int? = null,
     var maxLines: Int? = null,
+    var adaptiveGridSize: Boolean = false,
+    var maxObjectsInOneLineForAdaptiveSize: Int? = null,
+    var maxLinesForAdaptiveSize: Int? = null,
 
     // Это для recycler view параметр (в основном нужно чтобы для удобства отодвинуть view от начала экрана)
     var paddingHorizontal: Int? = null,  // Используется, как marginStart у 1 карточки в recycler и как marginStart/End у constraint layout родителя в grid

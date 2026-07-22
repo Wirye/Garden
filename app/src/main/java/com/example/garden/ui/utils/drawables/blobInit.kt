@@ -17,8 +17,8 @@ fun blobInit(size: Int, color: String, positions: FloatArray = floatArrayOf(0f, 
         shaderFactory = object : ShapeDrawable.ShaderFactory() {
             override fun resize(p0: Int, p1: Int): Shader {
                 return RadialGradient(
-                    size / 2f, size / 2f, // Центр
-                    size / delitRad,             // Радиус
+                    size / 2f, size / 2f,
+                    size / delitRad,
                     colors,
                     positions,
                     Shader.TileMode.CLAMP

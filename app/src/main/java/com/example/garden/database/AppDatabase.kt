@@ -6,7 +6,7 @@ import androidx.room.RoomDatabase
 import android.content.Context
 import androidx.room.TypeConverters
 
-@Database(entities = [ObjectData::class], version = 4)
+@Database(entities = [ObjectData::class], version = 8)
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun objectDataDao(): ObjectDataDao

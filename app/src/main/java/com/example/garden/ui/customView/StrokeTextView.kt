@@ -6,32 +6,26 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.util.AttributeSet
 import androidx.appcompat.widget.AppCompatTextView
+import com.example.garden.baseDensity
+import kotlin.math.round
 
 class StrokeTextView @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null
 ) : AppCompatTextView(context, attrs) {
 
     var strokeColor: Int = Color.BLACK
-    var strokeWidth: Float = 4f // Толщина контура
+    var strokeWidth: Float = round(1.3f*baseDensity)
 
     override fun onDraw(canvas: Canvas) {
         val states = textColors
-
-        // 1. Настраиваем кисть для контура
         paint.style = Paint.Style.STROKE
         paint.strokeJoin = Paint.Join.ROUND
-        paint.strokeMiter = 10f
+        paint.strokeMiter = round(3f* baseDensity)
         this.setTextColor(strokeColor)
         paint.strokeWidth = strokeWidth
-
-        // Рисуем контур
         super.onDraw(canvas)
-
-        // 2. Возвращаем обычный стиль для заливки текста
         paint.style = Paint.Style.FILL
         this.setTextColor(states)
-
-        // Рисуем основной текст поверх контура
         super.onDraw(canvas)
     }
 }

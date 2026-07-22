@@ -11,7 +11,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 
-// Расширение для контекста, чтобы обращаться к хранилищу из любого места
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "anime_settings")
 
 data class AnimeSettingsState(
@@ -27,23 +26,20 @@ data class SettingsState(
 class SettingsManager(private val context: Context) {
 
     companion object {
-        // Ключи для хранения данных
         val SHOW_CHILDS_NAME = booleanPreferencesKey("show_childs_name")
         val CHILDS_NAME_POSITION = intPreferencesKey("childs_name_position")
     }
 
-    // Чтение настроек (возвращает поток данных Flow)
     val showChildsName: Flow<Boolean> = context.dataStore.data
         .map { preferences ->
-            preferences[SHOW_CHILDS_NAME] ?: false // По умолчанию false
+            preferences[SHOW_CHILDS_NAME] ?: false
         }
 
     val childsNamePosition: Flow<Int> = context.dataStore.data
         .map { preferences ->
-            preferences[CHILDS_NAME_POSITION] ?: 0 // По умолчанию 0 (например, снизу)
+            preferences[CHILDS_NAME_POSITION] ?: 0
         }
 
-    // Внутри SettingsManager
     val settingsStateFlow: Flow<SettingsState> = combine(
         showChildsName,
         childsNamePosition
@@ -51,7 +47,6 @@ class SettingsManager(private val context: Context) {
         SettingsState(show, position)
     }
 
-    // Запись настроек (suspend функции для вызова из CoroutineScope)
     suspend fun setShowChildsName(show: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[SHOW_CHILDS_NAME] = show

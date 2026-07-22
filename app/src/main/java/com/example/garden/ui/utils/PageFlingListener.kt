@@ -22,7 +22,6 @@ class PageFlingListener(private val dotsList: List<Pair<listDot2, listDot>>, pri
             val targetIndex = dotsList.indexOf(it)
             val targetScroll = it.second.itemPositionInPx
             val distance = targetScroll - currentScroll
-
             recyclerView.smoothScrollBy(distance, 0)
             updatePage(targetIndex)
             return true

@@ -41,5 +41,8 @@
     <string name="Country">Кантри</string>
     <string name="Ambient">Эмбиент</string>
     <string name="Track">Трек</string>
+    <string name="CreateCarouselPage_objectsInOneLineErrorText">Число столбцов не может превышать максимально число столбцов</string>
+    <string name="StringForMaxHeightCalculate">СъешьжеещёHj</string>
+    <string name="Confirm">Подтвердить</string>
 
 </resources>

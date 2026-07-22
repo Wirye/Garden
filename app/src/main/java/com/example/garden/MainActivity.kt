@@ -13,7 +13,6 @@ import android.util.TypedValue
 import androidx.core.content.res.ResourcesCompat
 import android.content.Intent
 import android.content.res.Configuration
-import android.graphics.Rect
 import android.graphics.RenderEffect
 import android.graphics.Shader
 import android.graphics.drawable.GradientDrawable
@@ -51,7 +50,6 @@ import com.example.garden.viewmodel.MultiViewModelFactory
 import kotlin.getValue
 import android.media.MediaMetadataRetriever
 import android.net.Uri
-import android.widget.EditText
 import android.widget.FrameLayout
 import androidx.activity.result.contract.ActivityResultContracts
 import com.google.android.material.textfield.TextInputEditText
@@ -63,8 +61,6 @@ import androidx.core.net.toUri
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.doOnAttach
-import androidx.core.view.setMargins
-import androidx.core.view.setPadding
 import androidx.window.layout.WindowMetricsCalculator
 import com.example.garden.database.CarouselType
 import com.example.garden.database.CollectionType
@@ -98,7 +94,6 @@ import com.example.garden.ui.utils.viewExtensions.lifecycleOwner
 import com.example.garden.ui.utils.drawables.blobInit
 import com.example.garden.ui.utils.spaceItemDecorationInput
 import com.example.garden.ui.adapters.animePageSezonsAdapterListFormat
-import com.example.garden.ui.utils.system.hideKeyboardd
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.ensureActive
 
@@ -211,7 +206,7 @@ sealed class Layer {
         var mainRecyclerScrollPositionInPx: Int,
         val layoutObjId: Long,
         var state: Int,
-        val activeJobs: MutableList<Job> = mutableListOf()
+        var activeJobs: MutableList<Job> = mutableListOf()
     ) : Layer()
     data class MainPage(
         val elevation: Int,
@@ -263,13 +258,12 @@ data class objectData2(
 
     // Имя
     var name: String? = null,   // Название (для карусели или карточки)
-    var showName: Boolean = false, // Показывать ли название
-    var namePosition: Int? = 0, // 1 - Внутри карточки 0 - снаружи
     var showAlreadyWatchedLine: Boolean = true,
-    var showAvatar: Boolean = false,  // Это для каруселей, чтобы показывать рядом с названием карусели ник и аву пользователя
+    var showIco: Boolean = false,  // Это для каруселей, чтобы показывать рядом с названием карусели ник и аву пользователя
     var childsShowName: Boolean = false, // Показывать ли название
     var childsNamePosition: Int? = 0, // 1 - Внутри карточки 0 - снаружи
     var childsShowAlreadyWatchedLine: Boolean = true,
+    var childsShowAuthor: Boolean = false,
 
     // Изображение (оно же превью)
     var image: ImageData? = null,
@@ -287,6 +281,8 @@ data class objectData2(
     var width: Int? = null,
     var height: Int? = null,
     var childsCornerRadius: SizeType? = null,
+    var childsBaseWidth: Int? = null,
+    var childsBaseHeight: Int? = null,
 
     var layoutType: Int? = null,  // 0 - сетка (т.е constraint layout с расположенными в виде сетки view вместо recycler view, 1 - с recycler view.
     // Распостраняется и на карточки (0 - карточка - это сетка из карточек (у такой карточки должны быть childs, именно они выступают в роли карточек в сетке, если их нету карточка считается обычной), 1 - обычная карточка)
@@ -294,8 +290,11 @@ data class objectData2(
     var showDovodchikDots: Boolean = false,
 
     // Для layout type 0
-    var maxObjectsInOneLine: Int? = null,
+    var objectsInOneLine: Int? = null,
     var maxLines: Int? = null,
+    var adaptiveGridSize: Boolean = false,
+    var maxObjectsInOneLineForAdaptiveSize: Int? = null,
+    var maxLinesForAdaptiveSize: Int? = null,
 
     // Это для recycler view параметр (в основном нужно чтобы для удобства отодвинуть view от начала экрана)
     var paddingHorizontal: Int? = null,  // Используется, как marginStart у 1 карточки в recycler и как marginStart/End у constraint layout родителя в grid
@@ -361,6 +360,7 @@ data class createCardApply(
 
 var currentPendingKeyForFiles: String? = null
 var currentPendingPositionForCreateCardChangeImage: Int = 0
+var mainActivityJob: Job? = null
 class MainActivity : AppCompatActivity() {
     private lateinit var displayManager: DisplayManager
     private lateinit var recycler: RecyclerView
@@ -386,6 +386,7 @@ class MainActivity : AppCompatActivity() {
             if (tag != null) {
                 resultSenderViewModel.sendResult(tag, when(tag) {
                     ResultKeys.CREATE_CARD_CHANGE_IMAGE -> {Pair(uriString,pos)}
+                    ResultKeys.CREATE_CAROUSEL_PAGE_CHANGE_ICO -> {ImageData(source = ImageSource.DEVICE, value = uriString)}
                     else -> {uriString}
                 })
             }
@@ -414,6 +415,7 @@ class MainActivity : AppCompatActivity() {
         "UseCompatLoadingForDrawables"
     )
     override fun onCreate(savedInstanceState: Bundle?) {
+        mainActivityJob?.cancel()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContentView(R.layout.mainactivity)
@@ -426,7 +428,6 @@ class MainActivity : AppCompatActivity() {
             statusBarHeight = insets?.top ?: 0
             leftInsetWidth = insets?.left ?: 0
             rightInsetWidth = insets?.right ?: 0
-            Log.d("INSETS", "$leftInsetWidth $rightInsetWidth $statusBarHeight $navigationBarHeight $insets")
             screenWidth = screenSizes.width() - rightInsetWidth - leftInsetWidth
             screenHeight = screenSizes.height() - statusBarHeight - navigationBarHeight
             baseDensity = resources.displayMetrics.density
@@ -450,8 +451,6 @@ class MainActivity : AppCompatActivity() {
                 requestPermissions(arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), 101)
             }
             if (!alreadyCreated) {
-                viewModel.insert()
-                viewModel.setChildsShowNameInSezonsRecycler(true)
                 baseBlurEffectForBloobs = RenderEffect.createBlurEffect(
                     150f, 150f,
                     Shader.TileMode.MIRROR
@@ -610,7 +609,7 @@ class MainActivity : AppCompatActivity() {
             onRotationChanged()
 
             // Адаптеры
-            val adapter1 = CarouselsAdapter(this, addCardToCarousel = { addCarouselToPage(0) }, clickOnItem = { showPage(infoOfPageToShow.infoOfAnimePage(it.id, true), null) })
+            val adapter1 = CarouselsAdapter(this, addCardToCarousel = { addCardToCarousel(it) }, clickOnItem = { showPage(infoOfPageToShow.infoOfAnimePage(it.id, true), null) })
             val animePageSezonsPageAdapter = AnimePageSezonsPageAdapter(this, clickOnCard = { showPage(infoOfPageToShow.infoOfAnimePage(it.id, true), null) } )
             val animePageAdapter = AnimePageAdapter(this, showShowAllText = { text, size, callback -> showShowAllText(text, size, callback) }, animePageSezonsPageAdapter, openVideo = { showPage(infoOfPageToShow.infoOfVideoPlayer(it, true), null) })
             val wrapper = objectData2(
@@ -619,8 +618,6 @@ class MainActivity : AppCompatActivity() {
                 position = 0,
                 name = null,
                 author = null,
-                showName = false,
-                namePosition = 0,
                 width = null,
                 height = null,
                 paddingVertical = null,
@@ -631,7 +628,7 @@ class MainActivity : AppCompatActivity() {
                 childs = listOf(),
                 showDovodchikDots = false,
                 dovodchik = false,
-                maxObjectsInOneLine = null,
+                objectsInOneLine = null,
                 maxLines = null,
                 alreadyWatched = 0.toLong(),
                 elementType = ElementType.Anime,
@@ -718,7 +715,8 @@ class MainActivity : AppCompatActivity() {
             })
             container.addView(animePage)
 
-            lifecycleScope.launch {
+            mainActivityJob = lifecycleScope.launch {
+                ensureActive()
                 repeatOnLifecycle(Lifecycle.State.STARTED) {
                     launch {
                         viewModel.uiDataFlow.collect {
@@ -754,7 +752,7 @@ class MainActivity : AppCompatActivity() {
                                                 "Молчаливая ведьма"
                                             }, 200, 50f, false, null, 1
                                         ).totalHeight
-                                        val itemHeight = calcRecyclerViewHeight(objectsList, i) + pdV + 15 + if (textViewHeight > 72) {textViewHeight} else {72} + if (objectsList[i].dovodchik && objectsList[i].showDovodchikDots && objectsList[i].childs.isNotEmpty() && (objectsList[i].layoutType == null || objectsList[i].layoutType == 1)) {45} else {0}  // 15 - Это marginTop у recycler view 72 - это высота кнопок add и edit  45 - это высота точек
+                                        val itemHeight = calcRecyclerViewHeight(this@MainActivity, objectsList, i) + pdV + 15 + if (textViewHeight > 72) {textViewHeight} else {72} + if (objectsList[i].dovodchik && objectsList[i].showDovodchikDots && objectsList[i].childs.isNotEmpty() && (objectsList[i].layoutType == null || objectsList[i].layoutType == 1)) {45} else {0}  // 15 - Это marginTop у recycler view 72 - это высота кнопок add и edit  45 - это высота точек
                                         scrollV += itemHeight
                                     }
                                     recycler.scrollTo(0,scrollV)
@@ -816,41 +814,42 @@ class MainActivity : AppCompatActivity() {
                                         length += i.length
                                     }
                                     val cardData = ObjectData(
-                                        0,
-                                        null,
-                                        0,
-                                        0,
-                                        dataa.name.ifEmpty { "Без имени" },
-                                        false,
-                                        null,
-                                        false,
-                                        false,
-                                        false,
-                                        null,
-                                        true,
-                                        dataa.image,
-                                        dataa.description,
-                                        if (dataa.author == "") null else dataa.author,
-                                        null,
-                                        0,
-                                        length,
-                                        null,
-                                        null,
-                                        520,
-                                        743,
-                                        null,
-                                        null,
-                                        false,
-                                        false,
-                                        null,
-                                        null,
-                                        null,
-                                        null,
-                                        null,
-                                        null,
-                                        LinkData(LinkType.SELF,null,null),
-                                        ElementType.Anime,
-                                        dataa.genreList
+                                        id = 0,
+                                        parentId = null,
+                                        page = 0,
+                                        position = 0,
+                                        name = dataa.name.ifEmpty { "Без имени" },
+                                        showAlreadyWatchedLine = false,
+                                        showIco = false,
+                                        childsShowName = false,
+                                        childsNamePosition = null,
+                                        childsShowAlreadyWatchedLine = true,
+                                        image = dataa.image,
+                                        description = dataa.description,
+                                        author = if (dataa.author == "") null else dataa.author,
+                                        type = null,
+                                        alreadyWatched = 0,
+                                        length = length,
+                                        carouselType = null,
+                                        carouselCollectionType = null,
+                                        width = 520,
+                                        height = 743,
+                                        childsCornerRadius = null,
+                                        layoutType = null,
+                                        dovodchik = false,
+                                        showDovodchikDots = false,
+                                        objectsInOneLine = null,
+                                        maxLines = null,
+                                        adaptiveGridSize = false,
+                                        maxObjectsInOneLineForAdaptiveSize = null,
+                                        maxLinesForAdaptiveSize = null,
+                                        paddingHorizontal = null,
+                                        paddingVertical = null,
+                                        marginBetweenElementsHorizontal = null,
+                                        marginBetweenElementsVertical = null,
+                                        link = LinkData(LinkType.SELF, null, null),
+                                        elementType = ElementType.Anime,
+                                        genre = dataa.genreList
                                     )
                                     viewModel.insertCardWithEpisodes(cardData,dataa.episodesList, dataa.parentId)
                                     hideLayer()
@@ -876,7 +875,13 @@ class MainActivity : AppCompatActivity() {
                                         showDovodchikDots = true,
                                         elementType = ElementType.Carousel,
                                         maxLines = dataa.maxLines,
-                                        maxObjectsInOneLine = dataa.maxObjectsInOneLine,
+                                        objectsInOneLine = dataa.objectsInOneLine,
+                                        childsBaseWidth = dataa.childsBaseWidth,
+                                        childsBaseHeight = dataa.childsBaseHeight,
+                                        adaptiveGridSize = dataa.adaptiveGridSize,
+                                        maxObjectsInOneLineForAdaptiveSize = dataa.maxObjectsInOneLineForAdaptiveSize,
+                                        maxLinesForAdaptiveSize = dataa.maxLinesForAdaptiveSize,
+                                        childsShowAuthor = dataa.childsShowAuthor,
                                     )
                                     viewModel.insertCarousel(carouselData, dataa.page)
                                     hideLayer()
@@ -896,17 +901,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun dispatchTouchEvent(ev: MotionEvent?): Boolean {
-        if (ev?.action == MotionEvent.ACTION_DOWN) {
-            val v = currentFocus
-            if (v is EditText) {
-                val outRect = Rect()
-                v.getGlobalVisibleRect(outRect)
-                if (!outRect.contains(ev.rawX.toInt(), ev.rawY.toInt())) {
-                    v.clearFocus()
-                    hideKeyboardd(v)
-                }
-            }
-        }
+        com.example.garden.ui.utils.dispatchTouchEventHideKeyboard(ev,currentFocus)
         return super.dispatchTouchEvent(ev)
     }
 
@@ -942,6 +937,7 @@ class MainActivity : AppCompatActivity() {
         mainContainer.addView(playerLayer)
 
         playerSubscriptionJob = this.lifecycleOwner?.lifecycleScope?.launch {
+            ensureActive()
             val info = viewModel.getAllInfoByEpisodeId(id)
             withContext(Dispatchers.Main) {
                 resultSenderViewModel.sendResult(ResultKeys.VIDEO_PLAYER_ANIME_EPISODE_INFORMATION, info)
@@ -974,30 +970,45 @@ class MainActivity : AppCompatActivity() {
     fun getVideoDuration(uriString: String): Long {
         val retriever = MediaMetadataRetriever()
         try {
-            // Устанавливаем источник данных через Uri
             retriever.setDataSource(this, uriString.toUri())
-
-            // Извлекаем строку с длительностью
             val time = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
-
             return floor((time?.toLong() ?: 0L) / 1000f).toLong()
         } catch (e: Exception) {
-            Log.e("VIDEO_INFO", "Не удалось получить длительность: ${e.message}")
+            Log.e("getVideoDuration", "Something is incorrect: ${e.message}")
             return 0L
         } finally {
-            // Обязательно освобождаем ресурсы!
             retriever.release()
         }
     }
     fun bsdButtonActions(tag: BsdButtonsTags, value: Float) {
         when (tag) {
-            BsdButtonsTags.animePage_extraButton_changeAllEpisodesWatchedMark -> {Log.d("VALUE", "$value")}
+            BsdButtonsTags.animePage_extraButton_changeAllEpisodesWatchedMark -> {}
             BsdButtonsTags.none -> {}
         }
     }
     fun addCarouselToPage(page: Int) {
         val infoOfPageToShow = infoOfPageToShow.infoOfOverlayLayer(
-            info = OverLayLayer.CreateCarouselPage("Превью", page, SizeType.SMALL, true, 0, true, null, true,null,null,true,true, CarouselType.Anime, null),
+            info = OverLayLayer.CreateCarouselPage(
+                name = "",
+                page = page,
+                childsCornerRadius = SizeType.SMALL,
+                childsShowName = true,
+                childsNamePosition = 0,
+                childsShowAlreadyWatchedLine = true,
+                layoutType = null,
+                showWatchAllButton = true,
+                objectsInOneLine = null,
+                maxLines = null,
+                dovodchik = true,
+                showDovodchikDots = true,
+                carouselType = CarouselType.Anime,
+                carouselCollectionType = null,
+                showIco = false,
+                ico = null,
+                adaptiveGridSize = false,
+                maxObjectsInOneLineForAdaptiveSize = null,
+                maxLinesForAdaptiveSize = null,
+            ),
             true
         )
         showPage(infoOfPageToShow, null)
@@ -1005,10 +1016,33 @@ class MainActivity : AppCompatActivity() {
     fun restoreLayer() {
         for (i in layersList) {
             when (i) {
-                is Layer.MainPage -> {}
-                is Layer.AnimePage -> {showPage(infoOfPageToShow.infoOfAnimePage(i.layoutObjId, false), i)}
-                is Layer.OverLay -> {showPage(infoOfPageToShow.infoOfOverlayLayer(i.info, false), i)}
-                is Layer.VideoPlayer -> {showPage(infoOfPageToShow.infoOfVideoPlayer(i.id, false), i)}
+                is Layer.MainPage -> {
+                    i.activeJobs.forEach {
+                        it.cancel()
+                    }
+                    i.activeJobs.clear()
+                }
+                is Layer.AnimePage -> {
+                    i.activeJobs.forEach {
+                        it.cancel()
+                    }
+                    i.activeJobs.clear()
+                    showPage(infoOfPageToShow.infoOfAnimePage(i.layoutObjId, false), i)
+                }
+                is Layer.OverLay -> {
+                    i.activeJobs.forEach {
+                        it.cancel()
+                    }
+                    i.activeJobs.clear()
+                    showPage(infoOfPageToShow.infoOfOverlayLayer(i.info, false), i)
+                }
+                is Layer.VideoPlayer -> {
+                    i.activeJobs.forEach {
+                        it.cancel()
+                    }
+                    i.activeJobs.clear()
+                    showPage(infoOfPageToShow.infoOfVideoPlayer(i.id, false), i)
+                }
             }
         }
     }
