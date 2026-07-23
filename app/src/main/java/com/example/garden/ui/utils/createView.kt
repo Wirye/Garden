@@ -19,6 +19,7 @@ import android.text.Editable
 import android.text.InputType
 import android.text.TextUtils
 import android.text.TextWatcher
+import android.util.Log
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.MotionEvent
@@ -725,15 +726,15 @@ fun createM3Button(context: Context, width: Int, height: Int, textt: String, nam
         text = textt
         includeFontPadding = false
         typeface = font
-        measure(
-            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
-            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
-        )
         setTextSize(TypedValue.COMPLEX_UNIT_PX, textSizee)
         setTextColor("#804A4459".toColorInt())
         tag = "button_text"
         id = View.generateViewId()
         ellipsize = TextUtils.TruncateAt.END
+        measure(
+            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
+            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+        )
     }
     val wrapContentModeButtonWidth = if (icoId != null) {(icoSize+(arrowMarginRight*2))} else {0} + if (dropDownMode) {(icoSize+(arrowMarginRight*2))} else {0} + textView.measuredWidth + if (dropDownMode && (icoId == null)) {arrowMarginRight*3} else {0}
     if (wrapContentMode) {
@@ -1386,15 +1387,14 @@ fun createDropdownRow(context: Context, width: Int, height: Int, titleText: Stri
             val selected = options[position]
             val newChilds = createM3Button(context = context, width = buttonWidth, height = buttonHeight, textt = selected.first, name = "", sizeType = SizeType.SMALL, cornersMode = 0, icoId = buttonIcoId, pillMode = true, dropDownMode = true, wrapContentMode = true, maxWidthh = buttonWidth, isActive = true, nameColor = "#FFFFFF".toColorInt())
             dropdownButton.removeAllViews()
-            for (i in rt.childs.indices) {
-                dropdownButton.addView(rt.childs[i])
-            }
             val lp1 = dropdownButton.layoutParams as ConstraintLayout.LayoutParams
             lp1.width = newChilds.width
             dropdownButton.layoutParams = lp1
             for (i in newChilds.childs) {
                 dropdownButton.addView(i)
             }
+            dropdownButton.invalidate()
+            dropdownButton.requestLayout()
             onItemSelected(selected.first,selected.second)
             dismiss()
         }

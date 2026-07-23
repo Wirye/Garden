@@ -600,7 +600,6 @@ class MainActivity : AppCompatActivity() {
                     override fun onDisplayAdded(displayId: Int) {}
                     override fun onDisplayRemoved(displayId: Int) {}
                     override fun onDisplayChanged(displayId: Int) {
-                        // Это вызовется на ЛЮБОЙ поворот, включая 180°
                         handler.sendEmptyMessage(0)
                     }
                 },
