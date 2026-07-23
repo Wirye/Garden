@@ -33,10 +33,8 @@ fun toggleExtensionAnimation(rootContainer: ConstraintLayout, rows: List<View>, 
     val isCurrentlyExtend = rows.any { it.isVisible }
     val shouldBeExtended = targetState ?: !isCurrentlyExtend
 
-    if (isCurrentlyExtend == shouldBeExtended && animate) return
-
     val sortedRowList = mutableListOf<View>()
-    var lastRowId = animSourceRow.id
+    val lastRowId = animSourceRow.id
 
     fun sortRowsList(list: List<View>): List<View> {
         val result = mutableListOf<View>()

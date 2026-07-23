@@ -2441,34 +2441,48 @@ object createOvDialog {
             gravity = Gravity.CENTER_HORIZONTAL
         }
         previewContainer.addView(previewErrorTextView)
+        constraintLayoutInsideScrolConainerr.addView(previewContainer)
 
-        previewAdapter.firstHolderHeightCallback = {height -> run {
-            previewContainer.post {
-                scrollContainerr.post {
-                    val scroll = scrollContainerr.scrollY
-                    val previewConHeight = previewContainer.height
-                    val newHeight = height.coerceIn(0, round(450f * baseDensity).toInt())
-                    val newPreviewConHeight = newHeight + (marginTop * 2)
-                    val diff = newPreviewConHeight - previewConHeight
-                    val previewContainerlp1 = previewContainer.layoutParams as ConstraintLayout.LayoutParams
-                    previewContainerlp1.height = newPreviewConHeight
-                    previewContainer.layoutParams = previewContainerlp1
-                    val recyclerViewlp1 = recyclerView.layoutParams as ConstraintLayout.LayoutParams
-                    recyclerViewlp1.height = newHeight
-                    recyclerView.layoutParams = recyclerViewlp1
-                    scrollContainerr.viewTreeObserver.addOnPreDrawListener(object : ViewTreeObserver.OnPreDrawListener {
-                        override fun onPreDraw(): Boolean {
-                            scrollContainerr.viewTreeObserver.removeOnPreDrawListener(this)
-                            if (scroll > round(previewConHeight.toFloat() / 2f).toInt()) {
-                                scrollContainerr.scrollY = scroll + diff
+        previewContainer.post {
+            previewAdapter.firstHolderHeightCallback = {height -> run {
+                previewContainer.post {
+                    scrollContainerr.post {
+                        val scroll = scrollContainerr.scrollY
+                        val previewConHeight = previewContainer.height
+                        val newHeight = height.coerceIn(0, round(450f * baseDensity).toInt())
+                        val newPreviewConHeight = newHeight + (marginTop * 2)
+                        val diff = newPreviewConHeight - previewConHeight
+                        val previewContainerlp1 = previewContainer.layoutParams as ConstraintLayout.LayoutParams
+                        previewContainerlp1.height = newPreviewConHeight
+                        previewContainer.layoutParams = previewContainerlp1
+                        val recyclerViewlp1 = recyclerView.layoutParams as ConstraintLayout.LayoutParams
+                        recyclerViewlp1.height = newHeight
+                        recyclerView.layoutParams = recyclerViewlp1
+                        scrollContainerr.viewTreeObserver.addOnPreDrawListener(object : ViewTreeObserver.OnPreDrawListener {
+                            override fun onPreDraw(): Boolean {
+                                if (scrollContainerr.viewTreeObserver.isAlive) {
+                                    scrollContainerr.viewTreeObserver.removeOnPreDrawListener(this)
+                                } else {
+                                    scrollContainerr.viewTreeObserver.removeOnPreDrawListener(this)
+                                }
+                                if (diff != 0 && scroll > round(previewConHeight.toFloat() / 2f).toInt()) {
+                                    scrollContainerr.scrollY = scroll + diff
+                                }
+                                return true
                             }
-                            return true
-                        }
-                    })
+                        })
+                        previewContainer.invalidate()
+                        recyclerView.invalidate()
+                        scrollContainerr.invalidate()
+                        previewContainer.requestLayout()
+                        recyclerView.requestLayout()
+                        scrollContainerr.requestLayout()
+                    }
                 }
             }
-        }}
-        constraintLayoutInsideScrolConainerr.addView(previewContainer)
+            }
+        }
+
 
         val scrollContainerBackgroundDrawable = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE

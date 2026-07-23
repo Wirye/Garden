@@ -79,6 +79,7 @@ class CarouselsAdapter(private val context: Context, val addCardToCarousel: (Lon
     }
 
     override fun onBindViewHolder(holder: ViewHolder, @SuppressLint("RecyclerView") position: Int) {
+        val list = uploadLayoutTypeToCarouselChilds(getItem(position).childs, getItem(position), customLineWidth)
         val lineWidth = customLineWidth ?: screenWidth
         val layer = if (!previewMode) {layersList[layersList.indexOf(findMainPageLayerByPageId(getItem(position).page))]} else {layersListForPreviewMode?.get(0)}
         holder.totalScrolledRecyclerView =  0
@@ -224,7 +225,6 @@ class CarouselsAdapter(private val context: Context, val addCardToCarousel: (Lon
                     val newId = View.generateViewId()
                     id = newId
                     recyclerViewId = newId
-                    val list = uploadLayoutTypeToCarouselChilds(getItem(position).childs, getItem(position), customLineWidth)
                     if (!(list.isEmpty() || (list[0].layoutType == 0))) {
                         val itemDecoration = spaceItemDecoration(spaceItemDecorationInput(
                             listOf(getItem(position).marginBetweenElementsHorizontal ?: round(11f * baseDensity).toInt(),0,0,0),
@@ -236,7 +236,7 @@ class CarouselsAdapter(private val context: Context, val addCardToCarousel: (Lon
                     }
                 }
                 val ad = recycler.adapter as ChildAdapter
-                ad.submitList(uploadLayoutTypeToCarouselChilds(getItem(position).childs, getItem(position), customLineWidth)) {
+                ad.submitList(list) {
                     recycler.invalidateItemDecorations()
                 }
                 holder.constraintLayout.addView(recycler)
@@ -248,7 +248,7 @@ class CarouselsAdapter(private val context: Context, val addCardToCarousel: (Lon
                             holder.totalScrolledRecyclerView += dx
                             layer.scrollPositionsInPx[getItem(position).position] = holder.totalScrolledRecyclerView
                             val layoutManager = recycler.layoutManager as LinearLayoutManager
-                            val firstVisible = layoutManager.findFirstVisibleItemPosition()
+                            val firstVisible = toFirstVisible(list, layoutManager.findFirstVisibleItemPosition())
                             layer.scrollPositionCarousels[getItem(position).position] = firstVisible
                         }
                     })
@@ -258,12 +258,12 @@ class CarouselsAdapter(private val context: Context, val addCardToCarousel: (Lon
                             if (pdH == null) {
                                 pdH = round(19f * baseDensity).toInt()
                             }
-                            val q = layer.scrollPositionCarousels[getItem(position).position] ?: 0
+                            val q = fromFirstVisible(list, (layer.scrollPositionCarousels[getItem(position).position] ?: 0))
                             layer.scrollPositionCarousels[getItem(position).position] = 0
                             val qq = layer.scrollPositionsInPx[getItem(position).position] ?: 0
+                            layer.scrollPositionsInPx[getItem(position).position] = 0
                             val scrollH = calcItemPosInPxByPos(currentList,position, q, context, lineWidth) - pdH
                             var cardWidth = round(50f*baseDensity).toInt()
-                            val list = uploadLayoutTypeToCarouselChilds(getItem(position).childs, getItem(position), customLineWidth)
                             for (i in list) {
                                 if (i.width != null) {
                                     cardWidth = calculateCardWidth(list, ResourcesCompat.getFont(context, R.font.google_sans_medium), getItem(position).childsShowName, getItem(position).childsShowAuthor, getItem(position).childsNamePosition, list.indexOf(i), context, lineWidth, getItem(position).paddingHorizontal, getItem(position).marginBetweenElementsHorizontal)
@@ -283,7 +283,7 @@ class CarouselsAdapter(private val context: Context, val addCardToCarousel: (Lon
                     if (marginBetweenElementsHorizontal == null) {
                         marginBetweenElementsHorizontal = round(11f * baseDensity).toInt()
                     }
-                    val dots = createDovodchikDots(context, uploadLayoutTypeToCarouselChilds(getItem(position).childs, getItem(position), customLineWidth), padding, marginBetweenElementsHorizontal, currentList[position].childsShowName, currentList[position].childsShowAuthor, currentList[position].childsNamePosition, lineWidth)
+                    val dots = createDovodchikDots(context, list, padding, marginBetweenElementsHorizontal, currentList[position].childsShowName, currentList[position].childsShowAuthor, currentList[position].childsNamePosition, lineWidth)
                     val dotsLayout = dots.layout as ViewGroup
                     val layoutparams1 = dotsLayout.layoutParams as ConstraintLayout.LayoutParams
                     layoutparams1.topToBottom = recyclerViewId
@@ -471,7 +471,8 @@ class CarouselsAdapter(private val context: Context, val addCardToCarousel: (Lon
             if (layer.scrollPositionCarousels[getItem(position).position] == null) {
                 layer.scrollPositionCarousels[getItem(position).position] = 0
             }
-            val itemPositionInPx = calcItemPosInPxByPos(currentList,position, layer.scrollPositionCarousels[getItem(position).position]!!,context, (customLineWidth ?: screenWidth))
+            val list = uploadLayoutTypeToCarouselChilds(getItem(position).childs, getItem(position), customLineWidth)
+            val itemPositionInPx = calcItemPosInPxByPos(currentList,position, fromFirstVisible(list,layer.scrollPositionCarousels[getItem(position).position]!!),context, (customLineWidth ?: screenWidth))
             var dotPos = -1
             for (i in 0 until dots.size) {
                 if (dots[i].second.itemPositionInPx <= itemPositionInPx && i > dotPos) {
@@ -498,5 +499,39 @@ class CarouselsAdapter(private val context: Context, val addCardToCarousel: (Lon
             horizontalScrollView.smoothScrollBy(dotScrollWidth,0)
             recycler.smoothScrollBy(recyclerScrollWidth,0)
         }
+    }
+    fun toFirstVisible(list: List<objectData2>, firstVisibleHolder: Int): Int {
+        var firstVisibleHolderr = firstVisibleHolder
+        val firstVisibleItem = list[firstVisibleHolderr]
+        if (firstVisibleItem.layoutType == 0) {
+            var objPos = 0
+            for (i in 0 until firstVisibleHolder) {
+                val obj = list[i]
+                objPos += obj.childs.size
+                if (i == firstVisibleHolder - 1) {
+                    objPos += 1
+                }
+            }
+            firstVisibleHolderr = objPos
+        }
+        return firstVisibleHolderr
+    }
+    fun fromFirstVisible(list: List<objectData2>, firstVisible: Int): Int {
+        if (list.isNotEmpty()) {
+            if (list[0].layoutType == 0) {
+                var currentMaxPos = -1
+                for (i in 0 until list.size) {
+                    val obj = list[i]
+                    currentMaxPos += obj.childs.size
+                    if (firstVisible <= currentMaxPos) {
+                        return obj.position
+                    }
+                }
+            }
+            else {
+                return firstVisible
+            }
+        }
+        return 0
     }
 }
