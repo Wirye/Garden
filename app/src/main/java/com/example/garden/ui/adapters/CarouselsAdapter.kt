@@ -14,6 +14,7 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.core.content.res.ResourcesCompat
 import androidx.core.graphics.drawable.toDrawable
 import androidx.core.view.isEmpty
 import androidx.core.view.isNotEmpty
@@ -39,10 +40,12 @@ import com.example.garden.orientationNow
 import com.example.garden.orientationOld
 import com.example.garden.screenWidth
 import com.example.garden.ui.customView.OptimizedTextView
+import com.example.garden.ui.utils.calculateCardWidth
 import com.example.garden.ui.utils.spaceItemDecoration
 import com.example.garden.ui.utils.spaceItemDecorationInput
 import com.example.garden.ui.utils.uploadLayoutTypeToCarouselChilds
 import kotlin.collections.set
+import kotlin.math.abs
 import kotlin.math.round
 
 class CarouselsAdapter(private val context: Context, val addCardToCarousel: (Long) -> Unit, val clickOnItem: (objectData2) -> Unit, val previewMode: Boolean = false, val layersListForPreviewMode: List<Layer>? = null, val customLineWidth: Int? = null) : ListAdapter<objectData2, CarouselsAdapter.ViewHolder>(ObjectDiffCallback()) {
@@ -257,8 +260,17 @@ class CarouselsAdapter(private val context: Context, val addCardToCarousel: (Lon
                             }
                             val q = layer.scrollPositionCarousels[getItem(position).position] ?: 0
                             layer.scrollPositionCarousels[getItem(position).position] = 0
+                            val qq = layer.scrollPositionsInPx[getItem(position).position] ?: 0
                             val scrollH = calcItemPosInPxByPos(currentList,position, q, context, lineWidth) - pdH
-                            recycler.scrollBy(scrollH,0)
+                            var cardWidth = round(50f*baseDensity).toInt()
+                            val list = uploadLayoutTypeToCarouselChilds(getItem(position).childs, getItem(position), customLineWidth)
+                            for (i in list) {
+                                if (i.width != null) {
+                                    cardWidth = calculateCardWidth(list, ResourcesCompat.getFont(context, R.font.google_sans_medium), getItem(position).childsShowName, getItem(position).childsShowAuthor, getItem(position).childsNamePosition, list.indexOf(i), context, lineWidth, getItem(position).paddingHorizontal, getItem(position).marginBetweenElementsHorizontal)
+                                }
+                            }
+                            val scrollH2 = if (abs(scrollH - qq) > cardWidth) {scrollH} else {qq}
+                            recycler.scrollBy(scrollH2,0)
                         }
                     }
                 }

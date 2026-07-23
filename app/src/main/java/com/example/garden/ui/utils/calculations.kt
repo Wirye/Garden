@@ -198,15 +198,9 @@ fun calculateAmountOfDots(items: List<objectData2>, paddingHorizontal: Int, marg
     // Это необходимо для определения границ прокрутки и финальной точки.
     var layoutType = 1
     for (i in 0 until  items.size) {
-        var width: Int
-        width = calculateCardWidth(items, font, showName, showAuthor, namePosition, i, context,lineWidth)
+        val width = calculateCardWidth(items, font, showName, showAuthor, namePosition, i, context,lineWidth)
         // Если элемент — сетка (layoutType == 0), рассчитываем ширину всей группы
-        if (items[i].layoutType == 0) {
-            layoutType = 0
-            if (items[i].childs.isNotEmpty()) {
-                width = lineWidth
-            }
-        }
+        if (items[i].layoutType == 0) { layoutType = 0 }
         // Накапливаем общую ширину с учетом горизонтальных отступов
         sumWidth += width + if (items[i].layoutType != 0) marginBetweenElementsHorizontal else 0
     }
@@ -226,13 +220,7 @@ fun calculateAmountOfDots(items: List<objectData2>, paddingHorizontal: Int, marg
         }
         // Проходим по элементам, начиная с последней точки
         for (i in lastElementPosition until items.size) {
-            var width: Int
-            width = calculateCardWidth(items, font, showName, showAuthor, namePosition, i, context,lineWidth)
-            if (items[i].layoutType == 0) {
-                if (items[i].childs.isNotEmpty()) {
-                    width = lineWidth
-                }
-            }
+            val width = calculateCardWidth(items, font, showName, showAuthor, namePosition, i, context,lineWidth)
 
             // Рассчитываем конец текущего элемента
             var kon = sumWidth2 + width
@@ -355,7 +343,7 @@ fun getTextSizeByHeight(height: Int, font: Typeface? = null, context: Context): 
     return textSizee
 }
 fun calculateCardWidth(items: List<objectData2>, font: Typeface?, showName: Boolean, showAuthor: Boolean, namePosition: Int?, position: Int, context: Context, lineWidth: Int? = null, paddingHorizontal: Int? = null, marginBetweenElementsHorizontal: Int? = null): Int {
-    if (items[position].layoutType == 0) return 0
+    if (items[position].layoutType == 0) return if (items[position].childs.isNotEmpty()) lineWidth ?: screenWidth else 0
     val lineW = lineWidth ?: screenWidth
     var width: Int
     var cardHeight: Int
