@@ -217,7 +217,6 @@ class AnimePageAdapter(private val context: Context, private val showShowAllText
             id = newId
             bannerContainerId = newId
             radius = getAdaptiveRadius(bannerW, SizeType.MEDIUM)
-            alpha = 0.3f
         }
         val banner = ImageView(context).apply {
             val layoutParams1 = ConstraintLayout.LayoutParams(
@@ -1271,8 +1270,10 @@ class AnimePageAdapter(private val context: Context, private val showShowAllText
             setState((layer.first as Layer.AnimePage).state)
         }
 
+        val bannerImage = if (parentCard.image != null) { if (parentCard.image!!.source == ImageSource.URL) {parentCard.image!!.value}  else if (parentCard.image!!.source == ImageSource.DEVICE)  {if (parentCard.image!!.value.startsWith("content://")) parentCard.image!!.value.toUri() else File(parentCard.image!!.value)} else {parentCard.image!!.value.toInt()} } else {R.drawable.placeholder}
+        banner.loadImage(parentCard.image)
         val drawBackgroundBlobs = ImageRequest.Builder(context)
-            .data(if (parentCard.image != null) { if (parentCard.image!!.source == ImageSource.URL) {parentCard.image!!.value}  else if (parentCard.image!!.source == ImageSource.DEVICE)  {if (parentCard.image!!.value.startsWith("content://")) parentCard.image!!.value.toUri() else File(parentCard.image!!.value)} else {parentCard.image!!.value.toInt()} } else {R.drawable.placeholder})
+            .data(bannerImage)
             .allowHardware(false)
             .target { drawable ->
                 // Картинка загрузилась, превращаем в Bitmap
@@ -1304,7 +1305,13 @@ class AnimePageAdapter(private val context: Context, private val showShowAllText
                         }
                         color = ColorUtils.setAlphaComponent(color, (255 * 0.3).toInt())
                         val gradientDrawable = ShapeDrawable(OvalShape()).apply {
-                            val colors = intArrayOf(color, ColorUtils.setAlphaComponent(getDeepDarkColor(color), (255 * 0.0).toInt()))
+                            val colors = intArrayOf(
+                                color,
+                                ColorUtils.setAlphaComponent(
+                                    getDeepDarkColor(color),
+                                    (255 * 0.0).toInt()
+                                )
+                            )
                             val positions = floatArrayOf(0.0f, 1f)
 
                             shaderFactory = object : ShapeDrawable.ShaderFactory() {
@@ -1325,11 +1332,6 @@ class AnimePageAdapter(private val context: Context, private val showShowAllText
                         view.setRenderEffect(baseBlurEffectForBloobs)
                     }
                 }
-
-
-                banner.setBackgroundColor(resources.getColor(android.R.color.transparent))
-                bannerContainer.alpha = 1f
-                banner.setImageBitmap(bitmap)
             }
             .listener(
                 onError = { _, result ->
@@ -1338,7 +1340,6 @@ class AnimePageAdapter(private val context: Context, private val showShowAllText
             )
             .listener(
                 onStart = {
-                    banner.loadImage(ImageData(ImageSource.SELF, R.drawable.placeholder.toString()))
                 }
             )
             .build()
