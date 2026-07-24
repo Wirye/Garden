@@ -44,5 +44,8 @@
     <string name="CreateCarouselPage_objectsInOneLineErrorText">Число столбцов не может превышать максимально число столбцов</string>
     <string name="StringForMaxHeightCalculate">СъешьжеещёHj</string>
     <string name="Confirm">Подтвердить</string>
+    <string name="EditingEpisodes">Редактирование эпизодов</string>
+    <string name="Search">"Поиск"</string>
+    <string name="Save">Сохранить</string>
 
 </resources>

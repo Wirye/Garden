@@ -4,7 +4,6 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Color
 import android.graphics.text.LineBreaker
-import android.util.Log
 import android.util.TypedValue
 import android.view.View
 import android.view.ViewGroup
@@ -16,7 +15,6 @@ import android.widget.TextView
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.res.ResourcesCompat
 import androidx.core.graphics.drawable.toDrawable
-import androidx.core.view.isEmpty
 import androidx.core.view.isNotEmpty
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.ListAdapter
@@ -30,7 +28,7 @@ import com.example.garden.ui.utils.calcItemPosInPxByPos
 import com.example.garden.ui.utils.calcRecyclerViewHeight
 import com.example.garden.ui.utils.calculateDigitParams
 import com.example.garden.ui.utils.createDovodchikDots
-import com.example.garden.ui.utils.createDovodchikDotsReturn
+import com.example.garden.ui.utils.CreateDovodchikDotsReturn
 import com.example.garden.ui.utils.createGridOfChilds
 import com.example.garden.dotDrawables
 import com.example.garden.ui.utils.findMainPageLayerByPageId
@@ -451,7 +449,7 @@ class CarouselsAdapter(private val context: Context, val addCardToCarousel: (Lon
         }
     }
     var lastRecyclerViewPositionOnOrientationChanged: Pair<Int,Int>? = null
-    fun updateActiveDot(newActiveDotPosition: Int, dotsAll: createDovodchikDotsReturn, totalScrolledRecyclerView: Int, totalScrolledHorizontalScrollView: Int, numberTextView: TextView, recycler: RecyclerView, horizontalScrollView: HorizontalScrollView, position: Int, layer: Layer.MainPage, force: Boolean = false, orientationChanged: Boolean = false) {
+    fun updateActiveDot(newActiveDotPosition: Int, dotsAll: CreateDovodchikDotsReturn, totalScrolledRecyclerView: Int, totalScrolledHorizontalScrollView: Int, numberTextView: TextView, recycler: RecyclerView, horizontalScrollView: HorizontalScrollView, position: Int, layer: Layer.MainPage, force: Boolean = false, orientationChanged: Boolean = false) {
         val dots = dotsAll.list
         var recyclerScrollWidth: Int
         var number: Int

@@ -26,7 +26,6 @@ import android.widget.ImageView
 import android.widget.ScrollView
 import androidx.activity.addCallback
 import androidx.activity.viewModels
-import androidx.cardview.widget.CardView
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import kotlin.math.round
@@ -52,8 +51,6 @@ import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.widget.FrameLayout
 import androidx.activity.result.contract.ActivityResultContracts
-import com.google.android.material.textfield.TextInputEditText
-import com.google.android.material.textfield.TextInputLayout
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import com.example.garden.database.LinkType
@@ -74,12 +71,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.collections.isNotEmpty
 import com.example.garden.ui.adapters.AnimePageSezonsPageAdapter
-import com.example.garden.ui.adapters.FlatGridOfEditEpisodesAdapter
 import com.example.garden.ui.factories.BottomSheetDialogElement
 import com.example.garden.ui.factories.bottomSheetDialogFactory
 import com.example.garden.ui.utils.OverLayLayer
 import com.example.garden.ui.utils.spaceItemDecoration
-import com.example.garden.ui.utils.createOvDialog
+import com.example.garden.ui.utils.CreateOvDialog
 import com.example.garden.ui.utils.createDotDrawables
 import com.example.garden.ui.utils.findMainPageLayerByPageId
 import com.example.garden.ui.utils.findLayerByLayerObjectId
@@ -89,11 +85,11 @@ import com.example.garden.ui.utils.calcRecyclerViewHeight
 import com.example.garden.ui.utils.optimizeText
 import com.example.garden.ui.utils.system.changeOrientation
 import com.example.garden.ui.utils.system.toggleSystemBars
-import com.example.garden.ui.utils.viewExtensions.loadImage
 import com.example.garden.ui.utils.viewExtensions.lifecycleOwner
 import com.example.garden.ui.utils.drawables.blobInit
 import com.example.garden.ui.utils.spaceItemDecorationInput
 import com.example.garden.ui.adapters.animePageSezonsAdapterListFormat
+import com.example.garden.ui.utils.PageWithSearchInput
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.ensureActive
 
@@ -311,7 +307,7 @@ data class objectData2(
     var genre: List<Genre>? = null,
 )
 enum class pageTags {
-    animePage, createAnimePage, genreChoice, videoPlayer, createCarouselPage
+    animePage, createAnimePage, genreChoice, videoPlayer, createCarouselPage, pageWithSearch
 }
 sealed class infoOfPageToShow {
     data class infoOfAnimePage(
@@ -332,7 +328,8 @@ enum class fileType {
 }
 object ResultKeys {
     const val CREATE_CARD_GENRE_CHOICE = "CREATE_CARD_PAGE_GENRE_CHOICE"
-    const val CREATE_CARD_ADD_EPISODES = "CREATE_CARD_PAGE_ADD_EPISODES"
+    const val PAGE_WITH_SEARCH_EDIT_ANIME_CARD_EPISODES_ADD_EPISODES = "PAGE_WITH_SEARCH_EDIT_ANIME_CARD_EPISODES_ADD_EPISODE"
+    const val PAGE_WITH_SEARCH_EDIT_ANIME_CARD_EPISODES_CHANGE_EPISODE_IMAGE = "PAGE_WITH_SEARCH_EDIT_ANIME_CARD_EPISODES_CHANGE_EPISODE_IMAGE"
     const val CREATE_CARD_CHANGE_IMAGE = "CREATE_CARD_PAGE_CHANGE_IMAGE"
     const val CREATE_CARD_APPLY = "CREATE_CARD_PAGE_APPLY"
     const val VIDEO_PLAYER_ANIME_EPISODE_INFORMATION = "VIDEO_PLAYER_ANIME_EPISODE_INFORMATION"
@@ -346,6 +343,10 @@ object ResultKeys {
     const val VIDEO_PLAYER_EDIT_EPISODE_ALREADY_WATCHED = "VIDEO_PLAYER_EDIT_EPISODE_ALREADY_WATCHED"
     const val CREATE_CAROUSEL_PAGE_CHANGE_ICO = "CREATE_CAROUSEL_PAGE_CHANGE_ICO"
     const val CREATE_CAROUSEL_APPLY = "CREATE_CAROUSEL_APPLY"
+    const val SELECT_FILE = "SELECT_FILE"
+    const val SELECT_FILES = "SELECT_FILES"
+    const val CREATE_CARD_APPLY_EPISODES_LIST = "CREATE_CARD_APPLY_EPISODES_LIST"
+    const val PAGE_WITH_SEARCH_EDIT_ANIME_CARD_EPISODES_CHANGE_SEARCH_INPUT_TEXT = "PAGE_WITH_SEARCH_EDIT_ANIME_CARD_EPISODES_CHANGE_SEARCH_INPUT_TEXT"
 }
 data class createCardApply(
     val name: String,
@@ -357,9 +358,34 @@ data class createCardApply(
     val parentId: Long
 )
 
+data class SelectFileInput(
+    val fileType: fileType,
+    val key: String,
+)
+
+data class SelectFilesInput(
+    val fileTypes: List<fileType>,
+    val key: String
+)
+
+data class SelectFileOutput(
+    val data: String
+)
+
+data class SelectFilesOutput(
+    val data: List<String>
+)
+
+data class GenreChoiceOutput(
+    val data: List<Pair<Boolean, Genre>>
+)
+
+data class EditEpisodeAlreadyWatchedInput(
+    val id: Long,
+    val alreadyWatched: Long
+)
 
 var currentPendingKeyForFiles: String? = null
-var currentPendingPositionForCreateCardChangeImage: Int = 0
 var mainActivityJob: Job? = null
 class MainActivity : AppCompatActivity() {
     private lateinit var displayManager: DisplayManager
@@ -382,12 +408,10 @@ class MainActivity : AppCompatActivity() {
                 Log.e("STORAGE", "Не удалось получить постоянный доступ", e)
             }
             val tag = currentPendingKeyForFiles
-            val pos = currentPendingPositionForCreateCardChangeImage
             if (tag != null) {
                 resultSenderViewModel.sendResult(tag, when(tag) {
-                    ResultKeys.CREATE_CARD_CHANGE_IMAGE -> {Pair(uriString,pos)}
                     ResultKeys.CREATE_CAROUSEL_PAGE_CHANGE_ICO -> {ImageData(source = ImageSource.DEVICE, value = uriString)}
-                    else -> {uriString}
+                    else -> {SelectFileOutput(uriString)}
                 })
             }
         }
@@ -407,7 +431,7 @@ class MainActivity : AppCompatActivity() {
             }
             val tag = currentPendingKeyForFiles
             if (tag != null) {
-                resultSenderViewModel.sendResult(tag, resultList)
+                resultSenderViewModel.sendResult(tag, SelectFilesOutput(resultList))
             }
         }
     }
@@ -803,87 +827,104 @@ class MainActivity : AppCompatActivity() {
                         resultSenderViewModel.results.collect { (key, data) -> run {
                             when (key) {
                                 ResultKeys.VIDEO_PLAYER_EDIT_EPISODE_ALREADY_WATCHED -> {
-                                    val dataa = data as Pair<Long, Long>
-                                    viewModel.editAlreadyWatched(dataa.first,dataa.second)
+                                    val dataa = data as? EditEpisodeAlreadyWatchedInput
+                                    if (dataa != null) {
+                                        viewModel.editAlreadyWatched(dataa.id,dataa.alreadyWatched)
+                                    }
                                 }
                                 ResultKeys.CREATE_CARD_APPLY -> {
-                                    val dataa = data as createCardApply
-                                    var length = 0L
-                                    for (i in dataa.episodesList) {
-                                        length += i.length
+                                    val dataa = data as? createCardApply
+                                    if (dataa != null) {
+                                        var length = 0L
+                                        for (i in dataa.episodesList) {
+                                            length += i.length
+                                        }
+                                        val cardData = ObjectData(
+                                            id = 0,
+                                            parentId = null,
+                                            page = 0,
+                                            position = 0,
+                                            name = dataa.name.ifEmpty { "Без имени" },
+                                            showAlreadyWatchedLine = false,
+                                            showIco = false,
+                                            childsShowName = false,
+                                            childsNamePosition = null,
+                                            childsShowAlreadyWatchedLine = true,
+                                            image = dataa.image,
+                                            description = dataa.description,
+                                            author = if (dataa.author == "") null else dataa.author,
+                                            type = null,
+                                            alreadyWatched = 0,
+                                            length = length,
+                                            carouselType = null,
+                                            carouselCollectionType = null,
+                                            width = 520,
+                                            height = 743,
+                                            childsCornerRadius = null,
+                                            layoutType = null,
+                                            dovodchik = false,
+                                            showDovodchikDots = false,
+                                            objectsInOneLine = null,
+                                            maxLines = null,
+                                            adaptiveGridSize = false,
+                                            maxObjectsInOneLineForAdaptiveSize = null,
+                                            maxLinesForAdaptiveSize = null,
+                                            paddingHorizontal = null,
+                                            paddingVertical = null,
+                                            marginBetweenElementsHorizontal = null,
+                                            marginBetweenElementsVertical = null,
+                                            link = LinkData(LinkType.SELF, null, null),
+                                            elementType = ElementType.Anime,
+                                            genre = dataa.genreList
+                                        )
+                                        viewModel.insertCardWithEpisodes(cardData,dataa.episodesList, dataa.parentId)
+                                        hideLayer()
                                     }
-                                    val cardData = ObjectData(
-                                        id = 0,
-                                        parentId = null,
-                                        page = 0,
-                                        position = 0,
-                                        name = dataa.name.ifEmpty { "Без имени" },
-                                        showAlreadyWatchedLine = false,
-                                        showIco = false,
-                                        childsShowName = false,
-                                        childsNamePosition = null,
-                                        childsShowAlreadyWatchedLine = true,
-                                        image = dataa.image,
-                                        description = dataa.description,
-                                        author = if (dataa.author == "") null else dataa.author,
-                                        type = null,
-                                        alreadyWatched = 0,
-                                        length = length,
-                                        carouselType = null,
-                                        carouselCollectionType = null,
-                                        width = 520,
-                                        height = 743,
-                                        childsCornerRadius = null,
-                                        layoutType = null,
-                                        dovodchik = false,
-                                        showDovodchikDots = false,
-                                        objectsInOneLine = null,
-                                        maxLines = null,
-                                        adaptiveGridSize = false,
-                                        maxObjectsInOneLineForAdaptiveSize = null,
-                                        maxLinesForAdaptiveSize = null,
-                                        paddingHorizontal = null,
-                                        paddingVertical = null,
-                                        marginBetweenElementsHorizontal = null,
-                                        marginBetweenElementsVertical = null,
-                                        link = LinkData(LinkType.SELF, null, null),
-                                        elementType = ElementType.Anime,
-                                        genre = dataa.genreList
-                                    )
-                                    viewModel.insertCardWithEpisodes(cardData,dataa.episodesList, dataa.parentId)
-                                    hideLayer()
                                 }
-
                                 ResultKeys.CREATE_CAROUSEL_APPLY -> {
-                                    val dataa = data as OverLayLayer.CreateCarouselPage
-                                    val carouselData = ObjectData(
-                                        id = 0,
-                                        page = dataa.page,
-                                        position = 0,
-                                        name = dataa.name.ifEmpty { "Без имени" },
-                                        childsShowName = dataa.childsShowName,
-                                        childsCornerRadius = dataa.childsCornerRadius,
-                                        childsNamePosition = dataa.childsNamePosition,
-                                        childsShowAlreadyWatchedLine = dataa.childsShowAlreadyWatchedLine,
-                                        alreadyWatched = 0,
-                                        length = 0,
-                                        layoutType = dataa.layoutType,
-                                        carouselType = dataa.carouselType,
-                                        carouselCollectionType = dataa.carouselCollectionType,
-                                        dovodchik = dataa.dovodchik,
-                                        showDovodchikDots = true,
-                                        elementType = ElementType.Carousel,
-                                        maxLines = dataa.maxLines,
-                                        objectsInOneLine = dataa.objectsInOneLine,
-                                        childsBaseWidth = dataa.childsBaseWidth,
-                                        childsBaseHeight = dataa.childsBaseHeight,
-                                        adaptiveGridSize = dataa.adaptiveGridSize,
-                                        maxObjectsInOneLineForAdaptiveSize = dataa.maxObjectsInOneLineForAdaptiveSize,
-                                        maxLinesForAdaptiveSize = dataa.maxLinesForAdaptiveSize,
-                                        childsShowAuthor = dataa.childsShowAuthor,
-                                    )
-                                    viewModel.insertCarousel(carouselData, dataa.page)
-                                    hideLayer()
+                                    val dataa = data as? OverLayLayer.CreateCarouselPage
+                                    if (dataa != null) {
+                                        val carouselData = ObjectData(
+                                            id = 0,
+                                            page = dataa.page,
+                                            position = 0,
+                                            name = dataa.name.ifEmpty { "Без имени" },
+                                            childsShowName = dataa.childsShowName,
+                                            childsCornerRadius = dataa.childsCornerRadius,
+                                            childsNamePosition = dataa.childsNamePosition,
+                                            childsShowAlreadyWatchedLine = dataa.childsShowAlreadyWatchedLine,
+                                            alreadyWatched = 0,
+                                            length = 0,
+                                            layoutType = dataa.layoutType,
+                                            carouselType = dataa.carouselType,
+                                            carouselCollectionType = dataa.carouselCollectionType,
+                                            dovodchik = dataa.dovodchik,
+                                            showDovodchikDots = true,
+                                            elementType = ElementType.Carousel,
+                                            maxLines = dataa.maxLines,
+                                            objectsInOneLine = dataa.objectsInOneLine,
+                                            childsBaseWidth = dataa.childsBaseWidth,
+                                            childsBaseHeight = dataa.childsBaseHeight,
+                                            adaptiveGridSize = dataa.adaptiveGridSize,
+                                            maxObjectsInOneLineForAdaptiveSize = dataa.maxObjectsInOneLineForAdaptiveSize,
+                                            maxLinesForAdaptiveSize = dataa.maxLinesForAdaptiveSize,
+                                            childsShowAuthor = dataa.childsShowAuthor,
+                                        )
+                                        viewModel.insertCarousel(carouselData, dataa.page)
+                                        hideLayer()
+                                    }
+                                }
+                                ResultKeys.SELECT_FILE -> {
+                                    val dataa = data as? SelectFileInput
+                                    if (dataa != null) {
+                                        selectFile(dataa)
+                                    }
+                                }
+                                ResultKeys.SELECT_FILES -> {
+                                    val dataa = data as? SelectFilesInput
+                                    if (dataa != null) {
+                                        selectFiles(dataa)
+                                    }
                                 }
                             }
                         }
@@ -904,7 +945,7 @@ class MainActivity : AppCompatActivity() {
         return super.dispatchTouchEvent(ev)
     }
 
-    private var playerSubscriptionJob: kotlinx.coroutines.Job? = null
+    private var playerSubscriptionJob: Job? = null
     fun openAnimeVideoPlayer(id: Long) {
         val contextt = this
         playerSubscriptionJob?.cancel()
@@ -964,19 +1005,6 @@ class MainActivity : AppCompatActivity() {
         val vp: View? = mc.findViewWithTag("video_player")
         if (vp != null) {
             mc.removeView(vp)
-        }
-    }
-    fun getVideoDuration(uriString: String): Long {
-        val retriever = MediaMetadataRetriever()
-        try {
-            retriever.setDataSource(this, uriString.toUri())
-            val time = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
-            return floor((time?.toLong() ?: 0L) / 1000f).toLong()
-        } catch (e: Exception) {
-            Log.e("getVideoDuration", "Something is incorrect: ${e.message}")
-            return 0L
-        } finally {
-            retriever.release()
         }
     }
     fun bsdButtonActions(tag: BsdButtonsTags, value: Float) {
@@ -1134,20 +1162,19 @@ class MainActivity : AppCompatActivity() {
             finish()
         }
     }
-    fun selectFile(fileTypee: fileType, key: String, positionForCreateCardChangeImage: Int?) {
-        val fileTypeString = when (fileTypee) {
+    fun selectFile(startsInfo: SelectFileInput) {
+        val fileTypeString = when (startsInfo.fileType) {
             fileType.IMAGE -> "image/*"
             fileType.AUDIO -> "audio/*"
             fileType.VIDEO -> "video/*"
         }
-        currentPendingKeyForFiles = key
-        currentPendingPositionForCreateCardChangeImage = positionForCreateCardChangeImage ?: 0
+        currentPendingKeyForFiles = startsInfo.key
         pickFile.launch(fileTypeString)
     }
-    fun selectFiles(fileTypes: List<fileType>, key: String) {
-        currentPendingKeyForFiles = key
+    fun selectFiles(startsInfo: SelectFilesInput) {
+        currentPendingKeyForFiles = startsInfo.key
         var fileTypesString = arrayOf<String>()
-        for (i in fileTypes) {
+        for (i in startsInfo.fileTypes) {
             when (i) {
                 fileType.IMAGE -> fileTypesString = fileTypesString.plus("image/*")
                 fileType.AUDIO -> fileTypesString = fileTypesString.plus("audio/*")
@@ -1177,22 +1204,7 @@ class MainActivity : AppCompatActivity() {
                         }
                         val layer = if (info.isItNewLayer || layer == null) {layersList.last()} else {layer}
                         val mainContainer = findViewById<ViewGroup>(R.id.main)
-                        var bannerImageData: ImageData? = null
-                        val createAnimePageContainerView = createOvDialog.CreateAnimePage(this, info.info, resultSenderViewModel,
-                            addCard = {
-                                val createAnimePageContainerView: ConstraintLayout? = mainContainer.findViewWithTag("create_anime_page_container")
-                                if (createAnimePageContainerView != null) {
-                                    val sc = createAnimePageContainerView.findViewWithTag<ScrollView>("scroll_container")
-                                    val con = sc.findViewWithTag<ConstraintLayout>("container")
-                                    val nameInput = con.findViewWithTag<TextInputLayout>("name_input").getChildAt(0).findViewWithTag<TextInputEditText>("edit_text")
-                                    val authorInput = con.findViewWithTag<ConstraintLayout>("author_input").getChildAt(0) as TextInputLayout
-                                    val authorInputt = authorInput.findViewWithTag<TextInputEditText>("edit_text")
-                                    val descriptionInput = con.findViewWithTag<TextInputLayout>("description_input").findViewWithTag<TextInputEditText>("edit_text")
-                                    val data = createCardApply(nameInput.text.toString(), bannerImageData, authorInputt.text.toString(), descriptionInput.text.toString(), info.info.genreList, it, info.info.parentId)
-                                    resultSenderViewModel.sendResult(ResultKeys.CREATE_CARD_APPLY,data)
-                                }
-                            },
-                            changeImage = { pos -> selectFile(fileType.IMAGE, ResultKeys.CREATE_CARD_CHANGE_IMAGE, pos) },
+                        val createAnimePageContainerView = CreateOvDialog.createAnimePage(this, info.info, resultSenderViewModel,
                             openGenreChoice = {
                                 val fullGenreList = mutableListOf<Pair<Boolean, Genre>>()
                                 for (i in genreNames) {
@@ -1205,76 +1217,13 @@ class MainActivity : AppCompatActivity() {
                                     fullGenreList.add(Pair(isActive, i.key))
                                 }
                                 showPage(infoOfPageToShow.infoOfOverlayLayer(OverLayLayer.GenreChoice(fullGenreList, ResultKeys.CREATE_CARD_GENRE_CHOICE),true), null)
-                            }, layer)
+                            }, openEditEpisodesPage = { fs, sd -> run {
+                                val info = infoOfPageToShow.infoOfOverlayLayer(OverLayLayer.PageWithSearch(PageWithSearchInput.EditAnimeCardEpisodes(sd, fs as MutableList<episodeInfo>), ResultKeys.CREATE_CARD_APPLY_EPISODES_LIST),true)
+                                showPage(info, null)
+                            }},layer)
                         createAnimePageContainerView.tag = "create_anime_page_container"
                         createAnimePageContainerView.isFocusable = true
                         createAnimePageContainerView.isFocusableInTouchMode = true
-
-                        val sc = createAnimePageContainerView.findViewWithTag<ScrollView>("scroll_container")
-                        val con = sc.findViewWithTag<ConstraintLayout>("container")
-
-                        val addEpisodeBlockContainer = con.findViewWithTag<ConstraintLayout>("add_episodes_block_container")
-                        val addEpisodeButton = addEpisodeBlockContainer.findViewWithTag<ConstraintLayout>("add_episode_button")
-                        addEpisodeButton.setOnClickListener {
-                            selectFiles(listOf(fileType.VIDEO), ResultKeys.CREATE_CARD_ADD_EPISODES)
-                            addEpisodeButton.requestFocus()
-                        }
-                        val job = lifecycleScope.launch {
-                            resultSenderViewModel.results.collect { (key, data) -> run {
-                                ensureActive()
-                                when (key) {
-                                    ResultKeys.CREATE_CARD_CHANGE_IMAGE -> run {
-                                        val dataa = data as Pair<String, Int>
-                                        val imageData = ImageData(ImageSource.DEVICE, dataa.first)
-                                        val capcv: ConstraintLayout? = mainContainer.findViewWithTag("create_anime_page_container")
-                                        if (capcv != null) {
-                                            val sc = capcv.findViewWithTag<ScrollView>("scroll_container")
-                                            val con = sc.findViewWithTag<ConstraintLayout>("container")
-                                            if (dataa.second == -1) {
-                                                val banner: ConstraintLayout = con.findViewWithTag("banner_container")
-                                                val cardView = banner.findViewWithTag<CardView>("banner_card_view")
-                                                val imageView = cardView.getChildAt(0) as ImageView
-                                                val addIco = banner.findViewWithTag<ImageView>("image_container_add_ico")
-                                                imageView.alpha = 1f
-                                                imageView.loadImage(imageData)
-                                                cardView.alpha = 1f
-                                                addIco.alpha = 0f
-                                                info.info.image = imageData
-                                                banner.background = null
-                                                bannerImageData = imageData
-                                            }
-                                            else {
-                                                val aebc = con.findViewWithTag<ConstraintLayout>("add_episodes_block_container")
-                                                val eebc = aebc.findViewWithTag<ConstraintLayout>("edit_episodes_container")
-                                                val recycler = eebc.getChildAt(0) as RecyclerView
-                                                val adapter = recycler.adapter as FlatGridOfEditEpisodesAdapter
-                                                adapter.changeEpisodeBanner(imageData,dataa.second)
-                                            }
-                                        }
-                                    }
-
-                                    ResultKeys.CREATE_CARD_ADD_EPISODES -> run {
-                                        val dataa = data as List<String>
-                                        for (i in dataa) {
-                                            val episodeInfo = episodeInfo(null, "", LinkData(LinkType.CONTENT, null, i),getVideoDuration(i))
-                                            val capcv: ConstraintLayout? = mainContainer.findViewWithTag("create_anime_page_container")
-                                            if (capcv != null) {
-                                                val sc = capcv.findViewWithTag<ScrollView>("scroll_container")
-                                                val con = sc.findViewWithTag<ConstraintLayout>("container")
-                                                val aebc = con.findViewWithTag<ConstraintLayout>("add_episodes_block_container")
-                                                val eebc = aebc.findViewWithTag<ConstraintLayout>("edit_episodes_container")
-                                                val recycler = eebc.getChildAt(0) as RecyclerView
-                                                val adapter = recycler.adapter as FlatGridOfEditEpisodesAdapter
-                                                adapter.addEpisode(episodeInfo)
-                                            }
-                                        }
-                                    }
-                                }
-                            } }
-                        }
-                        if (layer is Layer.OverLay) {
-                            layer.activeJobs.add(job)
-                        }
 
                         val fullscreenview = createBlockBackgroundVieww()
                         fullscreenview.tag = "create_anime_page_fsv"
@@ -1303,7 +1252,7 @@ class MainActivity : AppCompatActivity() {
                             layersList.add(Layer.OverLay(lastElevation+1, pageTags.genreChoice, info.info))
                         }
                         val layer = if (info.isItNewLayer || layer == null) {layersList.last()} else {layer}
-                        val genreChoiceContainerView = createOvDialog.GenreChoice(this, info.info, resultSenderViewModel, deny = {hideLayer()})
+                        val genreChoiceContainerView = CreateOvDialog.genreChoice(this, info.info, resultSenderViewModel, close = {hideLayer()})
                         genreChoiceContainerView.tag = "genre_choice_container"
                         val lp1 = genreChoiceContainerView.layoutParams as ConstraintLayout.LayoutParams
                         lp1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
@@ -1339,18 +1288,14 @@ class MainActivity : AppCompatActivity() {
                             lastElevation += 1
                         }
                         val layer = if (info.isItNewLayer || layer == null) {layersList.last()} else {layer}
-                        val createCarouselPageContainerView = createOvDialog.createCarouselPage(context = this, startsInfo = info.info, layer = layer, resultSenderViewModel = resultSenderViewModel, choiceIco = {
-                            run {
-                                selectFile(fileType.IMAGE, ResultKeys.CREATE_CAROUSEL_PAGE_CHANGE_ICO, null)
-                            }
-                        }, apply = {
-                            info -> run { resultSenderViewModel.sendResult(ResultKeys.CREATE_CAROUSEL_APPLY, info) }
-                        })
+                        val createCarouselPageContainerView = CreateOvDialog.createCarouselPage(context = this, startsInfo = info.info, layer = layer, resultSenderViewModel = resultSenderViewModel
+                        )
                         createCarouselPageContainerView.tag = "create_carousel_page_container"
                         val main = findViewById<ViewGroup>(R.id.main)
-                        createCarouselPageContainerView.elevation = 100000f
                         val fullScreenView = createBlockBackgroundVieww()
                         fullScreenView.tag = "create_carousel_page_fsv"
+                        createCarouselPageContainerView.elevation = maxOverLayElevation
+                        maxOverLayElevation += 10f
                         var alreadyClosed = false
                         fullScreenView.setOnTouchListener { _, event ->
                             when (event.action) {
@@ -1366,6 +1311,35 @@ class MainActivity : AppCompatActivity() {
                         }
                         main?.addView(fullScreenView)
                         main?.addView(createCarouselPageContainerView)
+                    }
+                    is OverLayLayer.PageWithSearch -> {
+                        if (info.isItNewLayer) {
+                            layersList.add(Layer.OverLay(lastElevation+1, pageTags.pageWithSearch, info.info))
+                            lastElevation += 1
+                        }
+                        val layer = if (info.isItNewLayer || layer == null) {layersList.last()} else {layer}
+                        val pageWithSearch = CreateOvDialog.pageWithSearch(info.info.startsInfo, this, resultSenderViewModel, info.info.key, layer, close = {hideLayer()})
+                        pageWithSearch.tag = "page_with_search_container"
+                        val main = findViewById<ViewGroup>(R.id.main)
+                        val fullScreenView = createBlockBackgroundVieww()
+                        fullScreenView.tag = "page_with_search_fsv"
+                        pageWithSearch.elevation = maxOverLayElevation
+                        maxOverLayElevation += 10f
+                        var alreadyClosed = false
+                        fullScreenView.setOnTouchListener { _, event ->
+                            when (event.action) {
+                                MotionEvent.ACTION_DOWN -> {}
+                                MotionEvent.ACTION_UP -> {
+                                    if (!alreadyClosed) {
+                                        hideLayer()
+                                        alreadyClosed = true
+                                    }
+                                }
+                            }
+                            true
+                        }
+                        main?.addView(fullScreenView)
+                        main?.addView(pageWithSearch)
                     }
                 }
             }
@@ -1419,6 +1393,17 @@ class MainActivity : AppCompatActivity() {
                 val fullScreenView: View? = mainContainer.findViewWithTag<View>("create_carousel_page_fsv")
                 if (createCarouselPageContainerView != null) {
                     mainContainer.removeView(createCarouselPageContainerView)
+                }
+                if (fullScreenView != null) {
+                    mainContainer.removeView(fullScreenView)
+                }
+
+            }
+            pageTags.pageWithSearch -> {
+                val pageWithSearch: ViewGroup? = mainContainer.findViewWithTag<ViewGroup>("page_with_search_container")
+                val fullScreenView: View? = mainContainer.findViewWithTag<View>("page_with_search_fsv")
+                if (pageWithSearch != null) {
+                    mainContainer.removeView(pageWithSearch)
                 }
                 if (fullScreenView != null) {
                     mainContainer.removeView(fullScreenView)
@@ -1480,6 +1465,19 @@ class MainActivity : AppCompatActivity() {
                 null
             )
         }
+    }
+    fun test() {
+        val info = infoOfPageToShow.infoOfOverlayLayer(
+            info = OverLayLayer.PageWithSearch(
+                startsInfo = PageWithSearchInput.EditAnimeCardEpisodes(
+                    null,
+                    mutableListOf<episodeInfo>()
+                ),
+                "TEST"
+            ),
+            isItNewLayer = true
+        )
+        showPage(info, null)
     }
     fun createBlockBackgroundVieww(): ImageView {
         return ImageView(this).apply {

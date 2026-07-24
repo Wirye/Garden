@@ -52,7 +52,6 @@ import com.example.garden.blob3MarginTop
 import com.example.garden.ui.utils.convertToStringTime
 import com.example.garden.ui.utils.createGridOfGenres
 import com.example.garden.database.Genre
-import com.example.garden.database.ImageData
 import com.example.garden.database.ImageSource
 import com.example.garden.database.LinkType
 import com.example.garden.database.SizeType
@@ -69,7 +68,7 @@ import com.example.garden.ui.utils.optimizeText
 import com.example.garden.screenHeight
 import com.example.garden.screenWidth
 import com.example.garden.statusBarHeight
-import com.example.garden.ui.utils.segmentedButtonOptions
+import com.example.garden.ui.utils.SegmentedButtonOptions
 import com.example.garden.steps
 import com.example.garden.ui.adapters.objectDiffCallbacks.ObjectDiffCallback
 import java.io.File
@@ -951,7 +950,7 @@ class AnimePageAdapter(private val context: Context, private val showShowAllText
                     icoId = R.drawable.close_ico,
                     text = "Пометить все эпизоды как непросмотренные",
                     sizeType = SizeType.SMALL,
-                    options = listOf(segmentedButtonOptions("", R.drawable.check_ico, true), segmentedButtonOptions("", R.drawable.check_ico, false), segmentedButtonOptions("", R.drawable.check_ico, false))
+                    options = listOf(SegmentedButtonOptions("", R.drawable.check_ico, true), SegmentedButtonOptions("", R.drawable.check_ico, false), SegmentedButtonOptions("", R.drawable.check_ico, false))
                 ),
                 BottomSheetDialogElement.DropdownRow(
                     icoId = R.drawable.close_ico,

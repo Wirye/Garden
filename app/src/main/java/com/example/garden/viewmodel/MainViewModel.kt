@@ -541,12 +541,12 @@ class MainViewModel(private val dao: ObjectDataDao, private val groupDao: Groups
             }
         }
         if (parentCard != null) {
-            parentCard.width = round(parentCard.width!!.toFloat() * baseDensity1).toInt()
-            parentCard.height = round(parentCard.height!!.toFloat() * baseDensity1).toInt()
-            parentCard.paddingVertical = round(parentCard.paddingVertical!!.toFloat() * baseDensity1).toInt()
-            parentCard.paddingHorizontal = round(parentCard.paddingHorizontal!!.toFloat() * baseDensity1).toInt()
-            parentCard.marginBetweenElementsVertical = round(parentCard.marginBetweenElementsVertical!!.toFloat() * baseDensity1).toInt()
-            parentCard.marginBetweenElementsHorizontal = round(parentCard.marginBetweenElementsHorizontal!!.toFloat() * baseDensity1).toInt()
+            parentCard.width = if (parentCard.width != null) round(parentCard.width!!.toFloat() * baseDensity1).toInt() else null
+            parentCard.height = if (parentCard.height != null) round(parentCard.height!!.toFloat() * baseDensity1).toInt() else null
+            parentCard.paddingVertical = if (parentCard.paddingVertical != null) round(parentCard.paddingVertical!!.toFloat() * baseDensity1).toInt() else null
+            parentCard.paddingHorizontal = if (parentCard.paddingHorizontal != null) round(parentCard.paddingHorizontal!!.toFloat() * baseDensity1).toInt() else null
+            parentCard.marginBetweenElementsVertical = if (parentCard.marginBetweenElementsVertical != null) round(parentCard.marginBetweenElementsVertical!!.toFloat() * baseDensity1).toInt() else null
+            parentCard.marginBetweenElementsHorizontal = if (parentCard.marginBetweenElementsHorizontal != null) round(parentCard.marginBetweenElementsHorizontal!!.toFloat() * baseDensity1).toInt() else null
         }
         return Triple(parentCard,episodesListToReturn, thisEpisodePos)
     }

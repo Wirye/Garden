@@ -23,6 +23,7 @@ firebaseCrashlyticsBuildtools = "3.0.7"
 constraintlayoutCore = "1.1.1"
 media3 = "1.10.1"
 window = "1.5.1"
+fuzzywuzzy = "1.4.0"
 [libraries]
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
@@ -49,6 +50,7 @@ androidx-media3-exoplayer = { module = "androidx.media3:media3-exoplayer", versi
 androidx-media3-ui = { module = "androidx.media3:media3-ui", version.ref = "media3" }
 androidx-media3-common = { module = "androidx.media3:media3-common", version.ref = "media3" }
 androidx-window = { group = "androidx.window", name = "window", version.ref = "window" }
+fuzzywuzzy = { module = "me.xdrop:fuzzywuzzy", version.ref = "fuzzywuzzy" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

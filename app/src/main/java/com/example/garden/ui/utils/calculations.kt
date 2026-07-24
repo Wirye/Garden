@@ -3,7 +3,6 @@ package com.example.garden.ui.utils
 import android.content.Context
 import android.graphics.Color
 import android.graphics.Typeface
-import android.util.Log
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
@@ -20,7 +19,6 @@ import com.example.garden.screenWidth
 import com.example.garden.steps
 import kotlin.math.ceil
 import kotlin.math.floor
-import kotlin.math.max
 import kotlin.math.pow
 import kotlin.math.round
 import kotlin.math.roundToInt
@@ -393,7 +391,7 @@ sealed class CalculateIdealButtonWidthByHeightInput {
 
     data class SegmentedButtonInput(
         val height: Int,
-        val options: List<segmentedButtonOptions>,
+        val options: List<SegmentedButtonOptions>,
         val font: Typeface? = null
     ) : CalculateIdealButtonWidthByHeightInput()
 

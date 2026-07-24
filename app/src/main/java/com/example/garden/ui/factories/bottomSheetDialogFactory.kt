@@ -32,7 +32,7 @@ import com.example.garden.ui.utils.getAdaptiveRadius
 import com.example.garden.screenHeight
 import com.example.garden.screenWidth
 import com.example.garden.ui.utils.createSwitchButtonRow
-import com.example.garden.ui.utils.segmentedButtonOptions
+import com.example.garden.ui.utils.SegmentedButtonOptions
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.shape.CornerFamily
@@ -55,7 +55,7 @@ sealed class BottomSheetDialogElement {
         val icoId: Int,
         val text: String,
         val sizeType: SizeType,
-        val options: List<segmentedButtonOptions>,
+        val options: List<SegmentedButtonOptions>,
     ) : BottomSheetDialogElement()
 
     data class DropdownRow(

@@ -35,6 +35,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.round
 import android.view.GestureDetector
+import com.example.garden.EditEpisodeAlreadyWatchedInput
 import com.example.garden.leftInsetWidth
 import com.example.garden.navigationBarHeight
 import com.example.garden.rightInsetWidth
@@ -688,6 +689,8 @@ class AnimeVideoPlayer(context: Context, private val resultSenderViewModel: Resu
     }
 
     private fun saveProgressToDb(episodeId: Long, positionSeconds: Long) {
-        resultSenderViewModel.sendResult(ResultKeys.VIDEO_PLAYER_EDIT_EPISODE_ALREADY_WATCHED, Pair(episodeId,positionSeconds))
+        resultSenderViewModel.sendResult(ResultKeys.VIDEO_PLAYER_EDIT_EPISODE_ALREADY_WATCHED,
+            EditEpisodeAlreadyWatchedInput(id = episodeId, alreadyWatched = positionSeconds)
+        )
     }
 }

@@ -19,6 +19,7 @@ import androidx.cardview.widget.CardView
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.graphics.toColorInt
 import androidx.recyclerview.widget.ItemTouchHelper
+import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.garden.R
 import com.example.garden.baseDensity
@@ -26,6 +27,7 @@ import com.example.garden.ui.utils.convertToStringTime
 import com.example.garden.database.ImageData
 import com.example.garden.database.SizeType
 import com.example.garden.episodeInfo
+import com.example.garden.ui.utils.drawables.createOutlinedbackground
 import com.example.garden.ui.utils.getAdaptiveRadius
 import com.example.garden.ui.utils.getTextSizeByHeight
 import com.example.garden.ui.utils.system.hideKeyboardd
@@ -89,12 +91,7 @@ class FlatGridOfEditEpisodesAdapter(private val context: Context, private val it
         val margin = round(8f * baseDensity).toInt()
         val deleateIcoSize = round(icoSize.toFloat() / 1.6f).toInt()
         val container = holder.constraintLayout
-        val addBgDrawable = GradientDrawable().apply {
-            shape = GradientDrawable.RECTANGLE
-            cornerRadius = getAdaptiveRadius(itemHeightt, SizeType.SMALL)
-            setColor("#BF1B1B1B".toColorInt())
-            setStroke(round(1f*baseDensity).toInt(), "#809C9C9C".toColorInt())
-        }
+        val addBgDrawable = createOutlinedbackground(SizeType.SMALL, itemHeightt, round(1f*baseDensity).toInt(), 0.5f)
         val imageAddIco = ImageView(context).apply {
             val layoutparams1 = ConstraintLayout.LayoutParams(
                 itemHeightt,
