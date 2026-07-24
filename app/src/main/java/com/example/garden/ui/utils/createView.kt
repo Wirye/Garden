@@ -17,9 +17,9 @@ import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
 import android.text.Editable
 import android.text.InputType
+import android.text.Layout
 import android.text.TextUtils
 import android.text.TextWatcher
-import android.util.Log
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.MotionEvent
@@ -42,6 +42,7 @@ import androidx.core.content.res.ResourcesCompat
 import androidx.core.graphics.createBitmap
 import androidx.core.graphics.drawable.toDrawable
 import androidx.core.graphics.toColorInt
+import androidx.core.net.toUri
 import androidx.core.view.isEmpty
 import androidx.core.view.isNotEmpty
 import androidx.core.view.updateLayoutParams
@@ -68,6 +69,7 @@ import com.example.garden.database.ImageData
 import com.example.garden.database.ImageSource
 import com.example.garden.database.LinkData
 import com.example.garden.database.LinkType
+import com.example.garden.database.MusicGenre
 import com.example.garden.database.SizeType
 import com.example.garden.episodeInfo
 import com.example.garden.fileType
@@ -112,6 +114,7 @@ import com.example.garden.ui.utils.mathExtensions.snapToStep
 import com.example.garden.ui.utils.viewExtensions.changeStrokeColor
 import com.example.garden.ui.utils.viewExtensions.findIco
 import com.example.garden.ui.utils.viewExtensions.findTextInputEditText
+import com.example.garden.utils.getFileNameFromUri
 import com.example.garden.utils.getVideoDuration
 import com.example.garden.utils.search.searchInList
 import kotlin.collections.isNotEmpty
@@ -660,6 +663,7 @@ fun createBSDButton(textt: String, icoId: Int?, showOpenPageArrow: Boolean, cont
             View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
         )
         ellipsize = TextUtils.TruncateAt.END
+        hyphenationFrequency = Layout.HYPHENATION_FREQUENCY_NORMAL
         if (icoId != null) {
             layoutparams1.topToTop = icoViewId
             layoutparams1.startToEnd = icoViewId
@@ -682,6 +686,7 @@ fun createBSDButton(textt: String, icoId: Int?, showOpenPageArrow: Boolean, cont
         }
         layoutParams = layoutparams1
         tag = "textView"
+        id = View.generateViewId()
     }
     container.addView(textView)
     if (showOpenPageArrow) {
@@ -747,6 +752,7 @@ fun createM3Button(context: Context, width: Int, height: Int, textt: String, nam
         tag = "button_text"
         id = View.generateViewId()
         ellipsize = TextUtils.TruncateAt.END
+        hyphenationFrequency = Layout.HYPHENATION_FREQUENCY_NORMAL
         measure(
             View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
             View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
@@ -779,6 +785,7 @@ fun createM3Button(context: Context, width: Int, height: Int, textt: String, nam
                 View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
             )
             ellipsize = TextUtils.TruncateAt.END
+            hyphenationFrequency = Layout.HYPHENATION_FREQUENCY_NORMAL
 
             layoutparams1.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID
             layoutparams1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
@@ -1035,6 +1042,7 @@ fun createSlider(context: Context, widthh: Int, stopsList: List<Pair<Float, Stri
             setTextColor("#AFAFAF".toColorInt())
             ellipsize = TextUtils.TruncateAt.END
             maxLines = 1
+            hyphenationFrequency = Layout.HYPHENATION_FREQUENCY_NORMAL
         }
         textView.measure(
             View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
@@ -1370,6 +1378,7 @@ fun createDropdownRow(context: Context, width: Int, height: Int, titleText: Stri
         setTextSize(TypedValue.COMPLEX_UNIT_PX, textSizee)
         setTextColor("#E6E0E9".toColorInt())
         ellipsize = TextUtils.TruncateAt.END
+        hyphenationFrequency = Layout.HYPHENATION_FREQUENCY_NORMAL
         measure(
             View.MeasureSpec.makeMeasureSpec(textViewWidth, View.MeasureSpec.EXACTLY),
             View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
@@ -1480,6 +1489,7 @@ fun createSegmentedButtonRow(context: Context, width: Int, height: Int, options:
             View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
         )
         ellipsize = TextUtils.TruncateAt.END
+        hyphenationFrequency = Layout.HYPHENATION_FREQUENCY_NORMAL
         if (icoId != null) {
             layoutparams1.topToTop = icoViewId
             layoutparams1.startToEnd = icoViewId
@@ -1664,6 +1674,7 @@ fun createSwitchButtonRow(context: Context, isChecked: Boolean, width: Int, heig
             View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
         )
         ellipsize = TextUtils.TruncateAt.END
+        hyphenationFrequency = Layout.HYPHENATION_FREQUENCY_NORMAL
         if (icoId != null) {
             layoutparams1.topToTop = icoViewId
             layoutparams1.startToEnd = icoViewId
@@ -1831,7 +1842,7 @@ fun createGridOfGenres(context: Context, infoContainerHeight: Int, genreList: Li
         }
     }
 
-    val infoContainersList = mutableListOf<Triple<ConstraintLayout, Int, Pair<Boolean, Genre>>>()  // Список для хранения view жанров и инфы о них
+    val infoContainersList = mutableListOf<Triple<ConstraintLayout, Int, Pair<Boolean, Genre>>>()
     // Создание самих view жанров
     for (i in 0 until genreList.size) {
         val color = genreColors[genreList[i].second]
@@ -1863,6 +1874,7 @@ fun createGridOfGenres(context: Context, infoContainerHeight: Int, genreList: Li
             maxWidth = maxTextWidth
             maxLines = 1
             ellipsize = TextUtils.TruncateAt.END
+            hyphenationFrequency = Layout.HYPHENATION_FREQUENCY_NORMAL
             layoutParams = layoutparams1
         }
         infoText.measure(
@@ -2017,6 +2029,8 @@ fun createGridOfGenres(context: Context, infoContainerHeight: Int, genreList: Li
         setTextColor("#DFDFDF".toColorInt())
         val maxTextWidth = round((widthh - if (considerSelectedState) infoContainerHeight else 0).toFloat() / 1.65f).toInt()
         maxWidth = maxTextWidth
+        hyphenationFrequency = Layout.HYPHENATION_FREQUENCY_NORMAL
+        ellipsize = TextUtils.TruncateAt.END
     }
     showAllInfoViewText.measure(
         View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
@@ -2278,16 +2292,27 @@ fun createFlatGrid(context: Context, startsInfo: CreateFlatGridInput, widthh: In
     return res
 }
 
+data class ChapterInfo(
+    val name: String,
+    val image: ImageData?,
+    val childs: List<ImageData>
+)
 sealed class OverLayLayer {
-    data class CreateAnimePage(
+    data class CreateCardPage(
         var name: String,
-        var image: ImageData?,
+        var image: ImageData? = null,
         var description: String,
         var author: String,
         var genreList: List<Genre>,
         val episodesList: List<episodeInfo>,
         val type: ElementType,
-        val parentId: Long
+        val parentId: Long,
+        val chapterList: List<ChapterInfo>,
+        val cardsList: List<objectData2>,
+        var horizontalVideo: LinkData? = null,
+        var verticalVideo: LinkData? = null,
+        val musicGenreList: List<MusicGenre>,
+        var song: LinkData? = null,
     ) : OverLayLayer()
     data class GenreChoice(
         var genreList: List<Pair<Boolean, Genre>>,
@@ -2407,6 +2432,7 @@ object CreateOvDialog {
             text = hTextText
             maxLines = 1
             ellipsize = TextUtils.TruncateAt.END
+            hyphenationFrequency = Layout.HYPHENATION_FREQUENCY_NORMAL
             id = View.generateViewId()
             layoutParams = lp1
             includeFontPadding = false
@@ -2502,6 +2528,9 @@ object CreateOvDialog {
             layoutParams = lp1
             visibility = View.GONE
             gravity = Gravity.CENTER_HORIZONTAL
+            includeFontPadding = false
+            ellipsize = TextUtils.TruncateAt.END
+            hyphenationFrequency = Layout.HYPHENATION_FREQUENCY_NORMAL
         }
         previewContainer.addView(previewErrorTextView)
         constraintLayoutInsideScrolConainerr.addView(previewContainer)
@@ -2903,7 +2932,6 @@ object CreateOvDialog {
         choiceIcoRow.addView(choiceIcoButtonContainer)
         showIcoRowConstraintLayout.addView(choiceIcoRow)
         choiceIcoButtonContainer.setOnClickListener {
-            choiceIcoButtonContainer.requestFocus()
             resultSenderViewModel.sendResult(ResultKeys.SELECT_FILE, SelectFileInput(fileType.IMAGE, ResultKeys.CREATE_CAROUSEL_PAGE_CHANGE_ICO))
         }
         toggleExtensionAnimation(rootContainer = showIcoRowConstraintLayout, rows = listOf(choiceIcoRow), animSourceRow = showIcoRow, targetState = startsInfo.showIco, animate = false, animationId = showIcoRowAnimId)
@@ -3474,6 +3502,7 @@ object CreateOvDialog {
             setTextSize(TypedValue.COMPLEX_UNIT_PX, addButtonTextSize)
             text = "Добавить"
             setTextColor("#FFFFFF".toColorInt())
+            hyphenationFrequency = Layout.HYPHENATION_FREQUENCY_NORMAL
         }
 
         addButtonContainer.addView(addButtonText)
@@ -3500,7 +3529,7 @@ object CreateOvDialog {
             }
             }
         }
-        if (layer is Layer.OverLay && job != null) {
+        if (job != null) {
             layer.activeJobs.add(job)
         }
         createCarouselPreview(startsInfo)
@@ -3510,7 +3539,7 @@ object CreateOvDialog {
         return container
     }
     @SuppressLint("ClickableViewAccessibility")
-    fun createAnimePage(context: Context, startsInfo: OverLayLayer.CreateAnimePage, resultSenderViewModel: ResultSenderViewModel, openGenreChoice: () -> Unit, openEditEpisodesPage: (List<episodeInfo>, String?) -> Unit, layer: Layer) : ConstraintLayout {
+    fun createCardPage(context: Context, startsInfo: OverLayLayer.CreateCardPage, resultSenderViewModel: ResultSenderViewModel, openGenreChoice: () -> Unit, openEditEpisodesPage: (List<episodeInfo>, String?) -> Unit, openEditChaptersPage: (List<ChapterInfo>, String?) -> Unit, openEditCardsPage: (List<objectData2>, String?) -> Unit, layer: Layer) : ConstraintLayout {
         val font = context.resources.getFont(R.font.google_sans_regular)
         val boldFont = context.resources.getFont(R.font.google_sans_bold)
         val isLandscape = screenWidth > screenHeight
@@ -3519,7 +3548,10 @@ object CreateOvDialog {
         val bannerW = if (isLandscape) (screenHeight * 0.5f).toInt() else (actualWidth / 2.5f).toInt()
         val marginLeft = round(16f * baseDensity).toInt()
         val marginTop = round(12f * baseDensity).toInt()
-        val bannerH = if (startsInfo.type == ElementType.Music) bannerW else (bannerW * 1.415f).toInt()
+        val bannerH = when (startsInfo.type) {
+            ElementType.Music, ElementType.Playlist -> bannerW
+            else -> (bannerW * 1.415f).toInt()
+        }
         val hBtn = round(32f * baseDensity).toInt()
         val marginBetweenInfoElements = round(6f * baseDensity).toInt()
         var hTextSize = round(24f*baseDensity)
@@ -3527,14 +3559,17 @@ object CreateOvDialog {
             ElementType.Anime -> "Создание аниме карточки"
             ElementType.Manga -> "Создание карточки манги"
             ElementType.Music -> "Создание карточки музыки"
+            ElementType.Playlist -> "Создание карточки плейлиста"
             else -> {""}
         }
         val hTextMaxWidth = actualWidth - hBtn*2 - marginTop*4
         for (i in steps) {
-            val opT = optimizeText(hTextText, hTextMaxWidth, i, false, boldFont, 1)
-            if (opT.firstLine[opT.firstLine.lastIndex].toString() != "." && i <= hTextSize) {
-                hTextSize = i
-                break
+            if (hTextText.isNotEmpty()) {
+                val opT = optimizeText(hTextText, hTextMaxWidth, i, false, boldFont, 1)
+                if (opT.firstLine[opT.firstLine.lastIndex].toString() != "." && i <= hTextSize) {
+                    hTextSize = i
+                    break
+                }
             }
         }
         val containerWidth = actualWidth
@@ -3545,6 +3580,8 @@ object CreateOvDialog {
         val nameInputHeight = hBtn
         val scrollContainerWidth = nameInputWidth + marginLeft + bannerW + marginLeft + marginTop
         var editEpisodesPageSearchText: String? = null
+        var editChaptersPageSearchText: String? = null
+        var editCardsPageSearchText: String? = null
         val containerr = ConstraintLayout(context).apply {
             val layoutparams1 = ConstraintLayout.LayoutParams(
                 screenWidth + leftInsetWidth + rightInsetWidth,
@@ -3575,6 +3612,7 @@ object CreateOvDialog {
             setTextSize(TypedValue.COMPLEX_UNIT_PX, hTextSize)
             typeface = boldFont
             ellipsize = TextUtils.TruncateAt.END
+            hyphenationFrequency = Layout.HYPHENATION_FREQUENCY_NORMAL
             text = hTextText
             setTextColor("#FFFFFF".toColorInt())
             id = hTextId
@@ -3702,7 +3740,6 @@ object CreateOvDialog {
             banner.requestFocus()
             resultSenderViewModel.sendResult(ResultKeys.SELECT_FILE, SelectFileInput(fileType.IMAGE, ResultKeys.CREATE_CARD_CHANGE_IMAGE))
         }
-//        buttonsList.add(banner)
 
         val nameInputId = View.generateViewId()
         val nameInputTextSizee = getTextSizeByHeight(round(nameInputHeight.toFloat() / 2f).toInt(), font, context = context)
@@ -4047,6 +4084,8 @@ object CreateOvDialog {
             id = searchButtonTextId
             typeface = font
             gravity = Gravity.CENTER_VERTICAL
+            ellipsize = TextUtils.TruncateAt.END
+            hyphenationFrequency = Layout.HYPHENATION_FREQUENCY_NORMAL
         }
         val searchButtonIco = ImageView(context).apply {
             val layoutparams1 = ConstraintLayout.LayoutParams(
@@ -4065,14 +4104,11 @@ object CreateOvDialog {
         searchButtonContainer.addView(searchButtonText)
         searchButtonContainer.addView(searchButtonIco)
         container.addView(searchButtonContainer)
-
-
-        var episodesList: MutableList<episodeInfo> = startsInfo.episodesList as MutableList<episodeInfo>
-        if (startsInfo.type != ElementType.Music) {
-            val descriptionInputWidth = bannerW + marginLeft + nameInputWidth
-            val descriptionInputHeight = round(descriptionInputWidth.toFloat() / 2.83f).toInt()
-            val descriptionInputMarginTop = round(marginTop.toFloat() * 1.8f).toInt()
-            val descriptionInputId = View.generateViewId()
+        val descriptionInputWidth = bannerW + marginLeft + nameInputWidth
+        val descriptionInputHeight = round(descriptionInputWidth.toFloat() / 2.83f).toInt()
+        val descriptionInputMarginTop = round(marginTop.toFloat() * 1.8f).toInt()
+        val descriptionInputId = View.generateViewId()
+        fun addDescription() {
             val descriptionInput = createOutlinedTextField(context, descriptionInputWidth,SizeType.SMALL, descriptionInputHeight, "Введите описание", Gravity.TOP, nameInputTextSizee, null, startsInfo.description)
             val lp3 = descriptionInput.layoutParams as ConstraintLayout.LayoutParams
             lp3.startToStart = bannerId
@@ -4091,46 +4127,342 @@ object CreateOvDialog {
                 }
                 override fun afterTextChanged(s: Editable?) {}
             })
-            val episodesHTextHeight = round(hText.measuredHeight.toFloat() / 1.208f).toInt()
-            val episodesHTextSize = getTextSizeByHeight(episodesHTextHeight, boldFont, context = context)
-            val episodesHTextId = View.generateViewId()
-
-
-            val episodesHText = TextView(context).apply {
-                val layoutparams1 = ConstraintLayout.LayoutParams(
-                    ConstraintLayout.LayoutParams.WRAP_CONTENT,
-                    episodesHTextHeight
-                )
-                layoutparams1.startToStart = descriptionInputId
-                layoutparams1.topToBottom = descriptionInputId
-                layoutparams1.setMargins(0, descriptionInputMarginTop,0,0)
-                layoutParams = layoutparams1
-                includeFontPadding = false
-                setTextSize(TypedValue.COMPLEX_UNIT_PX, episodesHTextSize)
-                setTextColor("#FFFFFF".toColorInt())
-                typeface = boldFont
-                id = episodesHTextId
-                text = "Эпизоды"
-            }
-            container.addView(episodesHText)
-
-            val openEditEpisodesPage = createBSDButton("Редактировать эпизоды", null, true, context, descriptionInputWidth, round(57f * baseDensity).toInt())
-            val openEditEpisodesPagelp1 = openEditEpisodesPage.layoutParams as ConstraintLayout.LayoutParams
-            openEditEpisodesPagelp1.startToStart = episodesHTextId
-            openEditEpisodesPagelp1.topToBottom = episodesHTextId
-            openEditEpisodesPagelp1.setMargins(0,marginTop,0,0)
-            openEditEpisodesPage.layoutParams = openEditEpisodesPagelp1
-            openEditEpisodesPage.tag = "open_edit_episodes_page"
-            openEditEpisodesPage.id = View.generateViewId()
-            openEditEpisodesPage.background = createOutlinedbackground(SizeType.SMALL, descriptionInputWidth, round(1f*baseDensity).toInt(), 0.5f)
-            openEditEpisodesPage.setOnClickListener {
-                openEditEpisodesPage(episodesList, editEpisodesPageSearchText)
-            }
-            container.addView(openEditEpisodesPage)
         }
-        else if (startsInfo.type == ElementType.Playlist) {}
-        else {}
 
+
+        var episodesList: MutableList<episodeInfo> = startsInfo.episodesList as MutableList<episodeInfo>
+        when (startsInfo.type) {
+            ElementType.Anime -> {
+                addDescription()
+                val episodesHTextHeight = round(hText.measuredHeight.toFloat() / 1.208f).toInt()
+                val episodesHTextSize = getTextSizeByHeight(episodesHTextHeight, boldFont, context = context)
+                val episodesHTextId = View.generateViewId()
+                val episodesHText = TextView(context).apply {
+                    val layoutparams1 = ConstraintLayout.LayoutParams(
+                        ConstraintLayout.LayoutParams.WRAP_CONTENT,
+                        episodesHTextHeight
+                    )
+                    layoutparams1.startToStart = descriptionInputId
+                    layoutparams1.topToBottom = descriptionInputId
+                    layoutparams1.setMargins(0, descriptionInputMarginTop,0,0)
+                    layoutParams = layoutparams1
+                    includeFontPadding = false
+                    hyphenationFrequency = Layout.HYPHENATION_FREQUENCY_NORMAL
+                    setTextSize(TypedValue.COMPLEX_UNIT_PX, episodesHTextSize)
+                    setTextColor("#FFFFFF".toColorInt())
+                    typeface = boldFont
+                    id = episodesHTextId
+                    text = "Эпизоды"
+                    ellipsize = TextUtils.TruncateAt.END
+                }
+                container.addView(episodesHText)
+
+                val openEditEpisodesPage = createBSDButton("Редактировать эпизоды", null, true, context, descriptionInputWidth, round(57f * baseDensity).toInt())
+                val openEditEpisodesPagelp1 = openEditEpisodesPage.layoutParams as ConstraintLayout.LayoutParams
+                openEditEpisodesPagelp1.startToStart = episodesHTextId
+                openEditEpisodesPagelp1.topToBottom = episodesHTextId
+                openEditEpisodesPagelp1.setMargins(0,marginTop,0,0)
+                openEditEpisodesPage.layoutParams = openEditEpisodesPagelp1
+                openEditEpisodesPage.tag = "open_edit_episodes_page"
+                openEditEpisodesPage.id = View.generateViewId()
+                openEditEpisodesPage.background = createOutlinedbackground(SizeType.SMALL, descriptionInputWidth, round(1f*baseDensity).toInt(), 0.5f)
+                openEditEpisodesPage.setOnClickListener {
+                    openEditEpisodesPage(episodesList, editEpisodesPageSearchText)
+                }
+                container.addView(openEditEpisodesPage)
+            }
+            ElementType.Music -> {
+                val widthh = bannerW + marginLeft + nameInputWidth
+                val heightt = round(57f * baseDensity).toInt()
+                val containerrr = ConstraintLayout(context).apply {
+                    val layoutparams1 = ConstraintLayout.LayoutParams(
+                        widthh,
+                        ConstraintLayout.LayoutParams.WRAP_CONTENT
+                    )
+                    layoutparams1.startToStart = bannerId
+                    layoutparams1.topToBottom = editBannerButtonId
+                    layoutparams1.setMargins(0,marginTop,0,0)
+                    layoutParams = layoutparams1
+                    background = createOutlinedbackground(SizeType.SMALL, widthh, round(1f*baseDensity).toInt(), 0.5f)
+                }
+                val song = createBSDButton(context.getString(R.string.Track), null, false, context, widthh, heightt)
+                val songlp1 = song.layoutParams as ConstraintLayout.LayoutParams
+                songlp1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
+                songlp1.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
+                song.layoutParams = songlp1
+                song.id = View.generateViewId()
+                val choiceSongButtonSize = round(heightt.toFloat() / 1.786f).toInt()
+                val choiceSongButtonContainer = ConstraintLayout(context).apply {
+                    val lp1 = ConstraintLayout.LayoutParams(
+                        choiceSongButtonSize,
+                        choiceSongButtonSize
+                    )
+                    lp1.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
+                    lp1.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
+                    lp1.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID
+                    lp1.setMargins(0,0,calculateLeftAndRightMarginForRows(widthh).marginRight,0)
+                    layoutParams = lp1
+                    background = createOutlinedbackground(SizeType.SMALL, choiceSongButtonSize, round(1f*baseDensity).toInt(), 0.5f)
+                    tag = "choiceIcoButton"
+                }
+                val choiceSongButton = ImageView(context).apply {
+                    val layoutparams1 = ConstraintLayout.LayoutParams(
+                        ConstraintLayout.LayoutParams.MATCH_PARENT,
+                        ConstraintLayout.LayoutParams.MATCH_PARENT
+                    )
+                    layoutparams1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
+                    layoutparams1.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
+                    layoutParams = layoutparams1
+                    setImageResource(R.drawable.add_ico)
+                    imageTintList = ColorStateList.valueOf("#B0B0B0".toColorInt())
+                    scaleType = ImageView.ScaleType.CENTER_CROP
+                }
+                choiceSongButtonContainer.addView(choiceSongButton)
+                song.addView(choiceSongButtonContainer)
+                containerrr.addView(song)
+
+                val margins = calculateLeftAndRightMarginForRows(widthh)
+                val newTextViewWidth = round((widthh - (margins.marginLeft*3) - margins.marginRight - choiceSongButtonSize).toFloat() / 2f).toInt()
+
+                fun updateTextViewLp1(textView: TextView?) {
+                    if (textView != null) {
+                        val textViewlp1 = textView.layoutParams as ConstraintLayout.LayoutParams
+                        textViewlp1.width = newTextViewWidth
+                        textView.layoutParams = textViewlp1
+                    }
+                }
+                fun createExtraTextView(textView: TextView?): TextView {
+                    return TextView(context).apply {
+                        layoutParams = ConstraintLayout.LayoutParams(
+                            newTextViewWidth,
+                            ConstraintLayout.LayoutParams.WRAP_CONTENT
+                        ).apply {
+                            if (textView != null) startToEnd = textView.id else startToStart = ConstraintLayout.LayoutParams.PARENT_ID
+                            topToTop = ConstraintLayout.LayoutParams.PARENT_ID
+                            bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID
+                            setMargins(margins.marginLeft,0,0,0)
+                        }
+                        setTextSize(TypedValue.COMPLEX_UNIT_PX, textView?.textSize ?: nameInputTextSizee)
+                        setTextColor("#B0B0B0".toColorInt())
+                        maxLines = 1
+                        ellipsize = TextUtils.TruncateAt.END
+                        includeFontPadding = false
+                        typeface = font
+                        hyphenationFrequency = Layout.HYPHENATION_FREQUENCY_NORMAL
+                    }
+                }
+
+                val songTextView: TextView? = song.findViewWithTag("textView")
+                updateTextViewLp1(songTextView)
+                val songExtraTextView = createExtraTextView(songTextView)
+                song.addView(songExtraTextView)
+
+
+                val horizontalVideo = createBSDButton(context.getString(R.string.HorizontalVideo), null, false, context, widthh, heightt)
+                val horizontalVideolp1 = horizontalVideo.layoutParams as ConstraintLayout.LayoutParams
+                horizontalVideolp1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
+                horizontalVideolp1.topToBottom = song.id
+                horizontalVideo.layoutParams = horizontalVideolp1
+                horizontalVideo.id = View.generateViewId()
+                val choiceHorizontalVideoButtonContainer = ConstraintLayout(context).apply {
+                    val lp1 = ConstraintLayout.LayoutParams(
+                        choiceSongButtonSize,
+                        choiceSongButtonSize
+                    )
+                    lp1.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
+                    lp1.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
+                    lp1.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID
+                    lp1.setMargins(0,0,calculateLeftAndRightMarginForRows(widthh).marginRight,0)
+                    layoutParams = lp1
+                    background = createOutlinedbackground(SizeType.SMALL, choiceSongButtonSize, round(1f*baseDensity).toInt(), 0.5f)
+                    tag = "choiceIcoButton"
+                }
+                val choiceHorizontalVideoButton = ImageView(context).apply {
+                    val layoutparams1 = ConstraintLayout.LayoutParams(
+                        ConstraintLayout.LayoutParams.MATCH_PARENT,
+                        ConstraintLayout.LayoutParams.MATCH_PARENT
+                    )
+                    layoutparams1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
+                    layoutparams1.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
+                    layoutParams = layoutparams1
+                    setImageResource(R.drawable.add_ico)
+                    imageTintList = ColorStateList.valueOf("#B0B0B0".toColorInt())
+                    scaleType = ImageView.ScaleType.CENTER_CROP
+                }
+                choiceHorizontalVideoButtonContainer.addView(choiceHorizontalVideoButton)
+                horizontalVideo.addView(choiceHorizontalVideoButtonContainer)
+                containerrr.addView(horizontalVideo)
+
+                val horizontalVideoTextView: TextView? = horizontalVideo.findViewWithTag("textView")
+                updateTextViewLp1(horizontalVideoTextView)
+                val horizontalVideoExtraTextView = createExtraTextView(horizontalVideoTextView)
+                horizontalVideo.addView(horizontalVideoExtraTextView)
+
+
+                val verticalVideo = createBSDButton(context.getString(R.string.VerticalVideo), null, false, context, widthh, heightt)
+                val verticalVideolp1 = verticalVideo.layoutParams as ConstraintLayout.LayoutParams
+                verticalVideolp1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
+                verticalVideolp1.topToBottom = horizontalVideo.id
+                verticalVideo.layoutParams = verticalVideolp1
+                verticalVideo.id = View.generateViewId()
+                val choiceVerticalVideoButtonContainer = ConstraintLayout(context).apply {
+                    val lp1 = ConstraintLayout.LayoutParams(
+                        choiceSongButtonSize,
+                        choiceSongButtonSize
+                    )
+                    lp1.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
+                    lp1.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
+                    lp1.bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID
+                    lp1.setMargins(0,0,calculateLeftAndRightMarginForRows(widthh).marginRight,0)
+                    layoutParams = lp1
+                    background = createOutlinedbackground(SizeType.SMALL, choiceSongButtonSize, round(1f*baseDensity).toInt(), 0.5f)
+                    tag = "choiceIcoButton"
+                }
+                val choiceVerticalVideoButton = ImageView(context).apply {
+                    val layoutparams1 = ConstraintLayout.LayoutParams(
+                        ConstraintLayout.LayoutParams.MATCH_PARENT,
+                        ConstraintLayout.LayoutParams.MATCH_PARENT
+                    )
+                    layoutparams1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
+                    layoutparams1.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
+                    layoutParams = layoutparams1
+                    setImageResource(R.drawable.add_ico)
+                    imageTintList = ColorStateList.valueOf("#B0B0B0".toColorInt())
+                    scaleType = ImageView.ScaleType.CENTER_CROP
+                }
+                choiceVerticalVideoButtonContainer.addView(choiceVerticalVideoButton)
+                verticalVideo.addView(choiceVerticalVideoButtonContainer)
+                containerrr.addView(verticalVideo)
+
+                val verticalVideoTextView: TextView? = verticalVideo.findViewWithTag("textView")
+                updateTextViewLp1(verticalVideoTextView)
+                val verticalVideoExtraTextView = createExtraTextView(verticalVideoTextView)
+                verticalVideo.addView(verticalVideoExtraTextView)
+
+                choiceSongButtonContainer.setOnClickListener {
+                    resultSenderViewModel.sendResult(ResultKeys.SELECT_FILE, SelectFileInput(fileType.AUDIO, ResultKeys.CREATE_CARD_CHANGE_SONG))
+                }
+                choiceHorizontalVideoButtonContainer.setOnClickListener {
+                    resultSenderViewModel.sendResult(ResultKeys.SELECT_FILE, SelectFileInput(fileType.VIDEO, ResultKeys.CREATE_CARD_CHANGE_HORIZONTAL_VIDEO))
+                }
+                choiceVerticalVideoButtonContainer.setOnClickListener {
+                    resultSenderViewModel.sendResult(ResultKeys.SELECT_FILE, SelectFileInput(fileType.VIDEO, ResultKeys.CREATE_CARD_CHANGE_VERTICAL_VIDEO))
+                }
+
+                fun updateTextOnExtraTextView(textView: TextView?, uri: String) {
+                    textView?.text = getFileNameFromUri(uri.toUri(), context) ?: ""
+                }
+
+                val job = context.lifecycleOwner?.lifecycleScope?.launch {
+                    resultSenderViewModel.results.collect { (key, data) -> run {
+                            when (key) {
+                                ResultKeys.CREATE_CARD_CHANGE_SONG -> {
+                                    val dataa = data as? SelectFileOutput
+                                    if (dataa != null) {
+                                        startsInfo.song = LinkData(LinkType.CONTENT, null, dataa.data)
+                                        updateTextOnExtraTextView(songExtraTextView, dataa.data)
+                                    }
+                                }
+                                ResultKeys.CREATE_CARD_CHANGE_HORIZONTAL_VIDEO -> {
+                                    val dataa = data as? SelectFileOutput
+                                    if (dataa != null) {
+                                        startsInfo.horizontalVideo = LinkData(LinkType.CONTENT, null, dataa.data)
+                                        updateTextOnExtraTextView(horizontalVideoExtraTextView, dataa.data)
+                                    }
+                                }
+                                ResultKeys.CREATE_CARD_CHANGE_VERTICAL_VIDEO -> {
+                                    val dataa = data as? SelectFileOutput
+                                    if (dataa != null) {
+                                        startsInfo.verticalVideo = LinkData(LinkType.CONTENT, null, dataa.data)
+                                        updateTextOnExtraTextView(verticalVideoExtraTextView, dataa.data)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                if (job != null) {
+                    layer.activeJobs.add(job)
+                }
+                container.addView(containerrr)
+            }
+            ElementType.Manga -> {
+                addDescription()
+                val chaptersHTextHeight = round(hText.measuredHeight.toFloat() / 1.208f).toInt()
+                val chaptersHTextSize = getTextSizeByHeight(chaptersHTextHeight, boldFont, context = context)
+                val chaptersHTextId = View.generateViewId()
+                val chaptersHText = TextView(context).apply {
+                    val layoutparams1 = ConstraintLayout.LayoutParams(
+                        ConstraintLayout.LayoutParams.WRAP_CONTENT,
+                        chaptersHTextHeight
+                    )
+                    layoutparams1.startToStart = descriptionInputId
+                    layoutparams1.topToBottom = descriptionInputId
+                    layoutparams1.setMargins(0, descriptionInputMarginTop,0,0)
+                    layoutParams = layoutparams1
+                    includeFontPadding = false
+                    hyphenationFrequency = Layout.HYPHENATION_FREQUENCY_NORMAL
+                    setTextSize(TypedValue.COMPLEX_UNIT_PX, chaptersHTextSize)
+                    setTextColor("#FFFFFF".toColorInt())
+                    typeface = boldFont
+                    id = chaptersHTextId
+                    text = context.getString(R.string.Chapters)
+                    ellipsize = TextUtils.TruncateAt.END
+                }
+                container.addView(chaptersHText)
+                val openEditChaptersPage = createBSDButton(context.getString(R.string.EditChapters), null, true, context, descriptionInputWidth, round(57f * baseDensity).toInt())
+                val openEditChaptersPagelp1 = openEditChaptersPage.layoutParams as ConstraintLayout.LayoutParams
+                openEditChaptersPagelp1.startToStart = chaptersHTextId
+                openEditChaptersPagelp1.topToBottom = chaptersHTextId
+                openEditChaptersPagelp1.setMargins(0,marginTop,0,0)
+                openEditChaptersPage.layoutParams = openEditChaptersPagelp1
+                openEditChaptersPage.tag = "open_edit_chapters_page"
+                openEditChaptersPage.id = View.generateViewId()
+                openEditChaptersPage.background = createOutlinedbackground(SizeType.SMALL, descriptionInputWidth, round(1f*baseDensity).toInt(), 0.5f)
+                openEditChaptersPage.setOnClickListener {
+                    openEditChaptersPage(startsInfo.chapterList, editChaptersPageSearchText)
+                }
+                container.addView(openEditChaptersPage)
+            }
+            ElementType.Playlist -> {
+                val cardsHTextHeight = round(hText.measuredHeight.toFloat() / 1.208f).toInt()
+                val cardsHTextSize = getTextSizeByHeight(cardsHTextHeight, boldFont, context = context)
+                val cardsHTextId = View.generateViewId()
+                val cardsHText = TextView(context).apply {
+                    val layoutparams1 = ConstraintLayout.LayoutParams(
+                        ConstraintLayout.LayoutParams.WRAP_CONTENT,
+                        cardsHTextHeight
+                    )
+                    layoutparams1.startToStart = bannerId
+                    layoutparams1.topToBottom = editBannerButtonId
+                    layoutparams1.setMargins(0, descriptionInputMarginTop,0,0)
+                    layoutParams = layoutparams1
+                    includeFontPadding = false
+                    hyphenationFrequency = Layout.HYPHENATION_FREQUENCY_NORMAL
+                    setTextSize(TypedValue.COMPLEX_UNIT_PX, cardsHTextSize)
+                    setTextColor("#FFFFFF".toColorInt())
+                    typeface = boldFont
+                    id = cardsHTextId
+                    text = context.getString(R.string.Soderzhimoye)
+                    ellipsize = TextUtils.TruncateAt.END
+                }
+                container.addView(cardsHText)
+                val openEditCardsPage = createBSDButton(context.getString(R.string.EditSoderzhimoye), null, true, context, descriptionInputWidth, round(57f * baseDensity).toInt())
+                val openEditCardsPagelp1 = openEditCardsPage.layoutParams as ConstraintLayout.LayoutParams
+                openEditCardsPagelp1.startToStart = cardsHTextId
+                openEditCardsPagelp1.topToBottom = cardsHTextId
+                openEditCardsPagelp1.setMargins(0,marginTop,0,0)
+                openEditCardsPage.layoutParams = openEditCardsPagelp1
+                openEditCardsPage.tag = "open_edit_cards_page"
+                openEditCardsPage.id = View.generateViewId()
+                openEditCardsPage.background = createOutlinedbackground(SizeType.SMALL, descriptionInputWidth, round(1f*baseDensity).toInt(), 0.5f)
+                openEditCardsPage.setOnClickListener {
+                    openEditCardsPage(startsInfo.cardsList, editCardsPageSearchText)
+                }
+                container.addView(openEditCardsPage)
+            }
+            else -> {}
+        }
 
 
         val addCardButtonBg = GradientDrawable().apply {
@@ -4172,6 +4504,9 @@ object CreateOvDialog {
             setTextSize(TypedValue.COMPLEX_UNIT_PX, addCardButtonTextSize)
             text = "Добавить"
             setTextColor("#FFFFFF".toColorInt())
+            maxWidth = actualWidth - (marginLeft*2)
+            hyphenationFrequency = Layout.HYPHENATION_FREQUENCY_NORMAL
+            ellipsize = TextUtils.TruncateAt.END
         }
 
         addCardButtonContainer.addView(addCardButtonText)
@@ -4257,9 +4592,7 @@ object CreateOvDialog {
             }
         }
         if (job != null) {
-            if (layer is Layer.OverLay) {
-                layer.activeJobs.add(job)
-            }
+            layer.activeJobs.add(job)
         }
         return containerr
     }
@@ -4288,6 +4621,7 @@ object CreateOvDialog {
             includeFontPadding = false
             typeface = boldFont
             maxWidth = gridWidth
+            hyphenationFrequency = Layout.HYPHENATION_FREQUENCY_NORMAL
             setTextSize(TypedValue.COMPLEX_UNIT_PX, hTextSizee)
             text = "Выберите жанры"
             setTextColor("#FFFFFF".toColorInt())
@@ -4512,6 +4846,7 @@ object CreateOvDialog {
             setTextColor("#FFFFFF".toColorInt())
             maxWidth = buttonWidth
             ellipsize = TextUtils.TruncateAt.END
+            hyphenationFrequency = Layout.HYPHENATION_FREQUENCY_NORMAL
         }
         applyButtonContainer.addView(applyButtonText)
         container.addView(applyButtonContainer)
@@ -4543,6 +4878,7 @@ object CreateOvDialog {
             setTextColor("#FFFFFF".toColorInt())
             maxWidth = buttonWidth
             ellipsize = TextUtils.TruncateAt.END
+            hyphenationFrequency = Layout.HYPHENATION_FREQUENCY_NORMAL
         }
 
         denyButtonContainer.addView(denyButtonText)
@@ -4643,6 +4979,7 @@ object CreateOvDialog {
             id = View.generateViewId()
             layoutParams = lp1
             includeFontPadding = false
+            hyphenationFrequency = Layout.HYPHENATION_FREQUENCY_NORMAL
             measure(
                 View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
                 View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
@@ -4765,6 +5102,7 @@ object CreateOvDialog {
             maxLines = 1
             maxWidth = actualWidth - (marginLeft*2)
             ellipsize = TextUtils.TruncateAt.END
+            hyphenationFrequency = Layout.HYPHENATION_FREQUENCY_NORMAL
         }
         finalButton.addView(finalButtonText)
         container.addView(finalButton)
@@ -4936,7 +5274,7 @@ object CreateOvDialog {
                     }
                     }
                 }
-                if (layer is Layer.OverLay && job != null) {
+                if (job != null) {
                     layer.activeJobs.add(job)
                 }
                 finalButton.setOnClickListener {

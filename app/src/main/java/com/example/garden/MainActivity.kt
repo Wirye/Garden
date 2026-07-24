@@ -47,14 +47,12 @@ import com.example.garden.appsettings.AnimeSettingsState
 import com.example.garden.database.SizeType
 import com.example.garden.viewmodel.MultiViewModelFactory
 import kotlin.getValue
-import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.widget.FrameLayout
 import androidx.activity.result.contract.ActivityResultContracts
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import com.example.garden.database.LinkType
-import androidx.core.net.toUri
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.doOnAttach
@@ -89,6 +87,7 @@ import com.example.garden.ui.utils.viewExtensions.lifecycleOwner
 import com.example.garden.ui.utils.drawables.blobInit
 import com.example.garden.ui.utils.spaceItemDecorationInput
 import com.example.garden.ui.adapters.animePageSezonsAdapterListFormat
+import com.example.garden.ui.utils.ChapterInfo
 import com.example.garden.ui.utils.PageWithSearchInput
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.ensureActive
@@ -196,13 +195,14 @@ enum class BsdButtonsTags {
 enum class LayerMode {
     Full, Mini
 }
-sealed class Layer {
+sealed class Layer(
+    var activeJobs: MutableList<Job> = mutableListOf()
+) {
     data class AnimePage(
         val elevation: Int,
         var mainRecyclerScrollPositionInPx: Int,
         val layoutObjId: Long,
         var state: Int,
-        var activeJobs: MutableList<Job> = mutableListOf()
     ) : Layer()
     data class MainPage(
         val elevation: Int,
@@ -213,13 +213,11 @@ sealed class Layer {
         var mainRecyclerScrollPositionInPx: Int,
         var mainRecyclerScrollPosition: Int,
         var state: Int, // У страниц будут свои состояния, они будут описаны в коде самой страницы
-        val activeJobs: MutableList<Job> = mutableListOf()
     ) : Layer()
     data class OverLay(
         val elevation: Int,
         val tag: pageTags,
         val info: OverLayLayer,
-        val activeJobs: MutableList<Job> = mutableListOf()
     ) : Layer()
     data class VideoPlayer(
         val elevation: Int,
@@ -227,7 +225,6 @@ sealed class Layer {
         var isPlaying: Boolean,
         var playbackSpeed: Float = 1.0f,
         var isControllerVisible: Boolean = true,
-        val activeJobs: MutableList<Job> = mutableListOf()
     ) : Layer()
 }
 data class episodeInfo(
@@ -346,6 +343,9 @@ object ResultKeys {
     const val SELECT_FILE = "SELECT_FILE"
     const val SELECT_FILES = "SELECT_FILES"
     const val CREATE_CARD_APPLY_EPISODES_LIST = "CREATE_CARD_APPLY_EPISODES_LIST"
+    const val CREATE_CARD_CHANGE_SONG = "CREATE_CARD_CHANGE_SONG"
+    const val CREATE_CARD_CHANGE_VERTICAL_VIDEO = "CREATE_CARD_CHANGE_VERTICAL_VIDEO"
+    const val CREATE_CARD_CHANGE_HORIZONTAL_VIDEO = "CREATE_CARD_CHANGE_HORIZONTAL_VIDEO"
     const val PAGE_WITH_SEARCH_EDIT_ANIME_CARD_EPISODES_CHANGE_SEARCH_INPUT_TEXT = "PAGE_WITH_SEARCH_EDIT_ANIME_CARD_EPISODES_CHANGE_SEARCH_INPUT_TEXT"
 }
 data class createCardApply(
@@ -1197,14 +1197,14 @@ class MainActivity : AppCompatActivity() {
             }
             is infoOfPageToShow.infoOfOverlayLayer -> {
                 when (info.info) {
-                    is OverLayLayer.CreateAnimePage -> {
+                    is OverLayLayer.CreateCardPage -> {
                         if (info.isItNewLayer) {
                             layersList.add(Layer.OverLay(lastElevation+1, pageTags.createAnimePage, info.info))
                             lastElevation += 1
                         }
                         val layer = if (info.isItNewLayer || layer == null) {layersList.last()} else {layer}
                         val mainContainer = findViewById<ViewGroup>(R.id.main)
-                        val createAnimePageContainerView = CreateOvDialog.createAnimePage(this, info.info, resultSenderViewModel,
+                        val createAnimePageContainerView = CreateOvDialog.createCardPage(this, info.info, resultSenderViewModel,
                             openGenreChoice = {
                                 val fullGenreList = mutableListOf<Pair<Boolean, Genre>>()
                                 for (i in genreNames) {
@@ -1220,7 +1220,11 @@ class MainActivity : AppCompatActivity() {
                             }, openEditEpisodesPage = { fs, sd -> run {
                                 val info = infoOfPageToShow.infoOfOverlayLayer(OverLayLayer.PageWithSearch(PageWithSearchInput.EditAnimeCardEpisodes(sd, fs as MutableList<episodeInfo>), ResultKeys.CREATE_CARD_APPLY_EPISODES_LIST),true)
                                 showPage(info, null)
-                            }},layer)
+                            }}, openEditChaptersPage = {
+                                fs, sd -> run {}
+                            }, openEditCardsPage = {
+                                fs,sd -> run {}
+                            },layer)
                         createAnimePageContainerView.tag = "create_anime_page_container"
                         createAnimePageContainerView.isFocusable = true
                         createAnimePageContainerView.isFocusableInTouchMode = true
@@ -1452,7 +1456,7 @@ class MainActivity : AppCompatActivity() {
     fun addCardToCarousel(parentId: Long) {
         if (!alreadyShowedAddBlock) {
             showPage(infoOfPageToShow.infoOfOverlayLayer(
-                OverLayLayer.CreateAnimePage(
+                OverLayLayer.CreateCardPage(
                     "",
                     null,
                     "",
@@ -1460,7 +1464,13 @@ class MainActivity : AppCompatActivity() {
                     mutableListOf(),
                     mutableListOf(),
                     ElementType.Anime,
-                    parentId),
+                    parentId,
+                    listOf(),
+                    listOf(),
+                    null,
+                    null,
+                    listOf()
+                    ),
                 true),
                 null
             )

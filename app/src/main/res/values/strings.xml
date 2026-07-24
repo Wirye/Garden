@@ -47,5 +47,11 @@
     <string name="EditingEpisodes">Редактирование эпизодов</string>
     <string name="Search">"Поиск"</string>
     <string name="Save">Сохранить</string>
+    <string name="VerticalVideo">Вертикальное видео</string>
+    <string name="HorizontalVideo">Горизонтальное видео</string>
+    <string name="Chapters">Главы</string>
+    <string name="EditChapters">Редактировать главы</string>
+    <string name="Soderzhimoye">Содержимое</string>
+    <string name="EditSoderzhimoye">Редактировать содержимое</string>
 
 </resources>

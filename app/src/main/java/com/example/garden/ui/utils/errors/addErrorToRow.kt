@@ -1,6 +1,8 @@
 package com.example.garden.ui.utils.errors
 
 import android.content.Context
+import android.text.Layout
+import android.text.TextUtils
 import android.util.Log
 import android.util.TypedValue
 import android.view.View
@@ -44,6 +46,8 @@ fun addErrorToRow(row: ConstraintLayout, errorText: String, context: Context, er
             layoutParams = layoutparams1
             val newId = View.generateViewId()
             id = newId
+            ellipsize = TextUtils.TruncateAt.END
+            hyphenationFrequency = Layout.HYPHENATION_FREQUENCY_NORMAL
         }
         errorTextView.measure(
             View.MeasureSpec.makeMeasureSpec(row.width, View.MeasureSpec.EXACTLY),

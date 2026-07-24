@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.drawable.GradientDrawable
 import android.text.Editable
+import android.text.Layout
 import android.text.TextUtils
 import android.text.TextWatcher
 import android.util.TypedValue
@@ -41,7 +42,7 @@ class FlatGridOfEditEpisodesAdapter(private val context: Context, private val it
 
     lateinit var touchHelper: ItemTouchHelper
 
-    override fun onCreateViewHolder(p0: ViewGroup, position: Int): FlatGridOfEditEpisodesAdapter.ViewHolder {
+    override fun onCreateViewHolder(p0: ViewGroup, position: Int): ViewHolder {
         return ViewHolder(ConstraintLayout(context).apply {
             val layoutParams1 = RecyclerView.LayoutParams(
                 widthh,
@@ -221,6 +222,7 @@ class FlatGridOfEditEpisodesAdapter(private val context: Context, private val it
                 View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
             )
             maxWidth = widthh - icoSize - itemHeightt - margin*2
+            hyphenationFrequency = Layout.HYPHENATION_FREQUENCY_NORMAL
         }
         val sumTextsHeight = hT.measuredHeight + textView.measuredHeight
         val textsMarginTop = round((itemHeightt - sumTextsHeight).toFloat() / 6f).toInt() * 5

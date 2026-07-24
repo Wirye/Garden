@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Context
 import android.content.pm.ActivityInfo
 import android.graphics.drawable.GradientDrawable
+import android.text.Layout
 import android.text.TextUtils
 import android.util.Log
 import android.util.TypedValue
@@ -179,6 +180,7 @@ class AnimeVideoPlayer(context: Context, private val resultSenderViewModel: Resu
             val lp1 = layoutParams as ConstraintLayout.LayoutParams
             lp1.setMargins(0,(round(difference.toFloat() / 2f).toInt()),0,0)
             layoutParams = lp1
+            hyphenationFrequency = Layout.HYPHENATION_FREQUENCY_NORMAL
         }
         contrainer.addView(name)
         val playButton = ConstraintLayout(context).apply {
@@ -423,6 +425,9 @@ class AnimeVideoPlayer(context: Context, private val resultSenderViewModel: Resu
             setTextColor("#BF9C9C9C".toColorInt())
             id = generateViewId()
             maxWidth = screenWidth - marginHorizontal*2 - marginBetweenElements - length.measuredWidth
+            includeFontPadding = false
+            ellipsize = TextUtils.TruncateAt.END
+            hyphenationFrequency = Layout.HYPHENATION_FREQUENCY_NORMAL
         }
         contrainer.addView(episodeName)
 
@@ -443,6 +448,7 @@ class AnimeVideoPlayer(context: Context, private val resultSenderViewModel: Resu
             includeFontPadding = false
             id = generateViewId()
             maxWidth = screenWidth - marginHorizontal*2 - marginBetweenElements - length.measuredWidth
+            hyphenationFrequency = Layout.HYPHENATION_FREQUENCY_NORMAL
         }
         contrainer.addView(episodeNum)
         val totalDuration = info.second[info.third].length

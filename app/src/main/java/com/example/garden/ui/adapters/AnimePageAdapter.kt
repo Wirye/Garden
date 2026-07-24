@@ -12,8 +12,10 @@ import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.ShapeDrawable
 import android.graphics.drawable.shapes.OvalShape
+import android.text.Layout
 import android.text.Spannable
 import android.text.SpannableString
+import android.text.TextUtils
 import android.text.style.UnderlineSpan
 import android.util.Log
 import android.util.TypedValue
@@ -306,6 +308,8 @@ class AnimePageAdapter(private val context: Context, private val showShowAllText
             text = textText
             setTextColor("#FFFFFF".toColorInt())
             this.typeface = ResourcesCompat.getFont(context, R.font.google_sans_regular)
+            ellipsize = TextUtils.TruncateAt.END
+            hyphenationFrequency = Layout.HYPHENATION_FREQUENCY_NORMAL
         }
         watchButton.addView(textWatchButton)
         watchButton.addView(playIco)
@@ -373,6 +377,8 @@ class AnimePageAdapter(private val context: Context, private val showShowAllText
             val newId = View.generateViewId()
             id = newId
             nameViewId = newId
+            ellipsize = TextUtils.TruncateAt.END
+            hyphenationFrequency = Layout.HYPHENATION_FREQUENCY_NORMAL
         }
         nameView.measure(
             View.MeasureSpec.makeMeasureSpec(nameWidth, View.MeasureSpec.EXACTLY),
