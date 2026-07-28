@@ -59,6 +59,11 @@ import androidx.core.view.doOnAttach
 import androidx.window.layout.WindowMetricsCalculator
 import com.example.garden.database.CarouselType
 import com.example.garden.database.CollectionType
+import com.example.garden.database.GenreAge
+import com.example.garden.database.GenreEpisodes
+import com.example.garden.database.GenreSezon
+import com.example.garden.database.GenreYear
+import com.example.garden.database.GridGenreItem
 import com.example.garden.database.MusicGenre
 import com.example.garden.database.ObjectData
 import com.example.garden.players.AnimeVideoPlayer
@@ -122,51 +127,6 @@ var baseblob3Id = -1
 var alreadyShowedAddBlock = false
 var dotDrawables = mutableListOf<GradientDrawable>()
 val blobsNeedToHideOnAlbomOrientationIdsList = mutableListOf<Int>()
-val genreColors = mapOf(
-    Pair(Genre.Drama, "#37619F"),
-    Pair(Genre.Comedy, "#FFD600"),
-    Pair(Genre.Romance, "#FF85A2"),
-    Pair(Genre.EverydayLife, "#A0E4B0"),
-    Pair(Genre.School, "#A0E4B0"),
-    Pair(Genre.Psychological, "#9D5CFF"),
-    Pair(Genre.Shonen, "#FF9100"),
-    Pair(Genre.ActionMovie, "#FF4B4B"),
-    Pair(Genre.MartialArts, "#FF4B4B"),
-    Pair(Genre.Action, "#FF4B4B"),
-    Pair(Genre.Adventures, "#4CAF50"),
-    Pair(Genre.Shoujo, "#F48FB1"),
-    Pair(Genre.Fantasy, "#1FA2FF"),
-    Pair(Genre.Isekai, "#00E5FF"),
-    Pair(Genre.ScienceFiction, "#2979FF"),
-    Pair(Genre.Cyberpunk, "#2979FF"),
-    Pair(Genre.Fantastic, "#2979FF"),
-    Pair(Genre.Supernatural, "#2979FF"),
-    Pair(Genre.PostApocalypse, "#8D6E63"),
-    Pair(Genre.Detective, "#BDBDBD"),
-    Pair(Genre.Thriller, "#D32F2F"),
-    Pair(Genre.Horrors, "#D32F2F"),
-    Pair(Genre.Mysticism, "#7E57C2"),
-    Pair(Genre.Etty, "#F06292"),
-    Pair(Genre.Harem, "#FFD54F"),
-    Pair(Genre.Age, "#BFDFDFDF"),
-    Pair(Genre.Year, "#BFDFDFDF"),
-    Pair(Genre.Sezon, "#BFDFDFDF"),
-    Pair(Genre.Episodes, "&")
-)
-val musicGenreColors = mapOf(
-    Pair(MusicGenre.Rock, "#E53935"),
-    Pair(MusicGenre.Jazz, "#FFC107"),
-    Pair(MusicGenre.LoFi, "#B39DDB"),
-    Pair(MusicGenre.Pop, "#FF4081"),
-    Pair(MusicGenre.Classical, "#F5F5DC"),
-    Pair(MusicGenre.Metal, "#212121"),
-    Pair(MusicGenre.Electronic, "#00E5FF"),
-    Pair(MusicGenre.HipHop, "#FB8C00"),
-    Pair(MusicGenre.Country, "#8D6E63"),
-    Pair(MusicGenre.Ambient, "#1A237E"),
-)
-var genreNames = mapOf<Genre, String>()
-var musicGenreNames = mapOf<MusicGenre, String>()
 var baseDensity = 0f
 var scaledDensity = 0f
 var statusBarHeight = 0
@@ -196,7 +156,8 @@ enum class LayerMode {
     Full, Mini
 }
 sealed class Layer(
-    var activeJobs: MutableList<Job> = mutableListOf()
+    var activeJobs: MutableList<Job> = mutableListOf(),
+    var pageViewIds: MutableList<Int> = mutableListOf()
 ) {
     data class AnimePage(
         val elevation: Int,
@@ -301,7 +262,7 @@ data class objectData2(
 
     // Тип элемента (для удобства фильтрации и только для неё, про макет с.м link -> template)
     var elementType: ElementType,
-    var genre: List<Genre>? = null,
+    var genre: List<GridGenreItem>? = null,
 )
 enum class pageTags {
     animePage, createAnimePage, genreChoice, videoPlayer, createCarouselPage, pageWithSearch
@@ -324,6 +285,8 @@ enum class fileType {
     IMAGE, VIDEO, AUDIO
 }
 object ResultKeys {
+    const val PAGE_WITH_SEARCH_EDIT_ANIME_CARD_EPISODES_ADD_CHAPTERS = "PAGE_WITH_SEARCH_EDIT_ANIME_CARD_EPISODES_ADD_CHAPTERS"
+    const val PAGE_WITH_SEARCH_EDIT_ANIME_CARD_EPISODES_ADD_CHAPTERS_PAGES = "PAGE_WITH_SEARCH_EDIT_ANIME_CARD_EPISODES_ADD_CHAPTERS_PAGES"
     const val CREATE_CARD_GENRE_CHOICE = "CREATE_CARD_PAGE_GENRE_CHOICE"
     const val PAGE_WITH_SEARCH_EDIT_ANIME_CARD_EPISODES_ADD_EPISODES = "PAGE_WITH_SEARCH_EDIT_ANIME_CARD_EPISODES_ADD_EPISODE"
     const val PAGE_WITH_SEARCH_EDIT_ANIME_CARD_EPISODES_CHANGE_EPISODE_IMAGE = "PAGE_WITH_SEARCH_EDIT_ANIME_CARD_EPISODES_CHANGE_EPISODE_IMAGE"
@@ -347,15 +310,32 @@ object ResultKeys {
     const val CREATE_CARD_CHANGE_VERTICAL_VIDEO = "CREATE_CARD_CHANGE_VERTICAL_VIDEO"
     const val CREATE_CARD_CHANGE_HORIZONTAL_VIDEO = "CREATE_CARD_CHANGE_HORIZONTAL_VIDEO"
     const val PAGE_WITH_SEARCH_EDIT_ANIME_CARD_EPISODES_CHANGE_SEARCH_INPUT_TEXT = "PAGE_WITH_SEARCH_EDIT_ANIME_CARD_EPISODES_CHANGE_SEARCH_INPUT_TEXT"
+    const val PAGE_WITH_SEARCH_EDIT_ANIME_CARD_CHAPTERS_CHANGE_SEARCH_INPUT_TEXT = "PAGE_WITH_SEARCH_EDIT_ANIME_CARD_CHAPTERS_CHANGE_SEARCH_INPUT_TEXT"
+    const val PAGE_WITH_SEARCH_EDIT_ANIME_CARD_CHAPTERS_PAGES_CHANGE_SEARCH_INPUT_TEXT = "PAGE_WITH_SEARCH_EDIT_ANIME_CARD_CHAPTERS_PAGES_CHANGE_SEARCH_INPUT_TEXT"
+    const val OPEN_PAGE_WITH_SEARCH_EDIT_ANIME_CARD_CHAPTERS_PAGES = "OPEN_PAGE_WITH_SEARCH_EDIT_ANIME_CARD_CHAPTERS_PAGES"
+    const val PAGE_WITH_SEARCH_EDIT_ANIME_CARD_CHAPTERS_APPLY_CHAPTERS_PAGES_LIST = "PAGE_WITH_SEARCH_EDIT_ANIME_CARD_CHAPTERS_APPLY_CHAPTERS_PAGES_LIST"
+    const val CREATE_CARD_APPLY_CHAPTERS_LIST = "CREATE_CARD_APPLY_CHAPTERS_LIST"
 }
+data class OpenPageWithSearchEditAnimeCardChaptersPagesInput(
+    val alreadyEnteredSearchInputText: String?,
+    val list: MutableList<ImageData>,
+    val key: String
+)
 data class createCardApply(
-    val name: String,
-    val image: ImageData?,
-    val description: String,
-    val author: String,
-    val genreList: List<Genre>,
-    val episodesList: List<episodeInfo>,
-    val parentId: Long
+    var name: String,
+    var image: ImageData? = null,
+    var description: String,
+    var author: String,
+    var genreList: List<GridGenreItem>,
+    var episodesList: List<episodeInfo>,
+    var type: ElementType,
+    val parentId: Long,
+    var chapterList: List<ChapterInfo>,
+    val cardsList: List<objectData2>,
+    var horizontalVideo: LinkData? = null,
+    var verticalVideo: LinkData? = null,
+    var song: LinkData? = null,
+    var carouselType: CarouselType,
 )
 
 data class SelectFileInput(
@@ -377,7 +357,7 @@ data class SelectFilesOutput(
 )
 
 data class GenreChoiceOutput(
-    val data: List<Pair<Boolean, Genre>>
+    val data: List<Pair<Boolean, GridGenreItem>>
 )
 
 data class EditEpisodeAlreadyWatchedInput(
@@ -459,6 +439,7 @@ class MainActivity : AppCompatActivity() {
             screenWidthDp = round(screenWidth.toFloat() / baseDensity).toInt()
             screenHeightDp = round(screenHeight.toFloat() / baseDensity).toInt()
             val containerlp1 = container.layoutParams as FrameLayout.LayoutParams
+            Log.d("INSETS", "$leftInsetWidth $rightInsetWidth $statusBarHeight $navigationBarHeight")
             containerlp1.width = screenWidth + leftInsetWidth + rightInsetWidth
             containerlp1.height = screenHeight + statusBarHeight + navigationBarHeight
             container.layoutParams = containerlp1
@@ -475,6 +456,7 @@ class MainActivity : AppCompatActivity() {
                 requestPermissions(arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), 101)
             }
             if (!alreadyCreated) {
+                viewModel.insert()
                 baseBlurEffectForBloobs = RenderEffect.createBlurEffect(
                     150f, 150f,
                     Shader.TileMode.MIRROR
@@ -482,50 +464,6 @@ class MainActivity : AppCompatActivity() {
                 dotDrawables = createDotDrawables()
                 orientationOld = resources.configuration.orientation
                 orientationNow = resources.configuration.orientation
-                genreNames = mapOf(
-                    Pair(Genre.Drama, resources.getString(R.string.Drama)),
-                    Pair(Genre.Comedy, resources.getString(R.string.Comedy)),
-                    Pair(Genre.Romance, resources.getString(R.string.Romance)),
-                    Pair(Genre.EverydayLife, resources.getString(R.string.EverydayLife)),
-                    Pair(Genre.School, resources.getString(R.string.School)),
-                    Pair(Genre.Psychological, resources.getString(R.string.Psychological)),
-                    Pair(Genre.Shonen, resources.getString(R.string.Shonen)),
-                    Pair(Genre.ActionMovie, resources.getString(R.string.ActionMovie)),
-                    Pair(Genre.MartialArts, resources.getString(R.string.MartialArts)),
-                    Pair(Genre.Action, resources.getString(R.string.Action)),
-                    Pair(Genre.Adventures, resources.getString(R.string.Adventures)),
-                    Pair(Genre.Shoujo, resources.getString(R.string.Shoujo)),
-                    Pair(Genre.Fantasy, resources.getString(R.string.Fantasy)),
-                    Pair(Genre.Isekai, resources.getString(R.string.Isekai)),
-                    Pair(Genre.ScienceFiction, resources.getString(R.string.ScienceFiction)),
-                    Pair(Genre.Cyberpunk, resources.getString(R.string.Cyberpunk)),
-                    Pair(Genre.Fantastic, resources.getString(R.string.Fantastic)),
-                    Pair(Genre.Supernatural, resources.getString(R.string.Supernatural)),
-                    Pair(Genre.PostApocalypse, resources.getString(R.string.PostApocalypse)),
-                    Pair(Genre.Detective, resources.getString(R.string.Detective)),
-                    Pair(Genre.Thriller, resources.getString(R.string.Thriller)),
-                    Pair(Genre.Horrors, resources.getString(R.string.Horrors)),
-                    Pair(Genre.Mysticism, resources.getString(R.string.Mysticism)),
-                    Pair(Genre.Etty, resources.getString(R.string.Etty)),
-                    Pair(Genre.Harem, resources.getString(R.string.Harem)),
-                    Pair(Genre.Age, "Возраст"),
-                    Pair(Genre.Year, "Год"),
-                    Pair(Genre.Sezon, "Сезон года"),
-                    Pair(Genre.Episodes, "Кол-во эпизодов")
-
-                )
-                musicGenreNames = mapOf(
-                    Pair(MusicGenre.Rock, resources.getString(R.string.Rock)),
-                    Pair(MusicGenre.Pop, resources.getString(R.string.Pop)),
-                    Pair(MusicGenre.HipHop, resources.getString(R.string.HipHop)),
-                    Pair(MusicGenre.Electronic, resources.getString(R.string.Electronic)),
-                    Pair(MusicGenre.Metal, resources.getString(R.string.Metal)),
-                    Pair(MusicGenre.Country, resources.getString(R.string.Country)),
-                    Pair(MusicGenre.Jazz, resources.getString(R.string.Jazz)),
-                    Pair(MusicGenre.Classical, resources.getString(R.string.Classical)),
-                    Pair(MusicGenre.LoFi, resources.getString(R.string.LoFi)),
-                    Pair(MusicGenre.Ambient, resources.getString(R.string.Ambient))
-                )
                 alreadyCreated = true
             }
 
@@ -926,6 +864,21 @@ class MainActivity : AppCompatActivity() {
                                         selectFiles(dataa)
                                     }
                                 }
+                                ResultKeys.OPEN_PAGE_WITH_SEARCH_EDIT_ANIME_CARD_CHAPTERS_PAGES -> {
+                                    val dataa = data as? OpenPageWithSearchEditAnimeCardChaptersPagesInput
+                                    if (dataa != null) {
+                                        showPage(infoOfPageToShow.infoOfOverlayLayer(
+                                            info = OverLayLayer.PageWithSearch(
+                                                startsInfo = PageWithSearchInput.EditAnimeCardChaptersPages(
+                                                    alreadyEnteredSearchText = dataa.alreadyEnteredSearchInputText,
+                                                    list = dataa.list
+                                                ),
+                                                key = dataa.key
+                                            ),
+                                            isItNewLayer = true
+                                        ), layer = null)
+                                    }
+                                }
                             }
                         }
                         }
@@ -1127,7 +1080,7 @@ class MainActivity : AppCompatActivity() {
                                 }
                             }
                             layer.activeJobs.clear()
-                            hidePage(pageTags.animePage)
+                            hidePage(pageTags.animePage, layer.pageViewIds)
                         }
                         is Layer.OverLay -> {
                             layer.activeJobs.forEach { job ->
@@ -1136,7 +1089,7 @@ class MainActivity : AppCompatActivity() {
                                 }
                             }
                             layer.activeJobs.clear()
-                            hidePage(layer.tag)
+                            hidePage(layer.tag, layer.pageViewIds)
                         }
                         is Layer.VideoPlayer -> {
                             layer.activeJobs.forEach { job ->
@@ -1145,7 +1098,7 @@ class MainActivity : AppCompatActivity() {
                                 }
                             }
                             layer.activeJobs.clear()
-                            hidePage(pageTags.videoPlayer)
+                            hidePage(pageTags.videoPlayer, layer.pageViewIds)
                         }
                     }
                     when (previousLayer) {
@@ -1206,31 +1159,43 @@ class MainActivity : AppCompatActivity() {
                         val mainContainer = findViewById<ViewGroup>(R.id.main)
                         val createAnimePageContainerView = CreateOvDialog.createCardPage(this, info.info, resultSenderViewModel,
                             openGenreChoice = {
-                                val fullGenreList = mutableListOf<Pair<Boolean, Genre>>()
-                                for (i in genreNames) {
-                                    var isActive = false
-                                    for (j in info.info.genreList) {
-                                        if (j == i.key) {
-                                            isActive = true
-                                        }
-                                    }
-                                    fullGenreList.add(Pair(isActive, i.key))
+                                val fullGenreList = info.info.genreList.map { Pair(true, it) } as MutableList<Pair<Boolean, GridGenreItem>>
+                                if (fullGenreList.isEmpty()) {
+                                    fullGenreList.add(Pair(false, Genre.Drama))
                                 }
+                                if(!(fullGenreList.any { it.second is GenreYear })) {
+                                    fullGenreList.add(Pair(false, GenreYear()))
+                                }
+                                if(!(fullGenreList.any { it.second is GenreAge })) {
+                                    fullGenreList.add(Pair(false, GenreAge()))
+                                }
+                                if(!(fullGenreList.any { it.second is GenreSezon })) {
+                                    fullGenreList.add(Pair(false, GenreSezon()))
+                                }
+                                if(!(fullGenreList.any { it.second is GenreEpisodes })) {
+                                    fullGenreList.add(Pair(false, GenreEpisodes()))
+                                }
+
                                 showPage(infoOfPageToShow.infoOfOverlayLayer(OverLayLayer.GenreChoice(fullGenreList, ResultKeys.CREATE_CARD_GENRE_CHOICE),true), null)
                             }, openEditEpisodesPage = { fs, sd -> run {
-                                val info = infoOfPageToShow.infoOfOverlayLayer(OverLayLayer.PageWithSearch(PageWithSearchInput.EditAnimeCardEpisodes(sd, fs as MutableList<episodeInfo>), ResultKeys.CREATE_CARD_APPLY_EPISODES_LIST),true)
+                                val info = infoOfPageToShow.infoOfOverlayLayer(OverLayLayer.PageWithSearch(PageWithSearchInput.EditAnimeCardEpisodes(sd, fs.toMutableList()), ResultKeys.CREATE_CARD_APPLY_EPISODES_LIST),true)
                                 showPage(info, null)
                             }}, openEditChaptersPage = {
-                                fs, sd -> run {}
+                                fs, sd -> run {
+                                    val info = infoOfPageToShow.infoOfOverlayLayer(OverLayLayer.PageWithSearch(PageWithSearchInput.EditAnimeCardChapters(sd, fs.toMutableList()), ResultKeys.CREATE_CARD_APPLY_CHAPTERS_LIST),true)
+                                    showPage(info, null)
+                                }
                             }, openEditCardsPage = {
                                 fs,sd -> run {}
                             },layer)
-                        createAnimePageContainerView.tag = "create_anime_page_container"
+                        createAnimePageContainerView.id = View.generateViewId()
+                        layer.pageViewIds.add(createAnimePageContainerView.id)
                         createAnimePageContainerView.isFocusable = true
                         createAnimePageContainerView.isFocusableInTouchMode = true
 
                         val fullscreenview = createBlockBackgroundVieww()
-                        fullscreenview.tag = "create_anime_page_fsv"
+                        fullscreenview.id = View.generateViewId()
+                        layer.pageViewIds.add(fullscreenview.id)
                         createAnimePageContainerView.elevation = maxOverLayElevation
                         maxOverLayElevation += 10f
                         mainContainer.addView(fullscreenview)
@@ -1257,7 +1222,8 @@ class MainActivity : AppCompatActivity() {
                         }
                         val layer = if (info.isItNewLayer || layer == null) {layersList.last()} else {layer}
                         val genreChoiceContainerView = CreateOvDialog.genreChoice(this, info.info, resultSenderViewModel, close = {hideLayer()})
-                        genreChoiceContainerView.tag = "genre_choice_container"
+                        genreChoiceContainerView.id = View.generateViewId()
+                        layer.pageViewIds.add(genreChoiceContainerView.id)
                         val lp1 = genreChoiceContainerView.layoutParams as ConstraintLayout.LayoutParams
                         lp1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
                         lp1.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID
@@ -1266,7 +1232,8 @@ class MainActivity : AppCompatActivity() {
                         lp1.setMargins(leftInsetWidth, statusBarHeight, rightInsetWidth, navigationBarHeight)
                         genreChoiceContainerView.layoutParams = lp1
                         val fullscreenview = createBlockBackgroundVieww()
-                        fullscreenview.tag = "genre_choice_fsv"
+                        fullscreenview.id = View.generateViewId()
+                        layer.pageViewIds.add(fullscreenview.id)
                         genreChoiceContainerView.elevation = maxOverLayElevation
                         maxOverLayElevation += 10f
                         val mainContainer = findViewById<ViewGroup>(R.id.main)
@@ -1294,10 +1261,12 @@ class MainActivity : AppCompatActivity() {
                         val layer = if (info.isItNewLayer || layer == null) {layersList.last()} else {layer}
                         val createCarouselPageContainerView = CreateOvDialog.createCarouselPage(context = this, startsInfo = info.info, layer = layer, resultSenderViewModel = resultSenderViewModel
                         )
-                        createCarouselPageContainerView.tag = "create_carousel_page_container"
+                        createCarouselPageContainerView.id = View.generateViewId()
+                        layer.pageViewIds.add(createCarouselPageContainerView.id)
                         val main = findViewById<ViewGroup>(R.id.main)
                         val fullScreenView = createBlockBackgroundVieww()
-                        fullScreenView.tag = "create_carousel_page_fsv"
+                        fullScreenView.id = View.generateViewId()
+                        layer.pageViewIds.add(fullScreenView.id)
                         createCarouselPageContainerView.elevation = maxOverLayElevation
                         maxOverLayElevation += 10f
                         var alreadyClosed = false
@@ -1323,10 +1292,12 @@ class MainActivity : AppCompatActivity() {
                         }
                         val layer = if (info.isItNewLayer || layer == null) {layersList.last()} else {layer}
                         val pageWithSearch = CreateOvDialog.pageWithSearch(info.info.startsInfo, this, resultSenderViewModel, info.info.key, layer, close = {hideLayer()})
-                        pageWithSearch.tag = "page_with_search_container"
+                        pageWithSearch.id = View.generateViewId()
+                        layer.pageViewIds.add(pageWithSearch.id)
                         val main = findViewById<ViewGroup>(R.id.main)
                         val fullScreenView = createBlockBackgroundVieww()
-                        fullScreenView.tag = "page_with_search_fsv"
+                        fullScreenView.id = View.generateViewId()
+                        layer.pageViewIds.add(fullScreenView.id)
                         pageWithSearch.elevation = maxOverLayElevation
                         maxOverLayElevation += 10f
                         var alreadyClosed = false
@@ -1356,7 +1327,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
-    fun hidePage(tag: pageTags) {
+    fun hidePage(tag: pageTags, idsList: MutableList<Int>) {
         val mainContainer = findViewById<ViewGroup>(R.id.main)
         when(tag) {
             pageTags.animePage -> {
@@ -1364,57 +1335,20 @@ class MainActivity : AppCompatActivity() {
                 viewModel.updateAnimePageAdapter(-1, objectsList)
                 animePage.visibility = View.GONE
             }
-
-            pageTags.createAnimePage -> {
-                val createAnimePageContainerView: ViewGroup? = mainContainer.findViewWithTag<ViewGroup>("create_anime_page_container")
-                val fullScreenView: View? = mainContainer.findViewWithTag<View>("create_anime_page_fsv")
-                if (createAnimePageContainerView != null) {
-                    mainContainer.removeView(createAnimePageContainerView)
-                }
-                if (fullScreenView != null) {
-                    mainContainer.removeView(fullScreenView)
-                }
-            }
-
-            pageTags.genreChoice -> {
-                val genreChoiceContainerView: ViewGroup? = mainContainer.findViewWithTag<ViewGroup>("genre_choice_container")
-                val fullScreenView: View? = mainContainer.findViewWithTag<View>("genre_choice_fsv")
-                if (genreChoiceContainerView != null) {
-                    mainContainer.removeView(genreChoiceContainerView)
-                }
-                if (fullScreenView != null) {
-                    mainContainer.removeView(fullScreenView)
-                }
-            }
             pageTags.videoPlayer -> {
                 changeOrientation(this,true)
                 toggleSystemBars(true,this)
                 closeVideoPlayer()
             }
-
-            pageTags.createCarouselPage -> {
-                val createCarouselPageContainerView: ViewGroup? = mainContainer.findViewWithTag<ViewGroup>("create_carousel_page_container")
-                val fullScreenView: View? = mainContainer.findViewWithTag<View>("create_carousel_page_fsv")
-                if (createCarouselPageContainerView != null) {
-                    mainContainer.removeView(createCarouselPageContainerView)
-                }
-                if (fullScreenView != null) {
-                    mainContainer.removeView(fullScreenView)
-                }
-
-            }
-            pageTags.pageWithSearch -> {
-                val pageWithSearch: ViewGroup? = mainContainer.findViewWithTag<ViewGroup>("page_with_search_container")
-                val fullScreenView: View? = mainContainer.findViewWithTag<View>("page_with_search_fsv")
-                if (pageWithSearch != null) {
-                    mainContainer.removeView(pageWithSearch)
-                }
-                if (fullScreenView != null) {
-                    mainContainer.removeView(fullScreenView)
+            else -> {
+                idsList.forEach { id ->
+                    val view: View? = mainContainer.findViewById(id)
+                    if (view != null) {
+                        mainContainer.removeView(view)
+                    }
                 }
             }
         }
-
     }
     fun onRotationChanged() {
         val orientation = resources.configuration.orientation
@@ -1469,7 +1403,8 @@ class MainActivity : AppCompatActivity() {
                     listOf(),
                     null,
                     null,
-                    listOf()
+                    null,
+                    CarouselType.AnimeNManga
                     ),
                 true),
                 null

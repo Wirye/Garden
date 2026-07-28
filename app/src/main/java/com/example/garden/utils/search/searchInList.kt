@@ -7,6 +7,7 @@ data class SearchResult(
     val score: Int
 )
 fun searchInList(list: List<String>, text: String, minScore: Int): List<String> {
+    if (text.isEmpty()) return emptyList()
     val minScore = minScore.coerceIn(0,100)
     val cleanQuery = text.trim().lowercase()
     if (cleanQuery.isEmpty()) return list

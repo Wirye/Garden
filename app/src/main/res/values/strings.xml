@@ -53,5 +53,16 @@
     <string name="EditChapters">Редактировать главы</string>
     <string name="Soderzhimoye">Содержимое</string>
     <string name="EditSoderzhimoye">Редактировать содержимое</string>
+    <string name="Sezon">Сезон</string>
+    <string name="Year">Год</string>
+    <string name="Age">Возраст</string>
+    <string name="Episodes">Эпизоды</string>
+    <string name="EpisodesAnount">Кол-во эпизодов</string>
+    <string name="Winter">Зима</string>
+    <string name="Spring">Весна</string>
+    <string name="Summer">Лето</string>
+    <string name="Autumn">Осень</string>
+    <string name="EditingChapters">Редактировать главы</string>
+    <string name="EditingChapterPages">Редактировать страницы главы</string>
 
 </resources>

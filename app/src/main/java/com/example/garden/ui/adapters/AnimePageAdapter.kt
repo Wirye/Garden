@@ -54,6 +54,7 @@ import com.example.garden.blob3MarginTop
 import com.example.garden.ui.utils.convertToStringTime
 import com.example.garden.ui.utils.createGridOfGenres
 import com.example.garden.database.Genre
+import com.example.garden.database.GridGenreItem
 import com.example.garden.database.ImageSource
 import com.example.garden.database.LinkType
 import com.example.garden.database.SizeType
@@ -403,7 +404,7 @@ class AnimePageAdapter(private val context: Context, private val showShowAllText
                 break
             }
         }
-        val newGenreList = mutableListOf<Pair<Boolean, Genre>>()
+        val newGenreList = mutableListOf<Pair<Boolean, GridGenreItem>>()
         val maxInfoSumHeight = round(bannerH.toFloat() / 2f).toInt() - hBtn - marginBetweenInfoElements
         for (i in genreList) {
             newGenreList.add(Pair(false, i))
