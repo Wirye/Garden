@@ -1846,7 +1846,7 @@ data class CreateGridOfGenresReturn(
     val sumHeight: Int,
     val sumWidth: Int
 )
-fun createGridOfGenres(context: Context, infoContainerHeight: Int, genreList: List<Pair<Boolean, GridGenreItem>>, length: Long, alreadyWatched: Long, widthh: Int, heightt: Int, marginBetweenInfoElements: Int, considerSelectedState: Boolean = false, addShowAllButton: Boolean = false, showAllButtonWidth: Int? = null, addClickListeners: Boolean = false, onClick: (GridGenreItem) -> Unit): CreateGridOfGenresReturn {
+fun createGridOfGenres(context: Context, infoContainerHeight: Int, genreList: List<Pair<Boolean, GridGenreItem>>, length: Long, alreadyWatched: Long, widthh: Int, heightt: Int, marginBetweenInfoElements: Int, considerSelectedState: Boolean = false, addShowAllButton: Boolean = false, showAllButtonWidth: Int? = null, addClickListeners: Boolean = false, onClick: (GridGenreItem) -> Unit, onLongClick: (GridGenreItem) -> Unit): CreateGridOfGenresReturn {
     val container = ConstraintLayout(context).apply {
         val layoutparams1 = ConstraintLayout.LayoutParams(
             widthh,
@@ -1967,8 +1967,11 @@ fun createGridOfGenres(context: Context, infoContainerHeight: Int, genreList: Li
         infoContainer.addView(infoText)
         if (addClickListeners) {
             infoContainer.setOnClickListener {
-                infoContainer.requestFocus()
                 onClick(genreList[i].second)
+            }
+            infoContainer.setOnLongClickListener {
+                onLongClick(genreList[i].second)
+                true
             }
         }
         infoContainersList.add(Triple(infoContainer, infoContainerWidth, genreList[i]))
@@ -4039,6 +4042,7 @@ object CreateOvDialog {
             showAllButtonWidth = addGenreButtonSize,
             addClickListeners = false,
             onClick = {},
+            onLongClick = {}
         )
 
         val linesAmount = if (genreGrid.sumHeight == addGenreButtonSize) 1 else round(genreGrid.sumHeight.toFloat() / (addGenreButtonSize+marginBetweenInfoElements).toFloat()).toInt()
@@ -4155,6 +4159,7 @@ object CreateOvDialog {
                 showAllButtonWidth = addGenreButtonSize,
                 addClickListeners = false,
                 onClick = {},
+                onLongClick = {}
             )
 
             val linesAmount = if (genreGrid.sumHeight == addGenreButtonSize) 1 else round(genreGrid.sumHeight.toFloat() / (addGenreButtonSize+marginBetweenInfoElements).toFloat()).toInt()
@@ -4358,6 +4363,15 @@ object CreateOvDialog {
         val addedJobsList = mutableListOf<Job>() // Here must be all jobs, that created in addTypesUi function
         var episodesList: MutableList<episodeInfo> = startsInfo.episodesList as MutableList<episodeInfo>
         fun addTypesUi() {
+            val avalibleGenreType = when (startsInfo.type) {
+                ElementType.Anime -> listOf(Genre::class.java)
+                ElementType.Manga -> listOf(Genre::class.java)
+                ElementType.Music -> listOf(MusicGenre::class.java)
+                else -> listOf()
+            }
+            startsInfo.genreList = startsInfo.genreList.filter { it.getGenreClass() in avalibleGenreType }
+            val newList = getAllGenresOfSameType(startsInfo.genreList).map { Pair(it in startsInfo.genreList, it) }
+            resultSenderViewModel.sendResult(ResultKeys.CREATE_CARD_GENRE_CHOICE, GenreChoiceOutput(newList))
             when (startsInfo.type) {
                 ElementType.Anime -> {
                     addDescription()
@@ -4816,6 +4830,10 @@ object CreateOvDialog {
                 addedViewsList.forEach { view ->
                     container.removeView(view)
                 }
+                val descriptionInput: View? = container.findViewById(descriptionInputId)
+                if (descriptionInput != null) {
+                    container.removeView(descriptionInput)
+                }
                 container.requestLayout()
                 addTypesUi()
                 container.requestLayout()
@@ -4943,38 +4961,44 @@ object CreateOvDialog {
                 requestFocus()
             }
         }
-        fun apply(genre: GridGenreItem) {
-            for (i in 0 until fullGenreList.size) {
-                val obj = fullGenreList[i]
-                if (obj.second == genre) {
-                    fullGenreList[i] = Pair(!obj.first, obj.second)
-                }
+        fun apply(genre: GridGenreItem, isLongClick: Boolean) {
+            if (isLongClick) {
             }
-            val newGenreGrid = createGridOfGenres(
-                context = context,
-                infoContainerHeight = infoContainerHeight,
-                genreList = fullGenreList,
-                length = 1L,
-                alreadyWatched = 0L,
-                widthh = (gridWidth-(marginBetweenInfoElements*2)),
-                heightt = 10000000,
-                marginBetweenInfoElements = marginBetweenInfoElements,
-                considerSelectedState = true,
-                addShowAllButton = false,
-                showAllButtonWidth = null,
-                addClickListeners = true,
-                onClick = {
-                    apply(it)
+            else {
+                for ((i, element) in fullGenreList.withIndex()) {
+                    if (element.second == genre) {
+                        fullGenreList[i] = Pair(!element.first, element.second)
+                    }
                 }
-            )
-            val newGenreGridView = newGenreGrid.container
-            val lp1 = newGenreGridView.layoutParams as ConstraintLayout.LayoutParams
-            lp1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
-            lp1.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
-            newGenreGridView.layoutParams = lp1
-            gridContainer.removeAllViews()
-            gridContainer.addView(newGenreGridView)
-            startsInfo.genreList = fullGenreList
+                val newGenreGrid = createGridOfGenres(
+                    context = context,
+                    infoContainerHeight = infoContainerHeight,
+                    genreList = fullGenreList,
+                    length = 1L,
+                    alreadyWatched = 0L,
+                    widthh = (gridWidth-(marginBetweenInfoElements*2)),
+                    heightt = 10000000,
+                    marginBetweenInfoElements = marginBetweenInfoElements,
+                    considerSelectedState = true,
+                    addShowAllButton = false,
+                    showAllButtonWidth = null,
+                    addClickListeners = true,
+                    onClick = {
+                        apply(it, false)
+                    },
+                    onLongClick = {
+                        apply(it, true)
+                    }
+                )
+                val newGenreGridView = newGenreGrid.container
+                val lp1 = newGenreGridView.layoutParams as ConstraintLayout.LayoutParams
+                lp1.startToStart = ConstraintLayout.LayoutParams.PARENT_ID
+                lp1.topToTop = ConstraintLayout.LayoutParams.PARENT_ID
+                newGenreGridView.layoutParams = lp1
+                gridContainer.removeAllViews()
+                gridContainer.addView(newGenreGridView)
+                startsInfo.genreList = fullGenreList
+            }
         }
 
         val genreGrid = createGridOfGenres(
@@ -4991,7 +5015,10 @@ object CreateOvDialog {
             showAllButtonWidth = null,
             addClickListeners = true,
             onClick = {
-                apply(it)
+                apply(it, false)
+            },
+            onLongClick = {
+                apply(it, true)
             }
         )
         val genreGridMarginTop = round((marginBetweenInfoElements.toFloat()*2f) / 1.2f).toInt()

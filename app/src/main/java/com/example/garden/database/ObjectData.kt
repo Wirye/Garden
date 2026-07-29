@@ -138,7 +138,7 @@ data class GenreSezon (
 data class GenreYear (
     override val displayNameId: Int = com.example.garden.R.string.Year,
     override val colorHex: String = "#BFDFDFDF",
-    val year: Int? = null,
+    var year: Int? = null,
 ) : GridGenreItem
 
 data class GenreAge (

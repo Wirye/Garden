@@ -64,6 +64,7 @@ import com.example.garden.database.GenreEpisodes
 import com.example.garden.database.GenreSezon
 import com.example.garden.database.GenreYear
 import com.example.garden.database.GridGenreItem
+import com.example.garden.database.MusicGenre
 import com.example.garden.database.ObjectData
 import com.example.garden.players.AnimeVideoPlayer
 import com.example.garden.ui.adapters.AnimePageAdapter
@@ -93,6 +94,7 @@ import com.example.garden.ui.utils.spaceItemDecorationInput
 import com.example.garden.ui.adapters.animePageSezonsAdapterListFormat
 import com.example.garden.ui.utils.ChapterInfo
 import com.example.garden.ui.utils.PageWithSearchInput
+import com.example.garden.utils.getGenreClass
 import com.example.garden.utils.getMediaDuration
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.ensureActive
@@ -1189,9 +1191,21 @@ class MainActivity : AppCompatActivity() {
                         val mainContainer = findViewById<ViewGroup>(R.id.main)
                         val createAnimePageContainerView = CreateOvDialog.createCardPage(this, info.info, resultSenderViewModel,
                             openGenreChoice = {
-                                val fullGenreList = info.info.genreList.map { Pair(true, it) } as MutableList<Pair<Boolean, GridGenreItem>>
-                                if (fullGenreList.isEmpty()) {
-                                    fullGenreList.add(Pair(false, Genre.Drama))
+                                var fullGenreList = info.info.genreList.map { Pair(true, it) } as MutableList<Pair<Boolean, GridGenreItem>>
+                                val avalibleGenreType = when (info.info.type) {
+                                    ElementType.Anime -> listOf(Genre::class.java)
+                                    ElementType.Manga -> listOf(Genre::class.java)
+                                    ElementType.Music -> listOf(MusicGenre::class.java)
+                                    else -> listOf()
+                                }
+                                fullGenreList = fullGenreList.filter { it.second.getGenreClass() in avalibleGenreType }.toMutableList()
+                                for (i in avalibleGenreType) {
+                                    if (!(fullGenreList.any { it.second.getGenreClass() == i })) {
+                                        when (i) {
+                                            Genre::class.java -> fullGenreList.add(Pair(false, Genre.Drama))
+                                            MusicGenre::class.java -> fullGenreList.add(Pair(false, MusicGenre.LoFi))
+                                        }
+                                    }
                                 }
                                 if(!(fullGenreList.any { it.second is GenreYear })) {
                                     fullGenreList.add(Pair(false, GenreYear()))

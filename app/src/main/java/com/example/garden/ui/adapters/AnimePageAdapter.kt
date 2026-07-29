@@ -409,7 +409,7 @@ class AnimePageAdapter(private val context: Context, private val showShowAllText
         for (i in genreList) {
             newGenreList.add(Pair(false, i))
         }
-        val genreGrid = createGridOfGenres(context, infoContainerHeight, newGenreList, parentCard.length, parentCard.alreadyWatched, genreContainerWidth, maxInfoSumHeight, marginBetweenInfoElements, considerSelectedState = false, addShowAllButton = true, showAllButtonWidth = null, addClickListeners = false, onClick = {})
+        val genreGrid = createGridOfGenres(context, infoContainerHeight, newGenreList, parentCard.length, parentCard.alreadyWatched, genreContainerWidth, maxInfoSumHeight, marginBetweenInfoElements, considerSelectedState = false, addShowAllButton = true, showAllButtonWidth = null, addClickListeners = false, onClick = {}, onLongClick = {})
 
         val genreGridView = genreGrid.container
         for (i in 0 until genreGridView.childCount) {
