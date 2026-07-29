@@ -206,6 +206,11 @@ enum class ElementType {
     Playlist,
     Carousel,
     Episode,
+    Chapter,
+    ChapterPage,
+    Song,
+    SongVerticalVideo,
+    SongHorizontalVideo,
 }
 
 data class ImageData(

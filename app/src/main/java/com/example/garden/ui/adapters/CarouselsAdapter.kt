@@ -46,7 +46,7 @@ import kotlin.collections.set
 import kotlin.math.abs
 import kotlin.math.round
 
-class CarouselsAdapter(private val context: Context, val addCardToCarousel: (Long) -> Unit, val clickOnItem: (objectData2) -> Unit, val previewMode: Boolean = false, val layersListForPreviewMode: List<Layer>? = null, val customLineWidth: Int? = null) : ListAdapter<objectData2, CarouselsAdapter.ViewHolder>(ObjectDiffCallback()) {
+class CarouselsAdapter(private val context: Context, val addCardToCarousel: (objectData2) -> Unit, val clickOnItem: (objectData2) -> Unit, val previewMode: Boolean = false, val layersListForPreviewMode: List<Layer>? = null, val customLineWidth: Int? = null) : ListAdapter<objectData2, CarouselsAdapter.ViewHolder>(ObjectDiffCallback()) {
 
     class ViewHolder(val constraintLayout: ConstraintLayout)  : RecyclerView.ViewHolder(constraintLayout) {
         var totalScrolledRecyclerView = 0
@@ -175,7 +175,7 @@ class CarouselsAdapter(private val context: Context, val addCardToCarousel: (Lon
                 scaleType = ImageView.ScaleType.CENTER_CROP
                 setOnClickListener {
                     requestFocus()
-                    addCardToCarousel(currentList[holder.position].id)
+                    addCardToCarousel(currentList[holder.position])
                 }
             }
             holder.constraintLayout.addView(addButton)

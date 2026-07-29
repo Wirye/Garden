@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.garden.appsettings.AnimeSettingsState
 import com.example.garden.appsettings.SettingsManager
+import com.example.garden.database.CarouselType
 import com.example.garden.database.ElementType
 import com.example.garden.database.Genre
 import com.example.garden.database.ImageData
@@ -18,6 +19,8 @@ import com.example.garden.database.ObjectDataDao
 import com.example.garden.episodeInfo
 import com.example.garden.ui.utils.findObjectByIdInList
 import com.example.garden.objectData2
+import com.example.garden.ui.utils.ChapterInfo
+import com.example.garden.utils.getMediaDuration
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -183,7 +186,8 @@ class MainViewModel(private val dao: ObjectDataDao, private val groupDao: Groups
                 marginBetweenElementsVertical = null,
                 link = null,
                 elementType = ElementType.Carousel,
-                genre = null
+                genre = null,
+                carouselType = CarouselType.AnimeNManga
             )
             dao.insert(cr1)
             val cd1 = ObjectData(
@@ -300,144 +304,10 @@ class MainViewModel(private val dao: ObjectDataDao, private val groupDao: Groups
                 marginBetweenElementsVertical = null,
                 link = null,
                 elementType = ElementType.Carousel,
-                genre = null
-            )
-            val cd3 = ObjectData(
-                id = 5,
-                page = 0,
-                parentId = 4,
-                position = 0,
-                name = "Звёздное дитя 3",
-                showAlreadyWatchedLine = false,
-                showIco = false,
-                childsShowName = false,
-                childsNamePosition = 0,
-                childsShowAlreadyWatchedLine = false,
-                image = ImageData(
-                    source = ImageSource.URL,
-                    value = "https://anilibria.top/storage/releases/posters/10089/PKg3Ru0WTMgTSSXhIpJICXjdE5DNvvLE.webp"
-                ),
-                description = null,
-                author = null,
-                type = null,
-                alreadyWatched = 32,
-                length = 50,
-                width = 308,
-                height = 308,
-                childsCornerRadius = null,
-                layoutType = null,
-                dovodchik = false,
-                showDovodchikDots = false,
-                objectsInOneLine = null,
-                maxLines = null,
-                paddingHorizontal = null,
-                paddingVertical = null,
-                marginBetweenElementsHorizontal = null,
-                marginBetweenElementsVertical = null,
-                link = LinkData(
-                    type = LinkType.SELF,
-                    targetId = null,
-                    contentPath = null
-                ),
-                elementType = ElementType.Anime,
-                genre = listOf(
-                    Genre.Drama,
-                    Genre.Detective,
-                    Genre.Shonen
-                )
-            )
-            val cd4 = ObjectData(
-                id = 6,
-                page = 0,
-                parentId = 4,
-                position = 0,
-                name = "Звёздное дитя 3",
-                showAlreadyWatchedLine = false,
-                showIco = false,
-                childsShowName = false,
-                childsNamePosition = 0,
-                childsShowAlreadyWatchedLine = false,
-                image = ImageData(
-                    source = ImageSource.URL,
-                    value = "https://anilibria.top/storage/releases/posters/10089/PKg3Ru0WTMgTSSXhIpJICXjdE5DNvvLE.webp"
-                ),
-                description = null,
-                author = null,
-                type = null,
-                alreadyWatched = 32,
-                length = 50,
-                width = 308,
-                height = 308,
-                childsCornerRadius = null,
-                layoutType = null,
-                dovodchik = false,
-                showDovodchikDots = false,
-                objectsInOneLine = null,
-                maxLines = null,
-                paddingHorizontal = null,
-                paddingVertical = null,
-                marginBetweenElementsHorizontal = null,
-                marginBetweenElementsVertical = null,
-                link = LinkData(
-                    type = LinkType.SELF,
-                    targetId = null,
-                    contentPath = null
-                ),
-                elementType = ElementType.Anime,
-                genre = listOf(
-                    Genre.Drama,
-                    Genre.Detective,
-                    Genre.Shonen
-                )
-            )
-            val cd5 = ObjectData(
-                id = 7,
-                page = 0,
-                parentId = 4,
-                position = 0,
-                name = "Звёздное дитя 3",
-                showAlreadyWatchedLine = false,
-                showIco = false,
-                childsShowName = false,
-                childsNamePosition = 0,
-                childsShowAlreadyWatchedLine = false,
-                image = ImageData(
-                    source = ImageSource.URL,
-                    value = "https://anilibria.top/storage/releases/posters/10089/PKg3Ru0WTMgTSSXhIpJICXjdE5DNvvLE.webp"
-                ),
-                description = null,
-                author = null,
-                type = null,
-                alreadyWatched = 32,
-                length = 50,
-                width = 308,
-                height = 308,
-                childsCornerRadius = null,
-                layoutType = null,
-                dovodchik = false,
-                showDovodchikDots = false,
-                objectsInOneLine = null,
-                maxLines = null,
-                paddingHorizontal = null,
-                paddingVertical = null,
-                marginBetweenElementsHorizontal = null,
-                marginBetweenElementsVertical = null,
-                link = LinkData(
-                    type = LinkType.SELF,
-                    targetId = null,
-                    contentPath = null
-                ),
-                elementType = ElementType.Anime,
-                genre = listOf(
-                    Genre.Drama,
-                    Genre.Detective,
-                    Genre.Shonen
-                )
+                genre = null,
+                carouselType = CarouselType.PlaylistNMusic
             )
             dao.insert(cr2)
-            dao.insert(cd3)
-            dao.insert(cd4)
-            dao.insert(cd5)
             groupDao.deleteAll()
             groupDao.insert(GroupsData(0,0, 2, 0))
             groupDao.insert(GroupsData(0,0,3,1))
@@ -511,11 +381,94 @@ class MainViewModel(private val dao: ObjectDataDao, private val groupDao: Groups
         val episodeId = dao.insert(data)
         return episodeId
     }
+    suspend fun insertChapter(chapterInfo: ChapterInfo, parentId: Long): Long {
+        val position = dao.getMaxPosition(parentId) ?: -1
+        val data = ObjectData(
+            id = 0,
+            page = 0,
+            parentId = parentId,
+            position = position+1,
+            name = chapterInfo.name,
+            alreadyWatched = 0,
+            length = chapterInfo.childs.size.toLong(),
+            link = LinkData(LinkType.SELF, null, null),
+            elementType = ElementType.Chapter,
+        )
+        val chapterId = dao.insert(data)
+        for ((i, element) in chapterInfo.childs.withIndex()) {
+            val chapterPageData = ObjectData(
+                id = 0,
+                page = 0,
+                parentId = chapterId,
+                position = i,
+                image = null,
+                type = null,
+                alreadyWatched = 0,
+                length = 1L,
+                link = LinkData(LinkType.CONTENT, null, element.value),
+                elementType = ElementType.ChapterPage,
+            )
+            dao.insert(chapterPageData)
+        }
+        return chapterId
+    }
     fun insertCardWithEpisodes(cardInfo: ObjectData, episodesInfo: List<episodeInfo>, parentId: Long) {
         viewModelScope.launch {
             val cardId = insertCard(cardInfo, parentId)
             for (i in 0 until episodesInfo.size) {
                 insertEpisode(episodesInfo[i], cardId)
+            }
+        }
+    }
+    fun insertCardWithChapters(cardInfo: ObjectData, chaptersInfo: List<ChapterInfo>, parentId: Long) {
+        viewModelScope.launch {
+            val cardId = insertCard(cardInfo, parentId)
+            for (i in chaptersInfo.indices) {
+                insertChapter(chaptersInfo[i], cardId)
+            }
+        }
+    }
+    fun insertMusicCard(cardInfo: ObjectData, parentId: Long, song: LinkData?, verticalVideo: LinkData?, horizontalVideo: LinkData?) {
+        viewModelScope.launch {
+            val cardId = insertCard(cardInfo, parentId)
+            if (song != null) {
+                val songData = ObjectData(
+                    id = 0,
+                    page = 0,
+                    parentId = cardId,
+                    position = 0,
+                    link = song,
+                    elementType = ElementType.Song,
+                    length = 0L,
+                    alreadyWatched = 0L,
+                )
+                dao.insert(songData)
+            }
+            if (verticalVideo != null) {
+                val videoData = ObjectData(
+                    id = 0,
+                    page = 0,
+                    parentId = cardId,
+                    position = 1,
+                    link = verticalVideo,
+                    elementType = ElementType.SongVerticalVideo,
+                    length = 0L,
+                    alreadyWatched = 0L,
+                )
+                dao.insert(videoData)
+            }
+            if (horizontalVideo != null) {
+                val videoData = ObjectData(
+                    id = 0,
+                    page = 0,
+                    parentId = cardId,
+                    position = 2,
+                    link = horizontalVideo,
+                    elementType = ElementType.SongHorizontalVideo,
+                    length = 0L,
+                    alreadyWatched = 0L
+                )
+                dao.insert(videoData)
             }
         }
     }

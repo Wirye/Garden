@@ -64,7 +64,6 @@ import com.example.garden.database.GenreEpisodes
 import com.example.garden.database.GenreSezon
 import com.example.garden.database.GenreYear
 import com.example.garden.database.GridGenreItem
-import com.example.garden.database.MusicGenre
 import com.example.garden.database.ObjectData
 import com.example.garden.players.AnimeVideoPlayer
 import com.example.garden.ui.adapters.AnimePageAdapter
@@ -94,6 +93,7 @@ import com.example.garden.ui.utils.spaceItemDecorationInput
 import com.example.garden.ui.adapters.animePageSezonsAdapterListFormat
 import com.example.garden.ui.utils.ChapterInfo
 import com.example.garden.ui.utils.PageWithSearchInput
+import com.example.garden.utils.getMediaDuration
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.ensureActive
 
@@ -336,6 +336,8 @@ data class createCardApply(
     var verticalVideo: LinkData? = null,
     var song: LinkData? = null,
     var carouselType: CarouselType,
+    var width: Int,
+    var height: Int,
 )
 
 data class SelectFileInput(
@@ -570,8 +572,8 @@ class MainActivity : AppCompatActivity() {
             onRotationChanged()
 
             // Адаптеры
-            val adapter1 = CarouselsAdapter(this, addCardToCarousel = { addCardToCarousel(it) }, clickOnItem = { showPage(infoOfPageToShow.infoOfAnimePage(it.id, true), null) })
-            val animePageSezonsPageAdapter = AnimePageSezonsPageAdapter(this, clickOnCard = { showPage(infoOfPageToShow.infoOfAnimePage(it.id, true), null) } )
+            val adapter1 = CarouselsAdapter(this, addCardToCarousel = { addCardToCarousel(it) }, clickOnItem = { clickOnItem(it) })
+            val animePageSezonsPageAdapter = AnimePageSezonsPageAdapter(this, clickOnItem = { clickOnItem(it) } )
             val animePageAdapter = AnimePageAdapter(this, showShowAllText = { text, size, callback -> showShowAllText(text, size, callback) }, animePageSezonsPageAdapter, openVideo = { showPage(infoOfPageToShow.infoOfVideoPlayer(it, true), null) })
             val wrapper = objectData2(
                 id = -1,
@@ -774,9 +776,32 @@ class MainActivity : AppCompatActivity() {
                                     val dataa = data as? createCardApply
                                     if (dataa != null) {
                                         var length = 0L
-                                        for (i in dataa.episodesList) {
-                                            length += i.length
+                                        when (dataa.type) {
+                                            ElementType.Anime -> {
+                                                for (i in dataa.episodesList) {
+                                                    length += i.length
+                                                }
+                                            }
+                                            ElementType.Manga -> {
+                                                for (i in dataa.chapterList) {
+                                                    for (o in i.childs) {
+                                                        length += 1L
+                                                    }
+                                                }
+                                            }
+                                            ElementType.Music -> {
+                                                val song = dataa.song
+                                                if (song != null) {
+                                                    val path = song.contentPath
+                                                    if (path != null && song.type == LinkType.CONTENT) {
+                                                        length = getMediaDuration(path, this@MainActivity)
+                                                    }
+                                                }
+                                            }
+                                            ElementType.Playlist -> {}
+                                            else -> {}
                                         }
+
                                         val cardData = ObjectData(
                                             id = 0,
                                             parentId = null,
@@ -796,8 +821,8 @@ class MainActivity : AppCompatActivity() {
                                             length = length,
                                             carouselType = null,
                                             carouselCollectionType = null,
-                                            width = 520,
-                                            height = 743,
+                                            width = dataa.width,
+                                            height = dataa.height,
                                             childsCornerRadius = null,
                                             layoutType = null,
                                             dovodchik = false,
@@ -812,10 +837,15 @@ class MainActivity : AppCompatActivity() {
                                             marginBetweenElementsHorizontal = null,
                                             marginBetweenElementsVertical = null,
                                             link = LinkData(LinkType.SELF, null, null),
-                                            elementType = ElementType.Anime,
+                                            elementType = dataa.type,
                                             genre = dataa.genreList
                                         )
-                                        viewModel.insertCardWithEpisodes(cardData,dataa.episodesList, dataa.parentId)
+                                        when (dataa.type) {
+                                            ElementType.Anime -> {viewModel.insertCardWithEpisodes(cardData,dataa.episodesList, dataa.parentId)}
+                                            ElementType.Manga -> {viewModel.insertCardWithChapters(cardData,dataa.chapterList, dataa.parentId)}
+                                            ElementType.Music -> {viewModel.insertMusicCard(cardData, dataa.parentId, dataa.song, dataa.horizontalVideo, dataa.verticalVideo)}
+                                            else -> {}
+                                        }
                                         hideLayer()
                                     }
                                 }
@@ -1387,7 +1417,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
     @SuppressLint("ClickableViewAccessibility")
-    fun addCardToCarousel(parentId: Long) {
+    fun addCardToCarousel(parent: objectData2) {
         if (!alreadyShowedAddBlock) {
             showPage(infoOfPageToShow.infoOfOverlayLayer(
                 OverLayLayer.CreateCardPage(
@@ -1397,32 +1427,27 @@ class MainActivity : AppCompatActivity() {
                     "",
                     mutableListOf(),
                     mutableListOf(),
-                    ElementType.Anime,
-                    parentId,
+                    type = when (parent.carouselType ?: CarouselType.Anime) {
+                        CarouselType.Anime -> ElementType.Anime
+                        CarouselType.Manga -> ElementType.Manga
+                        CarouselType.Music -> ElementType.Music
+                        CarouselType.Playlist -> ElementType.Playlist
+                        CarouselType.PlaylistNMusic -> ElementType.Music
+                        CarouselType.AnimeNManga -> ElementType.Anime
+                    },
+                    parent.id,
                     listOf(),
                     listOf(),
                     null,
                     null,
                     null,
-                    CarouselType.AnimeNManga
-                    ),
+                    parent.carouselType ?: CarouselType.Anime,
+                    parent.childsBaseWidth,
+                    parent.childsBaseHeight),
                 true),
                 null
             )
         }
-    }
-    fun test() {
-        val info = infoOfPageToShow.infoOfOverlayLayer(
-            info = OverLayLayer.PageWithSearch(
-                startsInfo = PageWithSearchInput.EditAnimeCardEpisodes(
-                    null,
-                    mutableListOf<episodeInfo>()
-                ),
-                "TEST"
-            ),
-            isItNewLayer = true
-        )
-        showPage(info, null)
     }
     fun createBlockBackgroundVieww(): ImageView {
         return ImageView(this).apply {
@@ -1545,6 +1570,23 @@ class MainActivity : AppCompatActivity() {
         nameOnFullScreenViewContainer.addView(nameOnFullScreenViewScrollContainer)
         createBlockBackgroundView(nameOnFullScreenViewContainer) {
                 alreadyShowed -> callback(alreadyShowed)
+        }
+    }
+    fun clickOnItem(item: objectData2) {
+        when (item.elementType) {
+            ElementType.Anime -> {
+                showPage(infoOfPageToShow.infoOfAnimePage(item.id, true), null)
+            }
+            ElementType.Manga -> {
+                Log.d("CLICKED ON MANGA ITEM","")
+            }
+            ElementType.Music -> {
+                Log.d("CLICKED ON MUSIC ITEM","")
+            }
+            ElementType.Playlist -> {
+                Log.d("CLICKED ON PLAYLIST ITEM","")
+            }
+            else -> {}
         }
     }
 }

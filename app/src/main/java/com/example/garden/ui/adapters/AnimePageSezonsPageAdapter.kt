@@ -19,7 +19,7 @@ data class animePageSezonsAdapterListFormat(
     var obj: objectData2,
     var settingsState: AnimeSettingsState
 )
-class AnimePageSezonsPageAdapter(private val context: Context, private val clickOnCard: (objectData2) -> Unit): ListAdapter<animePageSezonsAdapterListFormat, AnimePageSezonsPageAdapter.ViewHolder>(ObjectDiffCallback2()) {
+class AnimePageSezonsPageAdapter(private val context: Context, private val clickOnItem: (objectData2) -> Unit): ListAdapter<animePageSezonsAdapterListFormat, AnimePageSezonsPageAdapter.ViewHolder>(ObjectDiffCallback2()) {
     class ViewHolder(val constraintLayout: ConstraintLayout) : RecyclerView.ViewHolder(constraintLayout)
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -56,7 +56,7 @@ class AnimePageSezonsPageAdapter(private val context: Context, private val click
             val objData = parentCard.childs[i]
             obj.setOnClickListener {
                 obj.requestFocus()
-                clickOnCard(objData)
+                clickOnItem(objData)
             }
         }
     }

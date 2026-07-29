@@ -6,7 +6,7 @@ import android.util.Log
 import androidx.core.net.toUri
 import kotlin.math.floor
 
-fun getVideoDuration(uriString: String, context: Context): Long {
+fun getMediaDuration(uriString: String, context: Context): Long {
     val retriever = MediaMetadataRetriever()
     try {
         retriever.setDataSource(context, uriString.toUri())

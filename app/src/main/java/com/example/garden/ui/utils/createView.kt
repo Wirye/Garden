@@ -127,7 +127,7 @@ import com.example.garden.ui.utils.viewExtensions.findTextInputEditText
 import com.example.garden.utils.getAllGenresOfSameType
 import com.example.garden.utils.getFileNameFromUri
 import com.example.garden.utils.getGenreClass
-import com.example.garden.utils.getVideoDuration
+import com.example.garden.utils.getMediaDuration
 import com.example.garden.utils.search.searchInList
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.ensureActive
@@ -2462,6 +2462,8 @@ sealed class OverLayLayer {
         var verticalVideo: LinkData? = null,
         var song: LinkData? = null,
         var carouselType: CarouselType,
+        var width: Int?,
+        var height: Int?,
     ) : OverLayLayer()
     data class GenreChoice(
         var genreList: List<Pair<Boolean, GridGenreItem>>,
@@ -3729,6 +3731,8 @@ object CreateOvDialog {
                 }
             }
         }
+        startsInfo.width = startsInfo.width ?: calculateBaseCardSize(startsInfo.type, SizeType.MEDIUM).first ?: 0
+        startsInfo.height = startsInfo.height ?: calculateBaseCardSize(startsInfo.type, SizeType.MEDIUM).second ?: 0
         val avalibleGenreType = when (startsInfo.type) {
             ElementType.Anime -> listOf(Genre::class.java)
             ElementType.Manga -> listOf(Genre::class.java)
@@ -4780,7 +4784,7 @@ object CreateOvDialog {
                 val data = createCardApply(startsInfo.name, startsInfo.image, startsInfo.description,
                     startsInfo.author, startsInfo.genreList, startsInfo.episodesList, startsInfo.type,
                     startsInfo.parentId, startsInfo.chapterList, startsInfo.cardsList, startsInfo.horizontalVideo,
-                    startsInfo.verticalVideo, startsInfo.song, startsInfo.carouselType)
+                    startsInfo.verticalVideo, startsInfo.song, startsInfo.carouselType, startsInfo.width ?: 0, startsInfo.height ?: 0)
                 resultSenderViewModel.sendResult(ResultKeys.CREATE_CARD_APPLY,data)
             }
         }
@@ -4866,7 +4870,6 @@ object CreateOvDialog {
                     ResultKeys.CREATE_CARD_APPLY_CHAPTERS_LIST -> {
                         val dataa = data as? MutableList<ChapterInfo>
                         if (dataa != null) {
-                            Log.d("LIST<>!", "$dataa")
                             startsInfo.chapterList = dataa
                         }
                     }
@@ -5466,7 +5469,6 @@ object CreateOvDialog {
                 fun applyEpisodesListChanges(list: MutableList<episodeInfo>) {
                     episodesList = list
                     startsInfo.list = list
-                    Log.d("STATASD", "${startsInfo.list}  $episodesList")
                     editEpisodesBlockHeight = ((round(46f * baseDensity).toInt() + round(11f * baseDensity).toInt())*episodesList.size) -  if (episodesList.isNotEmpty()) round(11f * baseDensity).toInt() else 0
                     if (editEpisodesBlockHeight > maxEditEpisodesBlockHeight) {
                         editEpisodesBlockHeight = maxEditEpisodesBlockHeight
@@ -5553,7 +5555,7 @@ object CreateOvDialog {
                                 val dataa = data as? SelectFilesOutput
                                 if (dataa != null) {
                                     for (i in dataa.data) {
-                                        val episodeInfo = episodeInfo(null, "", LinkData(LinkType.CONTENT, null, i),getVideoDuration(i, context))
+                                        val episodeInfo = episodeInfo(null, "", LinkData(LinkType.CONTENT, null, i),getMediaDuration(i, context))
                                         editEpisodesAdapter?.addEpisode(episodeInfo)
                                     }
                                 }
@@ -5656,7 +5658,6 @@ object CreateOvDialog {
                 fun applyEpisodesListChanges(list: MutableList<ChapterInfo>) {
                     episodesList = list
                     startsInfo.list = list
-                    Log.d("STATASD", "${startsInfo.list}  $episodesList")
                     editEpisodesBlockHeight = ((round(46f * baseDensity).toInt() + round(11f * baseDensity).toInt())*episodesList.size) -  if (episodesList.isNotEmpty()) round(11f * baseDensity).toInt() else 0
                     if (editEpisodesBlockHeight > maxEditEpisodesBlockHeight) {
                         editEpisodesBlockHeight = maxEditEpisodesBlockHeight
