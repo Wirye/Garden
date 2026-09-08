@@ -46,6 +46,7 @@ import com.example.garden.ui.components.MainPageBottomBar
 import com.example.garden.ui.components.MainPageTopBar
 import com.example.garden.ui.theme.LocalWindowInfo
 import com.example.garden.ui.utils.hazeSourcesForUpperLayers
+import com.example.garden.ui.utils.toLayerCreateCarouselPage
 import com.example.garden.ui.utils.toObjectData
 import com.example.garden.viewmodel.LayersViewModel
 import com.example.garden.viewmodel.MainViewModel
@@ -139,7 +140,7 @@ fun MainScreen(
                             {
                                 val bsLast = backStack.last()
                                 if (bsLast is Layer.MainPage) {
-                                    if (bsLast.pageId != PageType.Home) {
+                                    if (bsLast.page != PageType.Home) {
                                         layersViewModel.openLayer(
                                             Layer.MainPage(PageType.Home, mutableMapOf(), 0)
                                         )
@@ -149,7 +150,7 @@ fun MainScreen(
                             {
                                 val bsLast = backStack.last()
                                 if (bsLast is Layer.MainPage) {
-                                    if (bsLast.pageId != PageType.Anime) {
+                                    if (bsLast.page != PageType.Anime) {
                                         layersViewModel.openLayer(
                                             Layer.MainPage(PageType.Anime, mutableMapOf(), 0)
                                         )
@@ -159,7 +160,7 @@ fun MainScreen(
                             {
                                 val bsLast = backStack.last()
                                 if (bsLast is Layer.MainPage) {
-                                    if (bsLast.pageId != PageType.Music) {
+                                    if (bsLast.page != PageType.Music) {
                                         layersViewModel.openLayer(
                                             Layer.MainPage(PageType.Music, mutableMapOf(), 0)
                                         )
@@ -169,7 +170,7 @@ fun MainScreen(
                             {
                                 val bsLast = backStack.last()
                                 if (bsLast is Layer.MainPage) {
-                                    if (bsLast.pageId != PageType.Manga) {
+                                    if (bsLast.page != PageType.Manga) {
                                         layersViewModel.openLayer(
                                             Layer.MainPage(PageType.Manga, mutableMapOf(), 0)
                                         )
@@ -179,14 +180,14 @@ fun MainScreen(
                             {
                                 val bsLast = backStack.last()
                                 if (bsLast is Layer.MainPage) {
-                                    if (bsLast.pageId != PageType.Download) {
+                                    if (bsLast.page != PageType.Download) {
                                         layersViewModel.openLayer(
                                             Layer.MainPage(PageType.Download, mutableMapOf(), 0)
                                         )
                                     }
                                 }
                             },
-                            pageState = if (bs is Layer.MainPage) bs.pageId else PageType.Home
+                            pageState = if (bs is Layer.MainPage) bs.page else PageType.Home
                         )
                     }
                 }
@@ -227,7 +228,7 @@ private fun LayerContent(
 
                     MainPage(
                         layer = layer,
-                        carouselsList = carouselsList.filter { it.page == layer.pageId },
+                        carouselsList = carouselsList.filter { it.page == layer.page },
                         isTopLayer = isTopLayer,
                         topBarHeight = topBarHeightState.value,
                         bottomBarHeight = bottomBarHeight,
@@ -260,7 +261,7 @@ private fun LayerContent(
                                     name = "",
                                     carouselType = CarouselType.Anime,
                                     layoutType = LayoutType.DEFAULT,
-                                    page = layer.pageId,
+                                    page = layer.page,
                                     childsSize = CardSize.MEDIUM,
                                     carouselCollectionType = null,
                                     childsShowName = true,
@@ -273,6 +274,11 @@ private fun LayerContent(
                                     objectsInOneLine = null,
                                     maxLines = null
                                 )
+                            )
+                        },
+                        openEditCarouselPage = {
+                            layersViewModel.openLayer(
+                                it.toLayerCreateCarouselPage(true)
                             )
                         }
                     )
@@ -331,7 +337,11 @@ private fun LayerContent(
                         onClose = { closeLayer() },
                         onSaveAndClose = { info ->
                             coroutineScope.launch {
-                                mainViewModel.insertCarousel(info.toObjectData(), layer.page)
+                                if (info.carouselId == null) {
+                                    mainViewModel.insertCarousel(info.toObjectData(), layer.page)
+                                } else {
+                                    mainViewModel.editCarousel(info.toObjectData())
+                                }
                             }
                             closeLayer()
                         }

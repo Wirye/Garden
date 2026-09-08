@@ -6,6 +6,7 @@ import com.example.garden.database.ObjectData
 
 fun Layer.CreateCarouselPage.toObjectData() : ObjectData {
     return ObjectData(
+        id = carouselId ?: 0,
         position = 0,
         name = name,
         page = page,

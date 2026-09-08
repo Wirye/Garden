@@ -44,10 +44,10 @@ class LayersViewModel(
 
     fun openLayer(layer: Layer) {
         if (layer is Layer.MainPage) {
-            val pageId = layer.pageId
-            val isLayerAlreadyExist = backStack.any { it is Layer.MainPage && it.pageId == pageId }
+            val pageId = layer.page
+            val isLayerAlreadyExist = backStack.any { it is Layer.MainPage && it.page == pageId }
             if (isLayerAlreadyExist) {
-                val index = backStack.indexOfFirst { it is Layer.MainPage && it.pageId == pageId }
+                val index = backStack.indexOfFirst { it is Layer.MainPage && it.page == pageId }
                 val layer = backStack[index]
                 backStack.add(layer)
                 backStack.removeAt(index)
@@ -77,9 +77,9 @@ class LayersViewModel(
             if (isMainPage) {
                 mainPagesStack.removeAt(mainPagesStack.lastIndex)
                 val lastMainPage = mainPagesStack.last()
-                val isLastMainPageAlreadyExist = backStack.any { it is Layer.MainPage && it.pageId == lastMainPage }
+                val isLastMainPageAlreadyExist = backStack.any { it is Layer.MainPage && it.page == lastMainPage }
                 if (isLastMainPageAlreadyExist) {
-                    val lastMainPageLayer = backStack.first { it is Layer.MainPage && it.pageId == lastMainPage }
+                    val lastMainPageLayer = backStack.first { it is Layer.MainPage && it.page == lastMainPage }
                     val mainPageLayer = backStack.last()
                     val index = backStack.indexOf(lastMainPageLayer)
                     backStack[index] = mainPageLayer

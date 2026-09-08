@@ -775,6 +775,14 @@ class MainViewModel(private val dao: ObjectDataDao, private val groupDao: Groups
         return carouselId
     }
 
+    suspend fun editCarousel(objectData: ObjectData) {
+        val position = dao.getPositionById(objectData.id)
+        if (position != null) {
+            objectData.position = position
+            dao.updateObject(objectData)
+        }
+    }
+
     suspend fun insertCard(objectData: ObjectData, parentId: Long): Long {
         val position = dao.getMaxPosition(parentId) ?: -1
         objectData.position = position+1

@@ -54,7 +54,7 @@ sealed class Layer (
     ) : Layer()
     @Parcelize
     data class MainPage(
-        val pageId: PageType,
+        val page: PageType,
         val scrollPositionCarousels: MutableMap<Long, Int>,
         var mainRecyclerScrollPosition: Int
     ) : Layer()
@@ -177,7 +177,6 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             viewModel
-            viewModel.insert()
             val windowSizeClass = calculateWindowSizeClass(this)
             GardenTheme(windowSizeClass = windowSizeClass) {
                 val customColors = remember { CustomColors() }

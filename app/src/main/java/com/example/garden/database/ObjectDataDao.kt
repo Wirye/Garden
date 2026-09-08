@@ -4,16 +4,8 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import com.google.gson.Gson
-import com.google.gson.GsonBuilder
-import com.google.gson.JsonDeserializationContext
-import com.google.gson.JsonDeserializer
-import com.google.gson.JsonElement
-import com.google.gson.JsonObject
-import com.google.gson.JsonSerializationContext
-import com.google.gson.JsonSerializer
+import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
-import java.lang.reflect.Type
 
 @Dao
 interface ObjectDataDao {
@@ -39,6 +31,12 @@ interface ObjectDataDao {
     suspend fun getMaxPositionOnPage(parentId: Long?, page: PageType): Int?
     @Query("SELECT * FROM objectData WHERE id = :id")
     suspend fun getById(id: Long): ObjectData?
+
+    @Query("SELECT position FROM objectData WHERE id = :id")
+    suspend fun getPositionById(id: Long): Int?
+
+    @Update
+    suspend fun updateObject(carousel: ObjectData)
 
     @Query("DELETE FROM objectData")
     suspend fun deleteAll()

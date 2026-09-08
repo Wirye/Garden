@@ -429,7 +429,11 @@ fun CreateCarouselPage(
                                             )
                                         ) {
                                             item("name") {
-                                                var name by rememberSaveable(stateViewModel.state.name) { mutableStateOf(stateViewModel.state.name) }
+                                                var name by rememberSaveable(stateViewModel.state.name) {
+                                                    mutableStateOf(
+                                                        stateViewModel.state.name
+                                                    )
+                                                }
 
                                                 OutlinedTextField(
                                                     value = name,
@@ -586,7 +590,11 @@ fun CreateCarouselPage(
                                             }
 
                                             item("preset") {
-                                                var isBottomSheetOpen by rememberSaveable { mutableStateOf(false) }
+                                                var isBottomSheetOpen by rememberSaveable {
+                                                    mutableStateOf(
+                                                        false
+                                                    )
+                                                }
 
                                                 if (isBottomSheetOpen) {
                                                     CarouselCollectionPicker(
@@ -1191,7 +1199,9 @@ fun CreateCarouselPage(
 
                                                     val steps = options.size - 1
 
-                                                    var sliderValue by rememberSaveable(stateViewModel.state.childsSize) {
+                                                    var sliderValue by rememberSaveable(
+                                                        stateViewModel.state.childsSize
+                                                    ) {
                                                         mutableIntStateOf(
                                                             options.indexOf(stateViewModel.state.childsSize)
                                                         )
@@ -1395,7 +1405,9 @@ fun CreateCarouselPage(
 
                                                     val steps = options.size - 1
 
-                                                    var sliderValue by rememberSaveable(stateViewModel.state.childsCornerRadius) {
+                                                    var sliderValue by rememberSaveable(
+                                                        stateViewModel.state.childsCornerRadius
+                                                    ) {
                                                         mutableIntStateOf(
                                                             options.indexOf(stateViewModel.state.childsCornerRadius)
                                                         )
@@ -1718,14 +1730,14 @@ fun CreateCarouselPage(
                                                             verticalAlignment = Alignment.CenterVertically,
                                                         ) {
                                                             Icon(
-                                                                painter = painterResource(R.drawable.add_ico),
+                                                                painter = painterResource(if (!stateViewModel.state.isEditMode) R.drawable.add_ico else R.drawable.save_ico),
                                                                 modifier = Modifier.size(
-                                                                    MaterialTheme.dimens.iconLarge
+                                                                    if (!stateViewModel.state.isEditMode) MaterialTheme.dimens.iconLarge else MaterialTheme.dimens.iconMedium
                                                                 ),
                                                                 contentDescription = null
                                                             )
                                                             Text(
-                                                                text = stringResource(R.string.addCarousel),
+                                                                text = stringResource(if (!stateViewModel.state.isEditMode) R.string.addCarousel else R.string.save),
                                                                 style = MaterialTheme.typography.labelLarge,
                                                                 modifier = Modifier.weight(
                                                                     1f,
@@ -1822,7 +1834,9 @@ private fun CarouselCollectionPicker(
                 style = MaterialTheme.typography.headlineSmall
             )
 
-            Spacer(modifier = Modifier.fillMaxWidth().height(MaterialTheme.spacing.medium))
+            Spacer(modifier = Modifier
+                .fillMaxWidth()
+                .height(MaterialTheme.spacing.medium))
 
             Column(
                 modifier = Modifier
@@ -1851,7 +1865,10 @@ private fun CarouselCollectionPicker(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Box(
-                                    modifier = Modifier.defaultMinSize(minWidth = MaterialTheme.dimens.minButtonHeight, minHeight = MaterialTheme.dimens.minButtonHeight),
+                                    modifier = Modifier.defaultMinSize(
+                                        minWidth = MaterialTheme.dimens.minButtonHeight,
+                                        minHeight = MaterialTheme.dimens.minButtonHeight
+                                    ),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     AsyncImage(

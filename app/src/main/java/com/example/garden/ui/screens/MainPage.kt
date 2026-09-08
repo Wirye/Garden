@@ -122,6 +122,7 @@ fun MainPage(
     bottomBarHeight: Dp,
     openCreateCardPage: (Long, CarouselType) -> Unit,
     openCreateCarouselPage: () -> Unit,
+    openEditCarouselPage: (ObjectData2) -> Unit
 ) {
     var visibleCardPos by rememberSaveable(layer.id) {
         mutableIntStateOf(layer.firstElementPosition)
@@ -237,7 +238,9 @@ fun MainPage(
                                 onEditCarousel = {},
                                 onClickCard = {},
                                 onWatchAllClick = {},
-                                onEditCarouselSettings = {},
+                                onEditCarouselSettings = {
+                                    openEditCarouselPage(it)
+                                },
                                 modifier = Modifier.offset(
                                     y = -arrangementSpacing
                                 )
@@ -361,7 +364,7 @@ private fun Carousel(
     carouselData: ObjectData2,
     onAddCard: (Long, CarouselType) -> Unit,
     onEditCarousel: () -> Unit,
-    onEditCarouselSettings: () -> Unit,
+    onEditCarouselSettings: (ObjectData2) -> Unit,
     onClickCard: (ObjectData2) -> Unit,
     onWatchAllClick: (() -> Unit)? = null
 ) {
@@ -466,7 +469,7 @@ private fun Carousel(
                                 text = stringResource(R.string.setting),
                                 onClick = {
                                     haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
-                                    onEditCarouselSettings()
+                                    onEditCarouselSettings(carouselData)
                                     isExpanded.value = false
                                 }
                             ) {
@@ -522,7 +525,11 @@ private fun Carousel(
                         val isWatchAllButtonExist = onWatchAllClick != null
                         if (isWatchAllButtonExist) {
                             Box(
-                                modifier = Modifier.defaultMinSize(minWidth = MaterialTheme.dimens.minButtonHeight, minHeight = MaterialTheme.dimens.minButtonHeight)
+                                modifier = Modifier
+                                    .defaultMinSize(
+                                        minWidth = MaterialTheme.dimens.minButtonHeight,
+                                        minHeight = MaterialTheme.dimens.minButtonHeight
+                                    )
                                     .clickable(
                                         interactionSource = remember { MutableInteractionSource() },
                                         indication = null
@@ -617,7 +624,9 @@ private fun Carousel(
                         }
 
                         LayoutType.CAROUSEL_FROM_FLAT_GRID -> {
-                            (columnWidth.value.dp - MaterialTheme.spacing.screenHorizontal - MaterialTheme.spacing.extraLarge).coerceAtMost(600.dp)
+                            (columnWidth.value.dp - MaterialTheme.spacing.screenHorizontal - MaterialTheme.spacing.extraLarge).coerceAtMost(
+                                600.dp
+                            )
                         }
 
                         else -> {
@@ -707,10 +716,14 @@ private fun Carousel(
                             key = { card -> card.id }
                         ) { card ->
                             if (gridMode) {
-                                val allCardsAmount = remember { mutableIntStateOf(0) }
-                                cards.forEach {
-                                    allCardsAmount.intValue += it.childs.size
+                                val allCardsAmount = remember {
+                                    mutableIntStateOf(0).apply {
+                                        cards.forEach {
+                                            intValue += it.childs.size
+                                        }
+                                    }
                                 }
+
                                 GridOfCards(
                                     allCardsAmount = allCardsAmount.intValue,
                                     gridInfo = card,

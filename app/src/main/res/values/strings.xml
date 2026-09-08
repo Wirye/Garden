@@ -138,4 +138,5 @@
     <string name="absent">Отсутствует</string>
     <string name="fastChoiceYouTubeMusic">Быстрый выбор: YouTube Music</string>
     <string name="spacer"></string>
+    <string name="save">Сохранить</string>
 </resources>
