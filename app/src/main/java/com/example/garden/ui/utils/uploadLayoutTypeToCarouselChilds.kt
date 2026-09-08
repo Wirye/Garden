@@ -57,12 +57,21 @@ fun uploadLayoutTypeToCarouselChilds(
             val amountOfGrids =
                 ceil(childs.size.toFloat() / (objectsInOneLine.toFloat() * maxLines.toFloat())).toInt()
             var currentI = 0
+            var currentPosition: Int
             var lastId = 0L
             for (o in 0 until amountOfGrids) {
+                currentPosition = 0
                 val childss = mutableListOf<ObjectData2>()
                 for (i in currentI until currentI + (maxLines * objectsInOneLine)) {
                     if (i <= childs.indices.last) {
                         val child = childs[i]
+                        when(parent.layoutType) {
+                            LayoutType.CAROUSEL_FROM_FLAT_GRID -> {child.layoutType = LayoutType.FLAT_GRID_ITEM }
+                            LayoutType.DEFAULT, LayoutType.CAROUSEL_FROM_GRID, LayoutType.CAROUSEL_GRID -> { child.layoutType = LayoutType.DEFAULT }
+                            else -> {}
+                        }
+                        child.position = currentPosition
+                        currentPosition += 1
                         childss.add(child)
                         currentI += 1
                     } else break
@@ -123,6 +132,11 @@ fun uploadLayoutTypeToCarouselChilds(
                 for (i in currentI until currentI + (maxLines * objectsInOneLine)) {
                     if (i <= childs.indices.last) {
                         val child = childs[i]
+                        when(parent.layoutType) {
+                            LayoutType.CAROUSEL_FROM_FLAT_GRID -> {child.layoutType = LayoutType.FLAT_GRID_ITEM }
+                            LayoutType.DEFAULT, LayoutType.CAROUSEL_FROM_GRID, LayoutType.CAROUSEL_GRID -> { child.layoutType = LayoutType.DEFAULT }
+                            else -> {}
+                        }
                         child.position = currentPosition
                         currentPosition += 1
                         childss.add(child)
