@@ -1,53 +1,75 @@
 package com.example.garden.ui.utils
 
 import android.util.Log
-import com.example.garden.baseDensity
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import com.example.garden.database.ElementType
-import com.example.garden.objectData2
-import com.example.garden.screenWidth
+import com.example.garden.database.LayoutType
+import com.example.garden.database.ObjectData2
+import com.example.garden.database.PageType
+import com.example.garden.ui.theme.spacing
+import com.example.garden.ui.theme.windowSizeClass
 import kotlin.math.ceil
 import kotlin.math.round
 
-fun uploadLayoutTypeToCarouselChilds(childs: List<objectData2>, parent: objectData2, customLineWidth: Int? = null): List<objectData2> {
+@Composable
+fun uploadLayoutTypeToCarouselChilds(
+    childs: List<ObjectData2>,
+    parent: ObjectData2,
+    lineWidth: Dp
+): List<ObjectData2> {
     val layoutType = parent.layoutType
-    if (layoutType != 2) return childs
+    if (layoutType != LayoutType.CAROUSEL_FROM_GRID && layoutType != LayoutType.CAROUSEL_FROM_FLAT_GRID) return childs
     else if (childs.isEmpty()) return childs
-    else if (childs[0].layoutType == 0) return childs
+    else if (childs[0].layoutType == LayoutType.CARD_GRID) return childs
     else {
-        val ress = mutableListOf<objectData2>()
-        val paddingHorizontal = parent.paddingHorizontal ?: round(19f*baseDensity).toInt()
-        val lineWidth = (customLineWidth ?: screenWidth) - (paddingHorizontal*2)
+        val ress = mutableListOf<ObjectData2>()
+        val paddingHorizontal = MaterialTheme.spacing.screenHorizontal
+        val lineWidth = when (layoutType) {
+            LayoutType.CAROUSEL_FROM_FLAT_GRID -> lineWidth - paddingHorizontal
+            else -> lineWidth - (paddingHorizontal * 2)
+        }
         if (parent.adaptiveGridSize) {
-            if (!(childs.any { it.width != null })) {
-                Log.d("CarouselsAdapter (uploadLayoutTypeToChilds)", "Childs doesn't have width")
+            if (parent.childsSize == null) {
+                Log.d("Carousel (uploadLayoutTypeToChilds)", "Childs doesn't have size")
                 return emptyList()
             }
-            val width = childs.first { it.width != null }.width
-            val height = childs.first { it.height != null }.height
-            val margin = parent.marginBetweenElementsHorizontal ?: round(4f*baseDensity).toInt()
-            val amountOfCards = cardScaleCalcForGrid(width, height, lineWidth, margin, null).third.toInt()
+            val cardType = parent.childs.first().elementType
+            val width = when (layoutType) {
+                LayoutType.CAROUSEL_FROM_FLAT_GRID -> lineWidth
+                else -> parent.childsSize?.toDp(
+                    cardType,
+                    lineWidth,
+                    MaterialTheme.windowSizeClass.widthSizeClass
+                )?.width ?: return emptyList()
+            }
+
+            val margin = when(layoutType) {
+                LayoutType.CAROUSEL_FROM_FLAT_GRID -> 0.dp
+                else -> MaterialTheme.spacing.marginBetweenElementsInGrid
+            }
+            val amountOfCards = cardScaleCalcForGrid(width, lineWidth, margin, null).second.toInt()
             val res = calculateObjectsInOneLineAndMaxLinesForAdaptiveGridSize(parent, amountOfCards)
-            val maxLines = res.second ?: 1000000
+            val maxLines = res.second ?: Int.MAX_VALUE
             val objectsInOneLine = res.first
-            val amountOfGrids = ceil(childs.size.toFloat() / (objectsInOneLine.toFloat() * maxLines.toFloat())).toInt()
+            val amountOfGrids =
+                ceil(childs.size.toFloat() / (objectsInOneLine.toFloat() * maxLines.toFloat())).toInt()
             var currentI = 0
-            var currentPosition = 0
+            var lastId = 0L
             for (o in 0 until amountOfGrids) {
-                currentPosition = 0
-                val childss = mutableListOf<objectData2>()
+                val childss = mutableListOf<ObjectData2>()
                 for (i in currentI until currentI + (maxLines * objectsInOneLine)) {
                     if (i <= childs.indices.last) {
                         val child = childs[i]
-                        child.position = currentPosition
-                        currentPosition += 1
                         childss.add(child)
                         currentI += 1
-                    }
-                    else break
+                    } else break
                 }
-                val gridWrapper = objectData2(
-                    id = 0,
-                    page = 0,
+                val gridWrapper = ObjectData2(
+                    id = lastId,
+                    page = PageType.Home,
                     position = o,
                     childsShowAuthor = parent.childsShowAuthor,
                     childsShowName = parent.childsShowName,
@@ -58,33 +80,46 @@ fun uploadLayoutTypeToCarouselChilds(childs: List<objectData2>, parent: objectDa
                     length = 0,
                     elementType = ElementType.Carousel,
                     childs = childss,
-                    layoutType = 0,
-                    paddingHorizontal = paddingHorizontal,
-                    marginBetweenElementsHorizontal = parent.marginBetweenElementsHorizontal,
-                    marginBetweenElementsVertical = parent.marginBetweenElementsVertical,
+                    layoutType = when (layoutType) {
+                        LayoutType.CAROUSEL_FROM_FLAT_GRID -> LayoutType.CARD_FLAT_GRID
+                        else -> LayoutType.CARD_GRID
+                    },
                     objectsInOneLine = objectsInOneLine,
                     maxLines = maxLines,
                 )
                 ress.add(gridWrapper)
+                lastId += 1L
             }
-        }
-        else {
-            if (!(childs.any { it.width != null })) {
-                Log.d("CarouselsAdapter (uploadLayoutTypeToChilds)", "Childs doesn't have width")
+        } else {
+            if (parent.childsSize == null) {
+                Log.d("Carousel (uploadLayoutTypeToChilds)", "Childs doesn't have size")
                 return emptyList()
             }
-            val width = childs.first { it.width != null }.width
-            val height = childs.first { it.height != null }.height
-            val margin = parent.marginBetweenElementsHorizontal ?: round(4f*baseDensity).toInt()
-            val amountOfCards = cardScaleCalcForGrid(width, height, lineWidth, margin, null).third.toInt()
+            val cardType = parent.childs.first().elementType
+            val width = when (layoutType) {
+                LayoutType.CAROUSEL_FROM_FLAT_GRID -> lineWidth
+                else -> parent.childsSize?.toDp(
+                    cardType,
+                    lineWidth,
+                    MaterialTheme.windowSizeClass.widthSizeClass
+                )?.width ?: return emptyList()
+            }
+
+            val margin = when(layoutType) {
+                LayoutType.CAROUSEL_FROM_FLAT_GRID -> 0.dp
+                else -> MaterialTheme.spacing.marginBetweenElementsInGrid
+            }
+            val amountOfCards = cardScaleCalcForGrid(width, lineWidth, margin, null).second.toInt()
             val objectsInOneLine = parent.objectsInOneLine ?: amountOfCards
-            val maxLines = parent.maxLines ?: 1000000
-            val amountOfGrids = ceil(childs.size.toFloat() / (objectsInOneLine.toFloat() * maxLines.toFloat())).toInt()
+            val maxLines = parent.maxLines ?: Int.MAX_VALUE
+            val amountOfGrids =
+                ceil(childs.size.toFloat() / (objectsInOneLine.toFloat() * maxLines.toFloat())).toInt()
             var currentI = 0
-            var currentPosition = 0
+            var currentPosition: Int
+            var lastId = 0L
             for (o in 0 until amountOfGrids) {
                 currentPosition = 0
-                val childss = mutableListOf<objectData2>()
+                val childss = mutableListOf<ObjectData2>()
                 for (i in currentI until currentI + (maxLines * objectsInOneLine)) {
                     if (i <= childs.indices.last) {
                         val child = childs[i]
@@ -92,12 +127,11 @@ fun uploadLayoutTypeToCarouselChilds(childs: List<objectData2>, parent: objectDa
                         currentPosition += 1
                         childss.add(child)
                         currentI += 1
-                    }
-                    else break
+                    } else break
                 }
-                val gridWrapper = objectData2(
-                    id = 0,
-                    page = 0,
+                val gridWrapper = ObjectData2(
+                    id = lastId,
+                    page = PageType.Home,
                     position = o,
                     childsShowAuthor = parent.childsShowAuthor,
                     childsShowName = parent.childsShowName,
@@ -108,16 +142,51 @@ fun uploadLayoutTypeToCarouselChilds(childs: List<objectData2>, parent: objectDa
                     length = 0,
                     elementType = ElementType.Carousel,
                     childs = childss,
-                    layoutType = 0,
-                    paddingHorizontal = paddingHorizontal,
-                    marginBetweenElementsHorizontal = parent.marginBetweenElementsHorizontal,
-                    marginBetweenElementsVertical = parent.marginBetweenElementsVertical,
+                    layoutType = when (layoutType) {
+                        LayoutType.CAROUSEL_FROM_FLAT_GRID -> LayoutType.CARD_FLAT_GRID
+                        else -> LayoutType.CARD_GRID
+                    },
                     objectsInOneLine = objectsInOneLine,
                     maxLines = parent.maxLines,
                 )
                 ress.add(gridWrapper)
+                lastId += 1L
             }
         }
         return ress
     }
+}
+
+fun calculateObjectsInOneLineAndMaxLinesForAdaptiveGridSize(
+    parent: ObjectData2,
+    objectsInOneLine: Int
+): Pair<Int, Int?> {
+    val objectsInOneLine2 = objectsInOneLine.coerceIn(
+        parent.objectsInOneLine ?: 1,
+        parent.maxObjectsInOneLineForAdaptiveSize ?: Int.MAX_VALUE
+    )
+    var maxLines: Int?
+    if (objectsInOneLine2 == parent.maxObjectsInOneLineForAdaptiveSize) {
+        maxLines = parent.maxLinesForAdaptiveSize
+    } else if (objectsInOneLine2 == parent.objectsInOneLine) {
+        maxLines = parent.maxLines
+    } else if (parent.maxObjectsInOneLineForAdaptiveSize == null && parent.objectsInOneLine == null) {
+        maxLines = parent.maxLinesForAdaptiveSize
+    } else if (parent.maxObjectsInOneLineForAdaptiveSize != null && parent.objectsInOneLine == null) {
+        maxLines = parent.maxLines
+    } else if (parent.maxObjectsInOneLineForAdaptiveSize == null) {
+        maxLines = parent.maxLinesForAdaptiveSize
+    } else {
+        val maxObjectsInOneLineForAdaptiveSize = parent.maxObjectsInOneLineForAdaptiveSize!!
+        val objectsInOneLinee = parent.objectsInOneLine!!
+        val maxLinesForAdaptiveSize = parent.maxLinesForAdaptiveSize!!
+        val maxLiness = parent.maxLines!!
+        val steps = maxObjectsInOneLineForAdaptiveSize - objectsInOneLinee
+        val currentStep = objectsInOneLine2 - objectsInOneLinee
+        val pr = currentStep.toFloat() / steps.toFloat()
+        val linesSteps = maxLinesForAdaptiveSize - maxLiness
+        val interpolatedLines = linesSteps.toFloat() * pr
+        maxLines = round(maxLiness.toFloat() + interpolatedLines).toInt()
+    }
+    return Pair(objectsInOneLine2, maxLines)
 }

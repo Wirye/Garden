@@ -1,99 +1,7 @@
 package com.example.garden.database
 
 import androidx.room.TypeConverter
-import com.google.gson.Gson
-import com.google.gson.GsonBuilder
-import com.google.gson.JsonDeserializationContext
-import com.google.gson.JsonDeserializer
-import com.google.gson.JsonElement
-import com.google.gson.JsonObject
-import com.google.gson.JsonSerializationContext
-import com.google.gson.JsonSerializer
-import com.google.gson.reflect.TypeToken
-import java.lang.reflect.Type
 
-
-object GenreGson {
-
-    val gson: Gson = GsonBuilder().apply {
-
-        // Сначала регистрируем адаптер для самого интерфейса
-        registerTypeAdapter(GridGenreItem::class.java, object :
-            JsonSerializer<GridGenreItem>,
-            JsonDeserializer<GridGenreItem> {
-
-            override fun serialize(
-                src: GridGenreItem,
-                typeOfSrc: Type,
-                context: JsonSerializationContext
-            ): JsonElement {
-                val json = JsonObject()
-                json.addProperty("type", src::class.simpleName)
-
-                when (src) {
-                    is Genre -> {
-                        json.addProperty("isEnum", true)
-                        json.addProperty("name", src.name)
-                    }
-                    is MusicGenre -> {
-                        json.addProperty("isEnum", true)
-                        json.addProperty("name", src.name)
-                    }
-                    else -> {
-                        json.add("data", context.serialize(src))
-                    }
-                }
-
-                return json
-            }
-
-            override fun deserialize(
-                json: JsonElement,
-                typeOfT: Type,
-                context: JsonDeserializationContext
-            ): GridGenreItem {
-                val obj = json.asJsonObject
-                val typeName = obj.get("type").asString
-
-                return if (obj.has("isEnum")) {
-                    val name = obj.get("name").asString
-                    when (typeName) {
-                        "Genre" -> Genre.valueOf(name)
-                        "MusicGenre" -> MusicGenre.valueOf(name)
-                        else -> throw IllegalArgumentException("Unknown enum: $typeName")
-                    }
-                } else {
-                    val data = obj.get("data")
-                    when (typeName) {
-                        "GenreSezon" -> context.deserialize(data, GenreSezon::class.java)
-                        "GenreYear" -> context.deserialize(data, GenreYear::class.java)
-                        "GenreAge" -> context.deserialize(data, GenreAge::class.java)
-                        "GenreEpisodes" -> context.deserialize(data, GenreEpisodes::class.java)
-                        else -> throw IllegalArgumentException("Unknown type: $typeName")
-                    }
-                }
-            }
-        })
-
-        // И отдельно для enum'ов, чтобы Gson не использовал дефолтную сериализацию строкой
-        registerTypeAdapter(Genre::class.java, JsonSerializer<Genre> { src, _, _ ->
-            JsonObject().apply {
-                addProperty("type", "Genre")
-                addProperty("isEnum", true)
-                addProperty("name", src.name)
-            }
-        })
-
-        registerTypeAdapter(MusicGenre::class.java, JsonSerializer<MusicGenre> { src, _, _ ->
-            JsonObject().apply {
-                addProperty("type", "MusicGenre")
-                addProperty("isEnum", true)
-                addProperty("name", src.name)
-            }
-        })
-
-    }.create()
-}
 class Converters {
     @TypeConverter
     fun fromGenreList(value: List<GridGenreItem>?): String? {
@@ -111,7 +19,7 @@ class Converters {
     }
 
     @TypeConverter
-    fun toGenreList(value: String?): List<GridGenreItem>? {
+    fun toGenreList(value: String?): List<GridGenreItem> {
         if (value.isNullOrEmpty()) return emptyList()
 
         return value.split("|").mapNotNull { str ->
@@ -129,14 +37,14 @@ class Converters {
     }
 
     @TypeConverter
-    fun fromImageSource(value: ImageSource): String = value.name
-    @TypeConverter
-    fun toImageSource(value: String): ImageSource = ImageSource.valueOf(value)
-
-    @TypeConverter
     fun fromCornerType(value: SizeType): String = value.name
     @TypeConverter
     fun toCornerType(value: String): SizeType = SizeType.valueOf(value)
+
+    @TypeConverter
+    fun fromCardSize(value: CardSize): String = value.name
+    @TypeConverter
+    fun toCardSize(value: String): CardSize = CardSize.valueOf(value)
 
     @TypeConverter
     fun fromLinkType(value: LinkType): String = value.name
@@ -152,4 +60,46 @@ class Converters {
     fun fromCarouselType(value: CarouselType): String = value.name
     @TypeConverter
     fun toCarouselType(value: String): CarouselType = CarouselType.valueOf(value)
+
+    @TypeConverter
+    fun fromPageType(value: PageType): String = value.name
+    @TypeConverter
+    fun toPageType(value: String): PageType = PageType.valueOf(value)
+
+    @TypeConverter
+    fun fromLayoutType(value: LayoutType): String = value.name
+    @TypeConverter
+    fun toLayoutType(value: String): LayoutType = LayoutType.valueOf(value)
+}
+
+class ImageDataConverter {
+    @TypeConverter
+    fun fromImageData(imageData: ImageData?): String? {
+        return when (imageData) {
+            is ImageData.Resource -> "RES:${imageData.resId}"
+            is ImageData.Device -> "DEV:${imageData.path}"
+            is ImageData.Url -> "URL:${imageData.url}"
+            null -> null
+        }
+    }
+
+    @TypeConverter
+    fun toImageData(data: String?): ImageData? {
+        if (data == null) return null
+        return when {
+            data.startsWith("RES:") -> {
+                val resId = data.removePrefix("RES:").toIntOrNull() ?: 0
+                ImageData.Resource(resId)
+            }
+            data.startsWith("DEV:") -> {
+                val path = data.removePrefix("DEV:")
+                ImageData.Device(path)
+            }
+            data.startsWith("URL:") -> {
+                val url = data.removePrefix("URL:")
+                ImageData.Url(url)
+            }
+            else -> null
+        }
+    }
 }

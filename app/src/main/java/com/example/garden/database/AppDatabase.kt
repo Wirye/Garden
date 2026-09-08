@@ -6,8 +6,8 @@ import androidx.room.RoomDatabase
 import android.content.Context
 import androidx.room.TypeConverters
 
-@Database(entities = [ObjectData::class], version = 9)
-@TypeConverters(Converters::class)
+@Database(entities = [ObjectData::class], version = 12)
+@TypeConverters(Converters::class, ImageDataConverter::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun objectDataDao(): ObjectDataDao
 
@@ -21,7 +21,7 @@ abstract class AppDatabase : RoomDatabase() {
                     context,
                     AppDatabase::class.java,
                     "garden_beta.db"
-                ).build().also { Instance = it }
+                ).fallbackToDestructiveMigration(true).build().also { Instance = it }
             }
         }
     }

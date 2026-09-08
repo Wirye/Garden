@@ -1,6 +1,5 @@
 package com.example.garden.utils
 
-import android.util.Log
 import com.example.garden.database.GridGenreItem
 
 fun getAllGenresOfSameType(selected: List<GridGenreItem>): List<GridGenreItem> {

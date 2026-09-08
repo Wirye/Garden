@@ -6,6 +6,7 @@ data class SearchResult(
     val text: String,
     val score: Int
 )
+
 fun searchInList(list: List<String>, text: String, minScore: Int): List<String> {
     if (text.isEmpty()) return emptyList()
     val minScore = minScore.coerceIn(0,100)

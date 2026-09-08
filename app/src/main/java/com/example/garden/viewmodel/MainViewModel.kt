@@ -1,47 +1,57 @@
 package com.example.garden.viewmodel
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.garden.appsettings.AnimeSettingsState
 import com.example.garden.appsettings.SettingsManager
+import com.example.garden.database.CardSize
 import com.example.garden.database.CarouselType
 import com.example.garden.database.ElementType
 import com.example.garden.database.Genre
 import com.example.garden.database.ImageData
-import com.example.garden.database.ImageSource
+import com.example.garden.database.LayoutType
 import com.example.garden.database.LinkData
 import com.example.garden.database.LinkType
+import com.example.garden.database.ObjectData
+import com.example.garden.database.ObjectData2
+import com.example.garden.database.ObjectDataDao
+import com.example.garden.database.PageType
+import com.example.garden.database.SizeType
 import com.example.garden.database.groups.GroupsData
 import com.example.garden.database.groups.GroupsDataDao
-import com.example.garden.database.ObjectData
-import com.example.garden.database.ObjectDataDao
-import com.example.garden.episodeInfo
+import com.example.garden.ui.screens.ChapterInfo
+import com.example.garden.ui.screens.EpisodeInfo
 import com.example.garden.ui.utils.findObjectByIdInList
-import com.example.garden.objectData2
-import com.example.garden.ui.utils.ChapterInfo
-import com.example.garden.utils.getMediaDuration
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import kotlin.math.round
 
-data class animePageUIModel(
-    val animeData: objectData2?,
+data class AnimePageUIModel(
+    val animeData: ObjectData2?,
     val groups: List<GroupsData>,
     val settingsState: AnimeSettingsState
 )
 
-class MainViewModel(private val dao: ObjectDataDao, private val groupDao: GroupsDataDao, private val settingsManager: SettingsManager, private val baseDensity1: Float) : ViewModel() {
-    val uiDataFlow: Flow<List<objectData2>> = dao.getAll().map {
-        allItems ->
-        val roots = allItems.filter { it.parentId == null }.sortedBy { it.position }
-        roots.map { build(it,allItems) }
-    }
-    private val _animePageObjectFlow = MutableStateFlow<objectData2?>(null)
+class MainViewModel(private val dao: ObjectDataDao, private val groupDao: GroupsDataDao, private val settingsManager: SettingsManager) : ViewModel() {
+    val uiDataFlow: StateFlow<List<ObjectData2>> = dao.getAll()
+        .map { allItems ->
+            val roots = allItems.filter { it.parentId == null }.sortedBy { it.position }
+            roots.map { build(it, allItems) }
+        }
+        .flowOn(Dispatchers.Default)
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+    private val _animePageObjectFlow = MutableStateFlow<ObjectData2?>(null)
 
     val groupsFlow: Flow<List<GroupsData>> = groupDao.getAll()
     val settingsStateFlow = settingsManager.settingsStateFlow
@@ -52,7 +62,7 @@ class MainViewModel(private val dao: ObjectDataDao, private val groupDao: Groups
         settingsStateFlow
     ) {
         animePageObject, groups, settingsState ->
-        animePageUIModel(
+        AnimePageUIModel(
             animeData = animePageObject,
             groups = groups,
             settingsState = AnimeSettingsState(settingsState.showChildsName, settingsState.childsNamePosition)
@@ -67,7 +77,7 @@ class MainViewModel(private val dao: ObjectDataDao, private val groupDao: Groups
 
     fun getGroupById(id: Long, list: List<GroupsData>): Int? {
         var res: Int? = null
-        for (i in 0 until list.size) {
+        for (i in list.indices) {
             val obj = list[i]
             if (obj.id == id) {
                 res = obj.groupNumber
@@ -79,7 +89,7 @@ class MainViewModel(private val dao: ObjectDataDao, private val groupDao: Groups
 
     fun getGroupObjectsByGroupNumber(groupNumber: Int, list: List<GroupsData>): List<GroupsData> {
         val res = mutableListOf<GroupsData>()
-        for (i in 0 until list.size) {
+        for (i in list.indices) {
             val obj = list[i]
             if (obj.groupNumber == groupNumber) {
                 res.add(obj)
@@ -89,9 +99,9 @@ class MainViewModel(private val dao: ObjectDataDao, private val groupDao: Groups
         return res
     }
 
-    fun getGroupObjectsByIdOfOne(id: Long, list: List<objectData2>, list2: List<GroupsData>): List<objectData2> {
+    fun getGroupObjectsByIdOfOne(id: Long, list: List<ObjectData2>, list2: List<GroupsData>): List<ObjectData2> {
         val groupNumber = getGroupById(id, list2)
-        val groupObjects = mutableListOf<objectData2>()
+        val groupObjects = mutableListOf<ObjectData2>()
         if (groupNumber != null) {
             val groupObjectsIds = getGroupObjectsByGroupNumber(groupNumber, list2)
             for (i in groupObjectsIds) {
@@ -102,16 +112,16 @@ class MainViewModel(private val dao: ObjectDataDao, private val groupDao: Groups
             }
         }
         groupObjects.sortBy { it.position }
-        for (i in 0 until groupObjects.size) {
-            groupObjects[i].position = i
+        for ((i, element) in groupObjects.withIndex()) {
+            element.position = i
         }
         return groupObjects
     }
 
-    private fun build(current: ObjectData, allItems: List<ObjectData>): objectData2 {
+    private fun build(current: ObjectData, allItems: List<ObjectData>): ObjectData2 {
         val dataSource = if (current.link?.type == LinkType.INSERT && current.link?.targetId != null) { allItems.find { it.id == current.link?.targetId } ?: current } else { current }
         val childs = allItems.filter { it.parentId == if (dataSource != current) {dataSource.id} else {current.id } }.sortedBy { it.position }
-        return objectData2(
+        return ObjectData2(
             id = current.id,
             page = current.page,
             position = current.position,
@@ -130,10 +140,7 @@ class MainViewModel(private val dao: ObjectDataDao, private val groupDao: Groups
             length = dataSource.length,
             carouselType = dataSource.carouselType,
             carouselCollectionType = dataSource.carouselCollectionType,
-            width = if (current.width != null) {round(current.width!!.toFloat() * baseDensity1).toInt()} else {null},
-            height = if (current.height != null) {round(current.height!!.toFloat() * baseDensity1).toInt()} else {null},
-            childsBaseWidth = if (current.childsBaseWidth != null) {round(current.childsBaseWidth!!.toFloat() * baseDensity1).toInt()} else {null},
-            childsBaseHeight = if (current.childsBaseHeight != null) {round(current.childsBaseHeight!!.toFloat() * baseDensity1).toInt()} else {null},
+            childsSize = current.childsSize,
             childsCornerRadius = current.childsCornerRadius,
             layoutType = dataSource.layoutType,
             dovodchik = current.dovodchik,
@@ -143,10 +150,6 @@ class MainViewModel(private val dao: ObjectDataDao, private val groupDao: Groups
             adaptiveGridSize = current.adaptiveGridSize,
             maxObjectsInOneLineForAdaptiveSize = current.maxObjectsInOneLineForAdaptiveSize,
             maxLinesForAdaptiveSize = current.maxLinesForAdaptiveSize,
-            paddingHorizontal = if (current.paddingHorizontal != null) {round(current.paddingHorizontal!!.toFloat() * baseDensity1).toInt()} else {null},
-            paddingVertical = if (current.paddingVertical != null) {round(current.paddingVertical!!.toFloat() * baseDensity1).toInt()} else {null},
-            marginBetweenElementsHorizontal = if (current.marginBetweenElementsHorizontal != null) {round(current.marginBetweenElementsHorizontal!!.toFloat() * baseDensity1).toInt()} else {null},
-            marginBetweenElementsVertical = if (current.marginBetweenElementsVertical != null) {round(current.marginBetweenElementsVertical!!.toFloat() * baseDensity1).toInt()} else {null},
             childs = childs.map { build(it,allItems) },
             link = dataSource.link,
             elementType = dataSource.elementType,
@@ -157,7 +160,7 @@ class MainViewModel(private val dao: ObjectDataDao, private val groupDao: Groups
         viewModelScope.launch(Dispatchers.IO) {
             val cr1 = ObjectData(
                 id = 1,
-                page = 0,
+                page = PageType.Home,
                 parentId = null,
                 position = 0,
                 name = "Любимые аниме",
@@ -172,18 +175,13 @@ class MainViewModel(private val dao: ObjectDataDao, private val groupDao: Groups
                 type = null,
                 alreadyWatched = 0,
                 length = 0,
-                width = null,
-                height = null,
-                childsCornerRadius = null,
-                layoutType = null,
-                dovodchik = false,
+                childsSize = CardSize.SMALL,
+                childsCornerRadius = SizeType.MEDIUM,
+                layoutType = LayoutType.DEFAULT,
+                dovodchik = true,
                 showDovodchikDots = true,
                 objectsInOneLine = null,
                 maxLines = null,
-                paddingHorizontal = null,
-                paddingVertical = null,
-                marginBetweenElementsHorizontal = null,
-                marginBetweenElementsVertical = null,
                 link = null,
                 elementType = ElementType.Carousel,
                 genre = null,
@@ -192,42 +190,33 @@ class MainViewModel(private val dao: ObjectDataDao, private val groupDao: Groups
             dao.insert(cr1)
             val cd1 = ObjectData(
                 id = 2,
-                page = 0,
+                page = PageType.Home,
                 parentId = 1,
-                position = 0,
+                position = 1,
                 name = "Звёздное дитя 3",
                 showAlreadyWatchedLine = false,
                 showIco = false,
                 childsShowName = false,
                 childsNamePosition = 0,
                 childsShowAlreadyWatchedLine = false,
-                image = ImageData(
-                    source = ImageSource.URL,
-                    value = "https://anilibria.top/storage/releases/posters/10089/PKg3Ru0WTMgTSSXhIpJICXjdE5DNvvLE.webp"
-                ),
+                image = ImageData.Url("https://anilibria.top/storage/releases/posters/10089/PKg3Ru0WTMgTSSXhIpJICXjdE5DNvvLE.webp"),
                 description = null,
                 author = null,
                 type = null,
                 alreadyWatched = 32,
                 length = 50,
-                width = 160,
-                height = 229,
                 childsCornerRadius = null,
-                layoutType = null,
+                layoutType = LayoutType.DEFAULT,
                 dovodchik = false,
                 showDovodchikDots = false,
                 objectsInOneLine = null,
                 maxLines = null,
-                paddingHorizontal = null,
-                paddingVertical = null,
-                marginBetweenElementsHorizontal = null,
-                marginBetweenElementsVertical = null,
                 link = LinkData(
                     type = LinkType.SELF,
                     targetId = null,
                     contentPath = null
                 ),
-                elementType = ElementType.Anime,
+                elementType = ElementType.AnimeCard,
                 genre = listOf(
                     Genre.Drama,
                     Genre.Detective,
@@ -237,9 +226,9 @@ class MainViewModel(private val dao: ObjectDataDao, private val groupDao: Groups
             dao.insert(cd1)
             val cd2 = ObjectData(
                 id = 3,
-                page = 0,
+                page = PageType.Home,
                 parentId = 1,
-                position = 1,
+                position = 2,
                 name = "Звёздное дитя 3 222",
                 showAlreadyWatchedLine = false,
                 showIco = false,
@@ -252,33 +241,156 @@ class MainViewModel(private val dao: ObjectDataDao, private val groupDao: Groups
                 type = null,
                 alreadyWatched = 0,
                 length = 0,
-                width = 160,
-                height = 229,
                 childsCornerRadius = null,
-                layoutType = null,
+                layoutType = LayoutType.DEFAULT,
                 dovodchik = false,
                 showDovodchikDots = false,
                 objectsInOneLine = null,
                 maxLines = null,
-                paddingHorizontal = null,
-                paddingVertical = null,
-                marginBetweenElementsHorizontal = null,
-                marginBetweenElementsVertical = null,
                 link = LinkData(
                     type = LinkType.INSERT,
                     targetId = 2,
                     contentPath = null
                 ),
-                elementType = ElementType.Anime,
+                elementType = ElementType.AnimeCard,
                 genre = null
             )
             dao.insert(cd2)
-            val cr2 = ObjectData(
+            val cd3 = ObjectData(
                 id = 4,
-                page = 0,
+                page = PageType.Home,
+                parentId = 1,
+                position = 3,
+                name = "Звёздное дитя 3 222",
+                showAlreadyWatchedLine = false,
+                showIco = false,
+                childsShowName = false,
+                childsNamePosition = 0,
+                childsShowAlreadyWatchedLine = false,
+                image = null,
+                description = null,
+                author = null,
+                type = null,
+                alreadyWatched = 0,
+                length = 0,
+                childsCornerRadius = null,
+                layoutType = LayoutType.DEFAULT,
+                dovodchik = false,
+                showDovodchikDots = false,
+                objectsInOneLine = null,
+                maxLines = null,
+                link = LinkData(
+                    type = LinkType.INSERT,
+                    targetId = 2,
+                    contentPath = null
+                ),
+                elementType = ElementType.AnimeCard,
+                genre = null
+            )
+            dao.insert(cd3)
+            val cd4 = ObjectData(
+                id = 5,
+                page = PageType.Home,
+                parentId = 1,
+                position = 4,
+                name = "Звёздное дитя 3 222",
+                showAlreadyWatchedLine = false,
+                showIco = false,
+                childsShowName = false,
+                childsNamePosition = 0,
+                childsShowAlreadyWatchedLine = false,
+                image = null,
+                description = null,
+                author = null,
+                type = null,
+                alreadyWatched = 0,
+                length = 0,
+                childsCornerRadius = null,
+                layoutType = LayoutType.DEFAULT,
+                dovodchik = false,
+                showDovodchikDots = false,
+                objectsInOneLine = null,
+                maxLines = null,
+                link = LinkData(
+                    type = LinkType.INSERT,
+                    targetId = 2,
+                    contentPath = null
+                ),
+                elementType = ElementType.AnimeCard,
+                genre = null
+            )
+            dao.insert(cd4)
+            val cd5 = ObjectData(
+                id = 6,
+                page = PageType.Home,
+                parentId = 1,
+                position = 5,
+                name = "Звёздное дитя 3 222",
+                showAlreadyWatchedLine = false,
+                showIco = false,
+                childsShowName = false,
+                childsNamePosition = 0,
+                childsShowAlreadyWatchedLine = false,
+                image = null,
+                description = null,
+                author = null,
+                type = null,
+                alreadyWatched = 0,
+                length = 0,
+                childsCornerRadius = null,
+                layoutType = LayoutType.DEFAULT,
+                dovodchik = false,
+                showDovodchikDots = false,
+                objectsInOneLine = null,
+                maxLines = null,
+                link = LinkData(
+                    type = LinkType.INSERT,
+                    targetId = 2,
+                    contentPath = null
+                ),
+                elementType = ElementType.AnimeCard,
+                genre = null
+            )
+            dao.insert(cd5)
+            val cd6 = ObjectData(
+                id = 7,
+                page = PageType.Home,
+                parentId = 1,
+                position = 6,
+                name = "Звёздное дитя 3 222",
+                showAlreadyWatchedLine = false,
+                showIco = false,
+                childsShowName = false,
+                childsNamePosition = 0,
+                childsShowAlreadyWatchedLine = false,
+                image = null,
+                description = null,
+                author = null,
+                type = null,
+                alreadyWatched = 0,
+                length = 0,
+                childsCornerRadius = null,
+                layoutType = LayoutType.DEFAULT,
+                dovodchik = false,
+                showDovodchikDots = false,
+                objectsInOneLine = null,
+                maxLines = null,
+                link = LinkData(
+                    type = LinkType.INSERT,
+                    targetId = 2,
+                    contentPath = null
+                ),
+                elementType = ElementType.AnimeCard,
+                genre = null
+            )
+            dao.insert(cd6)
+
+            val cr2 = ObjectData(
+                id = 8,
+                page = PageType.Home,
                 parentId = null,
-                position = 1,
-                name = "Любимая музыка",
+                position = 0,
+                name = "Любимые аниме",
                 showAlreadyWatchedLine = true,
                 showIco = false,
                 childsShowName = true,
@@ -290,24 +402,364 @@ class MainViewModel(private val dao: ObjectDataDao, private val groupDao: Groups
                 type = null,
                 alreadyWatched = 0,
                 length = 0,
-                width = null,
-                height = null,
-                childsCornerRadius = null,
-                layoutType = 2,
+                childsSize = CardSize.SMALL,
+                childsCornerRadius = SizeType.MEDIUM,
+                layoutType = LayoutType.CAROUSEL_FROM_GRID,
                 dovodchik = true,
                 showDovodchikDots = true,
-                objectsInOneLine = null,
-                maxLines = null,
-                paddingHorizontal = null,
-                paddingVertical = null,
-                marginBetweenElementsHorizontal = null,
-                marginBetweenElementsVertical = null,
+                objectsInOneLine = 3,
+                maxLines = 1,
                 link = null,
                 elementType = ElementType.Carousel,
                 genre = null,
-                carouselType = CarouselType.PlaylistNMusic
+                carouselType = CarouselType.AnimeNManga
             )
             dao.insert(cr2)
+            val cd7 = ObjectData(
+                id = 9,
+                page = PageType.Home,
+                parentId = 8,
+                position = 1,
+                name = "Звёздное дитя 3",
+                showAlreadyWatchedLine = false,
+                showIco = false,
+                childsShowName = false,
+                childsNamePosition = 0,
+                childsShowAlreadyWatchedLine = false,
+                image = ImageData.Url("https://anilibria.top/storage/releases/posters/10089/PKg3Ru0WTMgTSSXhIpJICXjdE5DNvvLE.webp"),
+                description = null,
+                author = null,
+                type = null,
+                alreadyWatched = 32,
+                length = 50,
+                childsCornerRadius = null,
+                layoutType = LayoutType.DEFAULT,
+                dovodchik = false,
+                showDovodchikDots = false,
+                objectsInOneLine = null,
+                maxLines = null,
+                link = LinkData(
+                    type = LinkType.SELF,
+                    targetId = null,
+                    contentPath = null
+                ),
+                elementType = ElementType.AnimeCard,
+                genre = listOf(
+                    Genre.Drama,
+                    Genre.Detective,
+                    Genre.Shonen
+                )
+            )
+            dao.insert(cd7)
+            val cd8 = ObjectData(
+                id = 10,
+                page = PageType.Home,
+                parentId = 8,
+                position = 2,
+                name = "Звёздное дитя 3 222",
+                showAlreadyWatchedLine = false,
+                showIco = false,
+                childsShowName = false,
+                childsNamePosition = 0,
+                childsShowAlreadyWatchedLine = false,
+                image = null,
+                description = null,
+                author = null,
+                type = null,
+                alreadyWatched = 0,
+                length = 0,
+                childsCornerRadius = null,
+                layoutType = LayoutType.DEFAULT,
+                dovodchik = false,
+                showDovodchikDots = false,
+                objectsInOneLine = null,
+                maxLines = null,
+                link = LinkData(
+                    type = LinkType.INSERT,
+                    targetId = 2,
+                    contentPath = null
+                ),
+                elementType = ElementType.AnimeCard,
+                genre = null
+            )
+            dao.insert(cd8)
+            val cd9 = ObjectData(
+                id = 11,
+                page = PageType.Home,
+                parentId = 8,
+                position = 3,
+                name = "Звёздное дитя 3 222",
+                showAlreadyWatchedLine = false,
+                showIco = false,
+                childsShowName = false,
+                childsNamePosition = 0,
+                childsShowAlreadyWatchedLine = false,
+                image = null,
+                description = null,
+                author = null,
+                type = null,
+                alreadyWatched = 0,
+                length = 0,
+                childsCornerRadius = null,
+                layoutType = LayoutType.DEFAULT,
+                dovodchik = false,
+                showDovodchikDots = false,
+                objectsInOneLine = null,
+                maxLines = null,
+                link = LinkData(
+                    type = LinkType.INSERT,
+                    targetId = 2,
+                    contentPath = null
+                ),
+                elementType = ElementType.AnimeCard,
+                genre = null
+            )
+            dao.insert(cd9)
+            val cd10 = ObjectData(
+                id = 12,
+                page = PageType.Home,
+                parentId = 8,
+                position = 4,
+                name = "Звёздное дитя",
+                showAlreadyWatchedLine = false,
+                showIco = false,
+                childsShowName = false,
+                childsNamePosition = 0,
+                childsShowAlreadyWatchedLine = false,
+                image = null,
+                description = null,
+                author = null,
+                type = null,
+                alreadyWatched = 0,
+                length = 0,
+                childsCornerRadius = null,
+                layoutType = LayoutType.DEFAULT,
+                dovodchik = false,
+                showDovodchikDots = false,
+                objectsInOneLine = null,
+                maxLines = null,
+                elementType = ElementType.AnimeCard,
+                genre = null
+            )
+            dao.insert(cd10)
+            val cd11 = ObjectData(
+                id = 13,
+                page = PageType.Home,
+                parentId = 8,
+                position = 5,
+                name = "Звёздное дитя",
+                showAlreadyWatchedLine = false,
+                showIco = false,
+                childsShowName = false,
+                childsNamePosition = 0,
+                childsShowAlreadyWatchedLine = false,
+                image = null,
+                description = null,
+                author = null,
+                type = null,
+                alreadyWatched = 0,
+                length = 0,
+                childsCornerRadius = null,
+                layoutType = LayoutType.DEFAULT,
+                dovodchik = false,
+                showDovodchikDots = false,
+                objectsInOneLine = null,
+                maxLines = null,
+                elementType = ElementType.AnimeCard,
+                genre = null
+            )
+            dao.insert(cd11)
+            val cd12 = ObjectData(
+                id = 14,
+                page = PageType.Home,
+                parentId = 8,
+                position = 6,
+                name = "Звёздное дитя",
+                showAlreadyWatchedLine = false,
+                showIco = false,
+                childsShowName = false,
+                childsNamePosition = 0,
+                childsShowAlreadyWatchedLine = false,
+                image = null,
+                description = null,
+                author = null,
+                type = null,
+                alreadyWatched = 0,
+                length = 0,
+                childsCornerRadius = null,
+                layoutType = LayoutType.DEFAULT,
+                dovodchik = false,
+                showDovodchikDots = false,
+                objectsInOneLine = null,
+                maxLines = null,
+                elementType = ElementType.AnimeCard,
+                genre = null
+            )
+            dao.insert(cd12)
+
+            val cr3 = ObjectData(
+                id = 15,
+                page = PageType.Home,
+                parentId = null,
+                position = 0,
+                name = "Любимые аниме",
+                showAlreadyWatchedLine = true,
+                showIco = false,
+                childsShowName = true,
+                childsNamePosition = 0,
+                childsShowAlreadyWatchedLine = true,
+                image = null,
+                description = null,
+                author = null,
+                type = null,
+                alreadyWatched = 0,
+                length = 0,
+                childsSize = CardSize.SMALL,
+                childsCornerRadius = SizeType.MEDIUM,
+                layoutType = LayoutType.CAROUSEL_FROM_FLAT_GRID,
+                dovodchik = true,
+                showDovodchikDots = true,
+                objectsInOneLine = 1,
+                maxLines = 3,
+                link = null,
+                elementType = ElementType.Carousel,
+                genre = null,
+                carouselType = CarouselType.AnimeNManga
+            )
+            dao.insert(cr3)
+            val cd13 = ObjectData(
+                id = 16,
+                page = PageType.Home,
+                parentId = 15,
+                position = 1,
+                name = "Звёздное дитя 3",
+                showAlreadyWatchedLine = false,
+                showIco = false,
+                childsShowName = false,
+                childsNamePosition = 0,
+                childsShowAlreadyWatchedLine = false,
+                image = ImageData.Url("https://anilibria.top/storage/releases/posters/10089/PKg3Ru0WTMgTSSXhIpJICXjdE5DNvvLE.webp"),
+                description = null,
+                author = null,
+                type = null,
+                alreadyWatched = 32,
+                length = 50,
+                childsCornerRadius = null,
+                layoutType = LayoutType.FLAT_GRID_ITEM,
+                dovodchik = false,
+                showDovodchikDots = false,
+                objectsInOneLine = null,
+                maxLines = null,
+                link = LinkData(
+                    type = LinkType.SELF,
+                    targetId = null,
+                    contentPath = null
+                ),
+                elementType = ElementType.AnimeCard,
+                genre = listOf(
+                    Genre.Drama,
+                    Genre.Detective,
+                    Genre.Shonen
+                )
+            )
+            dao.insert(cd13)
+            val cd14 = ObjectData(
+                id = 17,
+                page = PageType.Home,
+                parentId = 15,
+                position = 2,
+                name = "Звёздное дитя 3 222",
+                showAlreadyWatchedLine = false,
+                showIco = false,
+                childsShowName = false,
+                childsNamePosition = 0,
+                childsShowAlreadyWatchedLine = false,
+                image = null,
+                description = null,
+                author = null,
+                type = null,
+                alreadyWatched = 0,
+                length = 0,
+                childsCornerRadius = null,
+                layoutType = LayoutType.FLAT_GRID_ITEM,
+                dovodchik = false,
+                showDovodchikDots = false,
+                objectsInOneLine = null,
+                maxLines = null,
+                link = LinkData(
+                    type = LinkType.INSERT,
+                    targetId = 16,
+                    contentPath = null
+                ),
+                elementType = ElementType.AnimeCard,
+                genre = null
+            )
+            dao.insert(cd14)
+            val cd15 = ObjectData(
+                id = 18,
+                page = PageType.Home,
+                parentId = 15,
+                position = 3,
+                name = "Звёздное дитя 3 222",
+                showAlreadyWatchedLine = false,
+                showIco = false,
+                childsShowName = false,
+                childsNamePosition = 0,
+                childsShowAlreadyWatchedLine = false,
+                image = null,
+                description = null,
+                author = null,
+                type = null,
+                alreadyWatched = 0,
+                length = 0,
+                childsCornerRadius = null,
+                layoutType = LayoutType.FLAT_GRID_ITEM,
+                dovodchik = false,
+                showDovodchikDots = false,
+                objectsInOneLine = null,
+                maxLines = null,
+                link = LinkData(
+                    type = LinkType.INSERT,
+                    targetId = 16,
+                    contentPath = null
+                ),
+                elementType = ElementType.AnimeCard,
+                genre = null
+            )
+            dao.insert(cd15)
+            val cd16 = ObjectData(
+                id = 19,
+                page = PageType.Home,
+                parentId = 15,
+                position = 4,
+                name = "Звёздное дитя 3 222",
+                showAlreadyWatchedLine = false,
+                showIco = false,
+                childsShowName = false,
+                childsNamePosition = 0,
+                childsShowAlreadyWatchedLine = false,
+                image = null,
+                description = null,
+                author = null,
+                type = null,
+                alreadyWatched = 0,
+                length = 0,
+                childsCornerRadius = null,
+                layoutType = LayoutType.FLAT_GRID_ITEM,
+                dovodchik = false,
+                showDovodchikDots = false,
+                objectsInOneLine = null,
+                maxLines = null,
+                link = LinkData(
+                    type = LinkType.INSERT,
+                    targetId = 16,
+                    contentPath = null
+                ),
+                elementType = ElementType.AnimeCard,
+                genre = null
+            )
+            dao.insert(cd16)
+
             groupDao.deleteAll()
             groupDao.insert(GroupsData(0,0, 2, 0))
             groupDao.insert(GroupsData(0,0,3,1))
@@ -315,16 +767,10 @@ class MainViewModel(private val dao: ObjectDataDao, private val groupDao: Groups
 
     }
 
-    suspend fun insertCarousel(objectData: ObjectData, page: Int): Long {
+    suspend fun insertCarousel(objectData: ObjectData, page: PageType): Long {
         val position = dao.getMaxPositionOnPage(null, page) ?: -1
         objectData.position = position+1
         objectData.page = page
-        objectData.paddingHorizontal = if (objectData.paddingHorizontal != null) {round(objectData.paddingHorizontal!!.toFloat() / baseDensity1).toInt()} else {null}
-        objectData.paddingVertical = if (objectData.paddingVertical != null) {round(objectData.paddingVertical!!.toFloat() / baseDensity1).toInt()} else {null}
-        objectData.marginBetweenElementsHorizontal = if (objectData.marginBetweenElementsHorizontal != null) {round(objectData.marginBetweenElementsHorizontal!!.toFloat() / baseDensity1).toInt()} else {null}
-        objectData.marginBetweenElementsVertical = if (objectData.marginBetweenElementsVertical != null) {round(objectData.marginBetweenElementsVertical!!.toFloat() / baseDensity1).toInt()} else {null}
-        objectData.childsBaseWidth = if (objectData.childsBaseWidth != null) {round(objectData.childsBaseWidth!!.toFloat() / baseDensity1).toInt()} else {null}
-        objectData.childsBaseHeight = if (objectData.childsBaseHeight != null) {round(objectData.childsBaseHeight!!.toFloat() / baseDensity1).toInt()} else {null}
         val carouselId = dao.insert(objectData)
         return carouselId
     }
@@ -333,21 +779,15 @@ class MainViewModel(private val dao: ObjectDataDao, private val groupDao: Groups
         val position = dao.getMaxPosition(parentId) ?: -1
         objectData.position = position+1
         objectData.parentId = parentId
-        objectData.width = if (objectData.width != null) {round(objectData.width!!.toFloat() / baseDensity1).toInt()} else {null}
-        objectData.height = if (objectData.height != null) {round(objectData.height!!.toFloat() / baseDensity1).toInt()} else {null}
-        objectData.paddingHorizontal = if (objectData.paddingHorizontal != null) {round(objectData.paddingHorizontal!!.toFloat() / baseDensity1).toInt()} else {null}
-        objectData.paddingVertical = if (objectData.paddingVertical != null) {round(objectData.paddingVertical!!.toFloat() / baseDensity1).toInt()} else {null}
-        objectData.marginBetweenElementsHorizontal = if (objectData.marginBetweenElementsHorizontal != null) {round(objectData.marginBetweenElementsHorizontal!!.toFloat() / baseDensity1).toInt()} else {null}
-        objectData.marginBetweenElementsVertical = if (objectData.marginBetweenElementsVertical != null) {round(objectData.marginBetweenElementsVertical!!.toFloat() / baseDensity1).toInt()} else {null}
         val cardId = dao.insert(objectData)
         return cardId
     }
 
-    suspend fun insertEpisode(episodeInfo: episodeInfo, parentId: Long): Long {
+    suspend fun insertEpisode(episodeInfo: EpisodeInfo, parentId: Long): Long {
         val position = dao.getMaxPosition(parentId) ?: -1
         val data = ObjectData(
             id = 0,
-            page = 0,
+            page = PageType.Home,
             parentId = parentId,
             position = position+1,
             name = episodeInfo.name,
@@ -362,18 +802,12 @@ class MainViewModel(private val dao: ObjectDataDao, private val groupDao: Groups
             type = null,
             alreadyWatched = 0,
             length = episodeInfo.length,
-            width = null,
-            height = null,
             childsCornerRadius = null,
-            layoutType = null,
+            layoutType = LayoutType.DEFAULT,
             dovodchik = false,
             showDovodchikDots = false,
             objectsInOneLine = null,
             maxLines = null,
-            paddingHorizontal = null,
-            paddingVertical = null,
-            marginBetweenElementsHorizontal = null,
-            marginBetweenElementsVertical = null,
             link = episodeInfo.link,
             elementType = ElementType.Episode,
             genre = null
@@ -385,7 +819,7 @@ class MainViewModel(private val dao: ObjectDataDao, private val groupDao: Groups
         val position = dao.getMaxPosition(parentId) ?: -1
         val data = ObjectData(
             id = 0,
-            page = 0,
+            page = PageType.Home,
             parentId = parentId,
             position = position+1,
             name = chapterInfo.name,
@@ -395,31 +829,34 @@ class MainViewModel(private val dao: ObjectDataDao, private val groupDao: Groups
             elementType = ElementType.Chapter,
         )
         val chapterId = dao.insert(data)
-        for ((i, element) in chapterInfo.childs.withIndex()) {
+        val cd = chapterInfo.childs
+        for ((i, element) in cd.withIndex()) {
             val chapterPageData = ObjectData(
                 id = 0,
-                page = 0,
+                page = PageType.Home,
                 parentId = chapterId,
                 position = i,
                 image = null,
                 type = null,
                 alreadyWatched = 0,
                 length = 1L,
-                link = LinkData(LinkType.CONTENT, null, element.value),
+                link = element.link,
                 elementType = ElementType.ChapterPage,
             )
             dao.insert(chapterPageData)
         }
         return chapterId
     }
-    fun insertCardWithEpisodes(cardInfo: ObjectData, episodesInfo: List<episodeInfo>, parentId: Long) {
+
+    fun insertCardWithEpisodes(cardInfo: ObjectData, episodesInfo: List<EpisodeInfo>, parentId: Long) {
         viewModelScope.launch {
             val cardId = insertCard(cardInfo, parentId)
-            for (i in 0 until episodesInfo.size) {
+            for (i in episodesInfo.indices) {
                 insertEpisode(episodesInfo[i], cardId)
             }
         }
     }
+
     fun insertCardWithChapters(cardInfo: ObjectData, chaptersInfo: List<ChapterInfo>, parentId: Long) {
         viewModelScope.launch {
             val cardId = insertCard(cardInfo, parentId)
@@ -428,13 +865,14 @@ class MainViewModel(private val dao: ObjectDataDao, private val groupDao: Groups
             }
         }
     }
+
     fun insertMusicCard(cardInfo: ObjectData, parentId: Long, song: LinkData?, verticalVideo: LinkData?, horizontalVideo: LinkData?) {
         viewModelScope.launch {
             val cardId = insertCard(cardInfo, parentId)
             if (song != null) {
                 val songData = ObjectData(
                     id = 0,
-                    page = 0,
+                    page = PageType.Home,
                     parentId = cardId,
                     position = 0,
                     link = song,
@@ -447,7 +885,7 @@ class MainViewModel(private val dao: ObjectDataDao, private val groupDao: Groups
             if (verticalVideo != null) {
                 val videoData = ObjectData(
                     id = 0,
-                    page = 0,
+                    page = PageType.Home,
                     parentId = cardId,
                     position = 1,
                     link = verticalVideo,
@@ -460,7 +898,7 @@ class MainViewModel(private val dao: ObjectDataDao, private val groupDao: Groups
             if (horizontalVideo != null) {
                 val videoData = ObjectData(
                     id = 0,
-                    page = 0,
+                    page = PageType.Home,
                     parentId = cardId,
                     position = 2,
                     link = horizontalVideo,
@@ -472,6 +910,7 @@ class MainViewModel(private val dao: ObjectDataDao, private val groupDao: Groups
             }
         }
     }
+
     fun editAlreadyWatched(id: Long, alreadyWatched: Long) {
         viewModelScope.launch(Dispatchers.IO) {
             dao.editAlreadyWatched(id, alreadyWatched)
@@ -493,22 +932,16 @@ class MainViewModel(private val dao: ObjectDataDao, private val groupDao: Groups
                 }
             }
         }
-        if (parentCard != null) {
-            parentCard.width = if (parentCard.width != null) round(parentCard.width!!.toFloat() * baseDensity1).toInt() else null
-            parentCard.height = if (parentCard.height != null) round(parentCard.height!!.toFloat() * baseDensity1).toInt() else null
-            parentCard.paddingVertical = if (parentCard.paddingVertical != null) round(parentCard.paddingVertical!!.toFloat() * baseDensity1).toInt() else null
-            parentCard.paddingHorizontal = if (parentCard.paddingHorizontal != null) round(parentCard.paddingHorizontal!!.toFloat() * baseDensity1).toInt() else null
-            parentCard.marginBetweenElementsVertical = if (parentCard.marginBetweenElementsVertical != null) round(parentCard.marginBetweenElementsVertical!!.toFloat() * baseDensity1).toInt() else null
-            parentCard.marginBetweenElementsHorizontal = if (parentCard.marginBetweenElementsHorizontal != null) round(parentCard.marginBetweenElementsHorizontal!!.toFloat() * baseDensity1).toInt() else null
-        }
         return Triple(parentCard,episodesListToReturn, thisEpisodePos)
     }
+
     fun setChildsShowNameInSezonsRecycler(isEnabled: Boolean) {
         viewModelScope.launch {
             settingsManager.setShowChildsName(isEnabled)
         }
     }
-    fun updateAnimePageAdapter(id: Long, list: List<objectData2>) = viewModelScope.launch(Dispatchers.Default) {
+
+    fun updateAnimePageAdapter(id: Long, list: List<ObjectData2>) = viewModelScope.launch(Dispatchers.Default) {
         val obj = findObjectByIdInList(id, list)
         _animePageObjectFlow.value = obj
     }

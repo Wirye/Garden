@@ -21,7 +21,7 @@ interface ObjectDataDao {
     fun getAll(): Flow<List<ObjectData>>
     // Найти элементы конкретной страницы (например, только Home)
     @Query("SELECT * FROM objectData WHERE page = :pageId AND parentId IS NULL ORDER BY position ASC")
-    suspend fun getCarouselsForPage(pageId: Int): List<ObjectData>
+    suspend fun getCarouselsForPage(pageId: PageType): List<ObjectData>
 
     // Найти все карточки внутри конкретной карусели
     @Query("SELECT * FROM objectData WHERE parentId = :parentId ORDER BY position ASC")
@@ -36,7 +36,7 @@ interface ObjectDataDao {
     @Query("SELECT MAX(position) FROM objectData WHERE (:parentId IS NULL AND parentId IS NULL) OR parentId = :parentId")
     suspend fun getMaxPosition(parentId: Long?): Int?
     @Query("SELECT MAX(position) FROM objectData WHERE ((:parentId IS NULL AND parentId IS NULL) OR parentId = :parentId) AND page = :page")
-    suspend fun getMaxPositionOnPage(parentId: Long?, page: Int): Int?
+    suspend fun getMaxPositionOnPage(parentId: Long?, page: PageType): Int?
     @Query("SELECT * FROM objectData WHERE id = :id")
     suspend fun getById(id: Long): ObjectData?
 
