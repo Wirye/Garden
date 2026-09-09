@@ -16,10 +16,11 @@ import kotlin.math.round
 
 @Composable
 fun uploadLayoutTypeToCarouselChilds(
-    childs: List<ObjectData2>,
     parent: ObjectData2,
     lineWidth: Dp
-): List<ObjectData2> {
+) : List<ObjectData2> {
+    val parent = uploadLayoutType(parent)
+    val childs = parent.childs
     val layoutType = parent.layoutType
     if (layoutType != LayoutType.CAROUSEL_FROM_GRID && layoutType != LayoutType.CAROUSEL_FROM_FLAT_GRID) return childs
     else if (childs.isEmpty()) return childs
@@ -65,11 +66,6 @@ fun uploadLayoutTypeToCarouselChilds(
                 for (i in currentI until currentI + (maxLines * objectsInOneLine)) {
                     if (i <= childs.indices.last) {
                         val child = childs[i]
-                        when(parent.layoutType) {
-                            LayoutType.CAROUSEL_FROM_FLAT_GRID -> {child.layoutType = LayoutType.FLAT_GRID_ITEM }
-                            LayoutType.DEFAULT, LayoutType.CAROUSEL_FROM_GRID, LayoutType.CAROUSEL_GRID -> { child.layoutType = LayoutType.DEFAULT }
-                            else -> {}
-                        }
                         child.position = currentPosition
                         currentPosition += 1
                         childss.add(child)
@@ -132,11 +128,6 @@ fun uploadLayoutTypeToCarouselChilds(
                 for (i in currentI until currentI + (maxLines * objectsInOneLine)) {
                     if (i <= childs.indices.last) {
                         val child = childs[i]
-                        when(parent.layoutType) {
-                            LayoutType.CAROUSEL_FROM_FLAT_GRID -> {child.layoutType = LayoutType.FLAT_GRID_ITEM }
-                            LayoutType.DEFAULT, LayoutType.CAROUSEL_FROM_GRID, LayoutType.CAROUSEL_GRID -> { child.layoutType = LayoutType.DEFAULT }
-                            else -> {}
-                        }
                         child.position = currentPosition
                         currentPosition += 1
                         childss.add(child)
@@ -169,6 +160,40 @@ fun uploadLayoutTypeToCarouselChilds(
         }
         return ress
     }
+}
+
+private fun uploadLayoutType(
+    parent: ObjectData2
+) : ObjectData2 {
+    if (parent.childs.isEmpty()) return parent
+    val layoutType = parent.layoutType
+    val isGridMode = parent.childs.first().layoutType !in listOf(
+        LayoutType.CARD_GRID,
+        LayoutType.CARD_FLAT_GRID,
+    )
+
+    val availableLayoutTypes = when(layoutType) {
+        LayoutType.DEFAULT -> listOf(LayoutType.DEFAULT)
+        LayoutType.CAROUSEL_GRID, LayoutType.CAROUSEL_FROM_GRID -> if (isGridMode) listOf(LayoutType.DEFAULT) else listOf(LayoutType.CARD_GRID)
+        LayoutType.CAROUSEL_FROM_FLAT_GRID -> if (isGridMode) listOf(LayoutType.FLAT_GRID_ITEM) else listOf(LayoutType.CARD_FLAT_GRID)
+        LayoutType.CARD_FLAT_GRID -> listOf(LayoutType.FLAT_GRID_ITEM)
+        LayoutType.CARD_GRID -> listOf(LayoutType.DEFAULT)
+        LayoutType.FLAT_GRID_ITEM -> listOf()
+    }
+
+    val newChilds = mutableListOf<ObjectData2>()
+
+    for (i in parent.childs.indices) {
+        val child = parent.childs[i]
+        val childLayoutType = child.layoutType
+        if (childLayoutType !in availableLayoutTypes) {
+            child.layoutType = availableLayoutTypes[0]
+        }
+        newChilds.add(child)
+    }
+
+    parent.childs = newChilds
+    return parent
 }
 
 fun calculateObjectsInOneLineAndMaxLinesForAdaptiveGridSize(

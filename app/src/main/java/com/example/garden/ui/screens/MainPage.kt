@@ -551,7 +551,6 @@ private fun Carousel(
 
                 val cards =
                     uploadLayoutTypeToCarouselChilds(
-                        carouselData.childs,
                         carouselData,
                         columnWidth
                     )
