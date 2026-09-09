@@ -139,4 +139,5 @@
     <string name="fastChoiceYouTubeMusic">Быстрый выбор: YouTube Music</string>
     <string name="spacer"></string>
     <string name="save">Сохранить</string>
+    <string name="Placeholder">Заглушка</string>
 </resources>

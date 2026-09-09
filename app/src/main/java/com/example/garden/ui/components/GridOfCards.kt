@@ -27,7 +27,9 @@ fun GridOfCards(
     paddingStart: Dp,
     paddingEnd: Dp,
     marginBetweenElements: Dp,
-    onCardClick: (ObjectData2) -> Unit
+    onCardClick: (ObjectData2) -> Unit,
+    onCardEdit: (ObjectData2) -> Unit,
+    onCardDelete: (Long) -> Unit
 ) {
     val items = gridInfo.childs.sortedBy { it.position }
     if (items.isNotEmpty()) {
@@ -62,7 +64,9 @@ fun GridOfCards(
                     image = item.image,
                     cornerRadius = gridInfo.childsCornerRadius ?: SizeType.ESMALL,
                     layoutType = item.layoutType,
-                    onClick = { onCardClick(item) }
+                    onClick = { onCardClick(item) },
+                    onEdit = { onCardEdit(item) },
+                    onDelete = { onCardDelete(item.id) }
                 )
             }
 
@@ -87,7 +91,9 @@ fun GridOfCards(
                         image = item.image,
                         cornerRadius = gridInfo.childsCornerRadius ?: SizeType.ESMALL,
                         layoutType = item.layoutType,
-                        onClick = { }
+                        onClick = { },
+                        onEdit = { onCardEdit(item) },
+                        onDelete = { onCardDelete(item.id) }
                     )
                 }
             }

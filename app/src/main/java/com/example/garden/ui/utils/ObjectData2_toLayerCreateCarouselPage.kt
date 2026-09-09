@@ -5,9 +5,8 @@ import com.example.garden.database.CardSize
 import com.example.garden.database.CarouselType
 import com.example.garden.database.ObjectData2
 
-fun ObjectData2.toLayerCreateCarouselPage(isEditMode: Boolean) : Layer.CreateCarouselPage {
+fun ObjectData2.toLayerCreateCarouselPage() : Layer.CreateCarouselPage {
     return Layer.CreateCarouselPage(
-        isEditMode = isEditMode,
         carouselId = this.id,
         name = this.name ?: "",
         carouselType = this.carouselType ?: CarouselType.Anime,

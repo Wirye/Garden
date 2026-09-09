@@ -131,6 +131,8 @@ fun CreateCardPage(
         key = layer.id.toString(), factory = CreateCardViewModel.provideFactory(layer)
     )
 
+    val isEditMode by remember(stateViewModel.state.cardId) { mutableStateOf(stateViewModel.state.cardId != null) }
+
     val songLength = rememberSaveable { mutableLongStateOf(0L) }
 
     LaunchedEffect(stateViewModel, layer) {
@@ -438,20 +440,22 @@ fun CreateCardPage(
                         onDismissRequest = { isExtraButtonsMenuOpened.value = false },
                         hazeState = LocalHazeLayers.current.mainScreen
                     ) {
-                        PopupMenuItem(
-                            text = stringResource(R.string.importFromAniLiberty),
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
-                                isExtraButtonsMenuOpened.value = false
-                            },
-                            icon = {
-                                Icon(
-                                    painter = painterResource(R.drawable.download_ico_2),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(MaterialTheme.dimens.iconLarge)
-                                )
-                            }
-                        )
+                        if (stateViewModel.state.cardType == ElementType.AnimeCard) {
+                            PopupMenuItem(
+                                text = stringResource(R.string.importFromAniLiberty),
+                                onClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                                    isExtraButtonsMenuOpened.value = false
+                                },
+                                icon = {
+                                    Icon(
+                                        painter = painterResource(R.drawable.download_ico_2),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(MaterialTheme.dimens.iconLarge)
+                                    )
+                                }
+                            )
+                        }
                     }
                 }
             }
@@ -1216,13 +1220,16 @@ fun CreateCardPage(
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Icon(
-                            painter = painterResource(R.drawable.add_ico),
-                            modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
-                            contentDescription = null
-                        )
+                        if (!isEditMode) {
+                            Icon(
+                                painter = painterResource(R.drawable.add_ico),
+                                modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
+                                contentDescription = null
+                            )
+                        }
+
                         Text(
-                            text = stringResource(R.string.addCard),
+                            text = stringResource(if (!isEditMode) R.string.addCard else R.string.save),
                             style = MaterialTheme.typography.labelLarge,
                             modifier = Modifier.weight(1f, fill = false),
                             overflow = TextOverflow.Ellipsis

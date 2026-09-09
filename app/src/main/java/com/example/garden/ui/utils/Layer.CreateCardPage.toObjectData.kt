@@ -10,6 +10,7 @@ import com.example.garden.database.PageType
 fun Layer.CreateCardPage.toObjectData(songLength: Long? = null) : ObjectData {
 
     return ObjectData(
+        id = cardId ?: 0L,
         parentId = parentId,
         name = name,
         author = author,

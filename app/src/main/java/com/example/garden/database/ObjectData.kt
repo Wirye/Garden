@@ -352,6 +352,9 @@ enum class ElementType : ElementTypeInterface {
     PlaylistCard {
         override val displayNameId = R.string.Playlist
     },
+    PlaceholderCard {
+        override val displayNameId = R.string.Placeholder
+    },
     Carousel {
         override val displayNameId = R.string.Carousel
     },

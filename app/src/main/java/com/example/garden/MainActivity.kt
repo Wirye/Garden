@@ -72,7 +72,6 @@ sealed class Layer (
     data class CreateCardPage(
         val parentId: Long,
         val cardId: Long? = null,
-        val isEditMode: Boolean = false,
         var name: String,
         var image: ImageData? = null,
         var description: String,
@@ -110,8 +109,7 @@ sealed class Layer (
         var maxLinesForAdaptiveSize: Int? = null,
         var childsSize: CardSize = CardSize.MEDIUM,
         var childsShowAuthor: Boolean = false,
-        val carouselId: Long? = null,
-        val isEditMode: Boolean = false
+        val carouselId: Long? = null
     ) : Layer()
     @Parcelize
     data class PageWithSearch (

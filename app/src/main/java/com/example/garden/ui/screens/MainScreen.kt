@@ -46,6 +46,7 @@ import com.example.garden.ui.components.MainPageBottomBar
 import com.example.garden.ui.components.MainPageTopBar
 import com.example.garden.ui.theme.LocalWindowInfo
 import com.example.garden.ui.utils.hazeSourcesForUpperLayers
+import com.example.garden.ui.utils.toLayerCreateCardPage
 import com.example.garden.ui.utils.toLayerCreateCarouselPage
 import com.example.garden.ui.utils.toObjectData
 import com.example.garden.viewmodel.LayersViewModel
@@ -278,8 +279,15 @@ private fun LayerContent(
                         },
                         openEditCarouselPage = {
                             layersViewModel.openLayer(
-                                it.toLayerCreateCarouselPage(true)
+                                it.toLayerCreateCarouselPage()
                             )
+                        },
+                        openEditCardPage = { data, parentId ->
+                            layersViewModel.openLayer(
+                                data.toLayerCreateCardPage(parentId)
+                            )
+                        },
+                        deleteCard = {
                         }
                     )
                 }
@@ -301,17 +309,21 @@ private fun LayerContent(
                         onClose = { closeLayer() },
                         onCloseAndApply = { objData, layer ->
                             coroutineScope.launch {
-                                when(layer.cardType) {
-                                    ElementType.AnimeCard -> mainViewModel.insertCardWithEpisodes(objData, layer.episodesList, layer.parentId)
-                                    ElementType.MangaCard -> mainViewModel.insertCardWithChapters(objData, layer.chaptersList, layer.parentId)
-                                    ElementType.MusicCard -> mainViewModel.insertMusicCard(
-                                        objData,
-                                        layer.parentId,
-                                        layer.song,
-                                        layer.verticalVideo,
-                                        layer.horizontalVideo
-                                    )
-                                    else -> {}
+                                if (layer.cardId == null) {
+                                    when(layer.cardType) {
+                                        ElementType.AnimeCard -> mainViewModel.insertCardWithEpisodes(objData, layer.episodesList, layer.parentId)
+                                        ElementType.MangaCard -> mainViewModel.insertCardWithChapters(objData, layer.chaptersList, layer.parentId)
+                                        ElementType.MusicCard -> mainViewModel.insertMusicCard(
+                                            objData,
+                                            layer.parentId,
+                                            layer.song,
+                                            layer.verticalVideo,
+                                            layer.horizontalVideo
+                                        )
+                                        else -> {}
+                                    }
+                                } else {
+                                    mainViewModel.editObject(objData)
                                 }
                             }
                             closeLayer()
@@ -340,7 +352,7 @@ private fun LayerContent(
                                 if (info.carouselId == null) {
                                     mainViewModel.insertCarousel(info.toObjectData(), layer.page)
                                 } else {
-                                    mainViewModel.editCarousel(info.toObjectData())
+                                    mainViewModel.editObject(info.toObjectData())
                                 }
                             }
                             closeLayer()

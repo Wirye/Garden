@@ -775,7 +775,7 @@ class MainViewModel(private val dao: ObjectDataDao, private val groupDao: Groups
         return carouselId
     }
 
-    suspend fun editCarousel(objectData: ObjectData) {
+    suspend fun editObject(objectData: ObjectData) {
         val position = dao.getPositionById(objectData.id)
         if (position != null) {
             objectData.position = position

@@ -122,7 +122,9 @@ fun MainPage(
     bottomBarHeight: Dp,
     openCreateCardPage: (Long, CarouselType) -> Unit,
     openCreateCarouselPage: () -> Unit,
-    openEditCarouselPage: (ObjectData2) -> Unit
+    openEditCarouselPage: (ObjectData2) -> Unit,
+    openEditCardPage: (ObjectData2, Long) -> Unit,
+    deleteCard: (Long) -> Unit,
 ) {
     var visibleCardPos by rememberSaveable(layer.id) {
         mutableIntStateOf(layer.firstElementPosition)
@@ -241,6 +243,8 @@ fun MainPage(
                                 onEditCarouselSettings = {
                                     openEditCarouselPage(it)
                                 },
+                                onEditCard = { openEditCardPage(it, carousel.id) },
+                                onDeleteCard = { deleteCard(it) },
                                 modifier = Modifier.offset(
                                     y = -arrangementSpacing
                                 )
@@ -350,7 +354,9 @@ fun CarouselPreview(
                 onEditCarousel = {},
                 onClickCard = {},
                 onWatchAllClick = {},
-                onEditCarouselSettings = {}
+                onEditCarouselSettings = {},
+                onEditCard = {},
+                onDeleteCard = {}
             )
         }
     }
@@ -366,7 +372,9 @@ private fun Carousel(
     onEditCarousel: () -> Unit,
     onEditCarouselSettings: (ObjectData2) -> Unit,
     onClickCard: (ObjectData2) -> Unit,
-    onWatchAllClick: (() -> Unit)? = null
+    onWatchAllClick: (() -> Unit)? = null,
+    onEditCard: (ObjectData2) -> Unit,
+    onDeleteCard: (Long) -> Unit
 ) {
     val haptic = LocalHapticFeedback.current
 
@@ -735,7 +743,9 @@ private fun Carousel(
                                         LayoutType.CAROUSEL_FROM_FLAT_GRID -> 0.dp
                                         else -> MaterialTheme.spacing.marginBetweenElementsInGrid
                                     },
-                                    onCardClick = { onClickCard(it) }
+                                    onCardClick = { onClickCard(it) },
+                                    onCardEdit = { onEditCard(it) },
+                                    onCardDelete = { onDeleteCard(it) }
                                 )
                             } else {
                                 Card(
@@ -753,7 +763,9 @@ private fun Carousel(
                                     cornerRadius = carouselData.childsCornerRadius
                                         ?: SizeType.ESMALL,
                                     layoutType = card.layoutType,
-                                    onClick = { onClickCard(card) }
+                                    onClick = { onClickCard(card) },
+                                    onEdit = { onEditCard(card) },
+                                    onDelete = { onDeleteCard(card.id) }
                                 )
                             }
                         }
@@ -808,7 +820,9 @@ private fun Carousel(
                             paddingStart = leftInset + MaterialTheme.spacing.screenHorizontal,
                             paddingEnd = rightInset + MaterialTheme.spacing.screenHorizontal,
                             marginBetweenElements = MaterialTheme.spacing.marginBetweenElementsInGrid,
-                            onCardClick = { onClickCard(it) }
+                            onCardClick = { onClickCard(it) },
+                            onCardEdit = { onEditCard(it) },
+                            onCardDelete = { onDeleteCard(it) }
                         )
                     } else {
                         Box(

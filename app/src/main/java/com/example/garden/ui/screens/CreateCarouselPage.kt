@@ -120,6 +120,8 @@ fun CreateCarouselPage(
         key = layer.id.toString(), factory = CreateCarouselViewModel.provideFactory(layer)
     )
 
+    val isEditMode by remember(stateViewModel.state.carouselId) { mutableStateOf(stateViewModel.state.carouselId != null) }
+
     LaunchedEffect(layer, stateViewModel) {
         stateViewModel.onUpdate = {
             layer.name = it.name
@@ -1729,15 +1731,18 @@ fun CreateCarouselPage(
                                                         Row(
                                                             verticalAlignment = Alignment.CenterVertically,
                                                         ) {
-                                                            Icon(
-                                                                painter = painterResource(if (!stateViewModel.state.isEditMode) R.drawable.add_ico else R.drawable.save_ico),
-                                                                modifier = Modifier.size(
-                                                                    if (!stateViewModel.state.isEditMode) MaterialTheme.dimens.iconLarge else MaterialTheme.dimens.iconMedium
-                                                                ),
-                                                                contentDescription = null
-                                                            )
+                                                            if(!isEditMode) {
+                                                                Icon(
+                                                                    painter = painterResource(R.drawable.add_ico),
+                                                                    modifier = Modifier.size(
+                                                                        MaterialTheme.dimens.iconLarge
+                                                                    ),
+                                                                    contentDescription = null
+                                                                )
+                                                            }
+
                                                             Text(
-                                                                text = stringResource(if (!stateViewModel.state.isEditMode) R.string.addCarousel else R.string.save),
+                                                                text = stringResource(if (!isEditMode) R.string.addCarousel else R.string.save),
                                                                 style = MaterialTheme.typography.labelLarge,
                                                                 modifier = Modifier.weight(
                                                                     1f,
