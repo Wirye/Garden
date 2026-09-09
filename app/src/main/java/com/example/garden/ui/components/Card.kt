@@ -362,9 +362,7 @@ private fun ExtraOptions(
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surfaceVariant,
-        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+        sheetState = sheetState
     ) {
         Column(
             modifier = Modifier.fillMaxWidth()
