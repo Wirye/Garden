@@ -392,7 +392,11 @@ fun CreateCardPage(
                     }
 
                     val availableCardTypes = remember(stateViewModel.state.carouselType) {
-                        mutableStateOf(stateViewModel.state.carouselType.availableCardTypes())
+                        mutableStateOf(
+                            if (!isEditMode) stateViewModel.state.carouselType.availableCardTypes() else listOf(
+                                stateViewModel.state.cardType
+                            )
+                        )
                     }
 
                     val selectedIndex =

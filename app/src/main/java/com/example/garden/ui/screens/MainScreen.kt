@@ -282,9 +282,9 @@ private fun LayerContent(
                                 it.toLayerCreateCarouselPage()
                             )
                         },
-                        openEditCardPage = { data, parentId ->
+                        openEditCardPage = { data, parentId, carouselType ->
                             layersViewModel.openLayer(
-                                data.toLayerCreateCardPage(parentId)
+                                data.toLayerCreateCardPage(parentId, carouselType)
                             )
                         },
                         deleteCard = {

@@ -123,7 +123,7 @@ fun MainPage(
     openCreateCardPage: (Long, CarouselType) -> Unit,
     openCreateCarouselPage: () -> Unit,
     openEditCarouselPage: (ObjectData2) -> Unit,
-    openEditCardPage: (ObjectData2, Long) -> Unit,
+    openEditCardPage: (ObjectData2, Long, CarouselType) -> Unit,
     deleteCard: (Long) -> Unit,
 ) {
     var visibleCardPos by rememberSaveable(layer.id) {
@@ -243,7 +243,7 @@ fun MainPage(
                                 onEditCarouselSettings = {
                                     openEditCarouselPage(it)
                                 },
-                                onEditCard = { openEditCardPage(it, carousel.id) },
+                                onEditCard = { openEditCardPage(it, carousel.id, carousel.carouselType ?: CarouselType.Anime) },
                                 onDeleteCard = { deleteCard(it) },
                                 modifier = Modifier.offset(
                                     y = -arrangementSpacing

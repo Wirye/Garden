@@ -4,10 +4,10 @@ import com.example.garden.Layer
 import com.example.garden.database.CarouselType
 import com.example.garden.database.ObjectData2
 
-fun ObjectData2.toLayerCreateCardPage(parentId: Long) : Layer.CreateCardPage {
+fun ObjectData2.toLayerCreateCardPage(parentId: Long, carouselType: CarouselType) : Layer.CreateCardPage {
     return Layer.CreateCardPage(
         name = this.name ?: "",
-        carouselType = this.carouselType ?: CarouselType.Anime,
+        carouselType = carouselType,
         parentId = parentId,
         cardId = this.id,
         description = this.description ?: "",
