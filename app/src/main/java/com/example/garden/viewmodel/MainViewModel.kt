@@ -2,7 +2,6 @@ package com.example.garden.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.garden.appsettings.AnimeSettingsState
 import com.example.garden.appsettings.SettingsManager
 import com.example.garden.database.CardSize
 import com.example.garden.database.CarouselType
@@ -21,23 +20,13 @@ import com.example.garden.database.groups.GroupsData
 import com.example.garden.database.groups.GroupsDataDao
 import com.example.garden.ui.screens.ChapterInfo
 import com.example.garden.ui.screens.EpisodeInfo
-import com.example.garden.ui.utils.findObjectByIdInList
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-
-data class AnimePageUIModel(
-    val animeData: ObjectData2?,
-    val groups: List<GroupsData>,
-    val settingsState: AnimeSettingsState
-)
 
 class MainViewModel(private val dao: ObjectDataDao, private val groupDao: GroupsDataDao, private val settingsManager: SettingsManager) : ViewModel() {
     val uiDataFlow: StateFlow<List<ObjectData2>> = dao.getAll()
@@ -51,72 +40,6 @@ class MainViewModel(private val dao: ObjectDataDao, private val groupDao: Groups
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
         )
-    private val _animePageObjectFlow = MutableStateFlow<ObjectData2?>(null)
-
-    val groupsFlow: Flow<List<GroupsData>> = groupDao.getAll()
-    val settingsStateFlow = settingsManager.settingsStateFlow
-
-    val animePageFlow = combine(
-        _animePageObjectFlow,
-        groupsFlow,
-        settingsStateFlow
-    ) {
-        animePageObject, groups, settingsState ->
-        AnimePageUIModel(
-            animeData = animePageObject,
-            groups = groups,
-            settingsState = AnimeSettingsState(settingsState.showChildsName, settingsState.childsNamePosition)
-        )
-    }
-
-    fun toggleShowNames(isEnabled: Boolean) {
-        viewModelScope.launch {
-            settingsManager.setShowChildsName(isEnabled)
-        }
-    }
-
-    fun getGroupById(id: Long, list: List<GroupsData>): Int? {
-        var res: Int? = null
-        for (i in list.indices) {
-            val obj = list[i]
-            if (obj.id == id) {
-                res = obj.groupNumber
-                break
-            }
-        }
-        return res
-    }
-
-    fun getGroupObjectsByGroupNumber(groupNumber: Int, list: List<GroupsData>): List<GroupsData> {
-        val res = mutableListOf<GroupsData>()
-        for (i in list.indices) {
-            val obj = list[i]
-            if (obj.groupNumber == groupNumber) {
-                res.add(obj)
-            }
-        }
-        res.sortBy { it.position }
-        return res
-    }
-
-    fun getGroupObjectsByIdOfOne(id: Long, list: List<ObjectData2>, list2: List<GroupsData>): List<ObjectData2> {
-        val groupNumber = getGroupById(id, list2)
-        val groupObjects = mutableListOf<ObjectData2>()
-        if (groupNumber != null) {
-            val groupObjectsIds = getGroupObjectsByGroupNumber(groupNumber, list2)
-            for (i in groupObjectsIds) {
-                val obj = findObjectByIdInList(i.id, list)
-                if (obj != null && i.id != id) {
-                    groupObjects.add(obj)
-                }
-            }
-        }
-        groupObjects.sortBy { it.position }
-        for ((i, element) in groupObjects.withIndex()) {
-            element.position = i
-        }
-        return groupObjects
-    }
 
     private fun build(current: ObjectData, allItems: List<ObjectData>): ObjectData2 {
         val dataSource = if (current.link?.type == LinkType.INSERT && current.link?.targetId != null) { allItems.find { it.id == current.link?.targetId } ?: current } else { current }
@@ -918,40 +841,5 @@ class MainViewModel(private val dao: ObjectDataDao, private val groupDao: Groups
                 dao.insert(videoData)
             }
         }
-    }
-
-    fun editAlreadyWatched(id: Long, alreadyWatched: Long) {
-        viewModelScope.launch(Dispatchers.IO) {
-            dao.editAlreadyWatched(id, alreadyWatched)
-        }
-    }
-
-    suspend fun getAllInfoByEpisodeId(id: Long): Triple<ObjectData?, List<ObjectData>, Int> {
-        var parentCard: ObjectData? = null
-        val episodesListToReturn = mutableListOf<ObjectData>()
-        val thisEpisode = dao.getById(id)
-        var thisEpisodePos = 0
-        if (thisEpisode != null) {
-            if (thisEpisode.parentId != null) {
-                thisEpisodePos = thisEpisode.position
-                parentCard = dao.getById(thisEpisode.parentId!!)
-                if (parentCard != null) {
-                    val episodes = dao.getChilds(parentCard.id)
-                    episodesListToReturn.addAll(episodes)
-                }
-            }
-        }
-        return Triple(parentCard,episodesListToReturn, thisEpisodePos)
-    }
-
-    fun setChildsShowNameInSezonsRecycler(isEnabled: Boolean) {
-        viewModelScope.launch {
-            settingsManager.setShowChildsName(isEnabled)
-        }
-    }
-
-    fun updateAnimePageAdapter(id: Long, list: List<ObjectData2>) = viewModelScope.launch(Dispatchers.Default) {
-        val obj = findObjectByIdInList(id, list)
-        _animePageObjectFlow.value = obj
     }
 }
