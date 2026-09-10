@@ -607,6 +607,7 @@ class MainViewModel(private val dao: ObjectDataDao, private val groupDao: Groups
                 showIco = false,
                 childsShowName = true,
                 childsNamePosition = 0,
+                childsShowAuthor = true,
                 childsShowAlreadyWatchedLine = true,
                 image = null,
                 description = null,

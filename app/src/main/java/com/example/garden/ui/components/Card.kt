@@ -143,27 +143,31 @@ fun Card(
                     Column(
                         modifier = Modifier.weight(1f, fill = false)
                     ) {
-                        Text(
-                            text = (name
-                                ?: stringResource(R.string.withoutName)).ifEmpty { stringResource(R.string.withoutName) },
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onBackground,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
+                        if (showName) {
+                            Text(
+                                text = (name
+                                    ?: stringResource(R.string.withoutName)).ifEmpty { stringResource(R.string.withoutName) },
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onBackground,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
 
-                        Text(
-                            text = (author
-                                ?: stringResource(R.string.withoutAuthor)).ifEmpty {
-                                stringResource(
-                                    R.string.withoutAuthor
-                                )
-                            },
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
+                        if (showAuthor) {
+                            Text(
+                                text = (author
+                                    ?: stringResource(R.string.withoutAuthor)).ifEmpty {
+                                    stringResource(
+                                        R.string.withoutAuthor
+                                    )
+                                },
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                     }
                 }
 
