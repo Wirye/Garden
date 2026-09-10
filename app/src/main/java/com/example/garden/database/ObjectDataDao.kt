@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.Flow
 interface ObjectDataDao {
     @Query("SELECT * FROM objectData")
     fun getAll(): Flow<List<ObjectData>>
+
     @Query("SELECT * FROM objectData WHERE page = :pageId AND parentId IS NULL ORDER BY position ASC")
     suspend fun getCarouselsForPage(pageId: PageType): List<ObjectData>
 
@@ -27,8 +28,10 @@ interface ObjectDataDao {
 
     @Query("SELECT MAX(position) FROM objectData WHERE (:parentId IS NULL AND parentId IS NULL) OR parentId = :parentId")
     suspend fun getMaxPosition(parentId: Long?): Int?
+
     @Query("SELECT MAX(position) FROM objectData WHERE ((:parentId IS NULL AND parentId IS NULL) OR parentId = :parentId) AND page = :page")
     suspend fun getMaxPositionOnPage(parentId: Long?, page: PageType): Int?
+
     @Query("SELECT * FROM objectData WHERE id = :id LIMIT 1")
     suspend fun getById(id: Long): ObjectData?
 
@@ -41,11 +44,23 @@ interface ObjectDataDao {
     @Query("DELETE FROM objectData")
     suspend fun deleteAll()
 
+    @Query("DELETE FROM objectData WHERE parentId = :targetId")
+    suspend fun deleteChildsOf(targetId: Long)
+
     @Query("""
+        DELETE FROM objectData 
+        WHERE lnk_targetId = :targetId 
+          AND lnk_type = 'INSERT'
+    """)
+    suspend fun deleteLinkedObjectsOf(targetId: Long)
+
+    @Query(
+        """
         UPDATE objectData 
         SET position = position - 1 
         WHERE parentId = :parentId AND position > :currentPosition
-    """)
+        """
+    )
     suspend fun decrementPositionsAfter(parentId: Long?, currentPosition: Int)
 
     @Delete
@@ -53,10 +68,15 @@ interface ObjectDataDao {
 
     @Transaction
     suspend fun deleteAndShiftPositions(item: ObjectData) {
+        deleteChildsOf(targetId = item.id)
+
+        deleteLinkedObjectsOf(targetId = item.id)
+
         decrementPositionsAfter(
             parentId = item.parentId,
             currentPosition = item.position
         )
+
         deleteObject(item)
     }
 }
