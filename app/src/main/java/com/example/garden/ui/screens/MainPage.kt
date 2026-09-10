@@ -63,7 +63,6 @@ import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -78,6 +77,7 @@ import androidx.compose.ui.unit.times
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
 import com.example.garden.Layer
+import com.example.garden.LocalCustomColors
 import com.example.garden.R
 import com.example.garden.database.CarouselType
 import com.example.garden.database.ElementType
@@ -124,7 +124,8 @@ fun MainPage(
     openCreateCarouselPage: () -> Unit,
     openEditCarouselPage: (ObjectData2) -> Unit,
     openEditCardPage: (ObjectData2, Long, CarouselType) -> Unit,
-    deleteCard: (Long) -> Unit,
+    deleteCard: (ObjectData2, Long?) -> Unit,
+    deleteCarousel: (ObjectData2, Long?) -> Unit
 ) {
     var visibleCardPos by rememberSaveable(layer.id) {
         mutableIntStateOf(layer.firstElementPosition)
@@ -244,7 +245,8 @@ fun MainPage(
                                     openEditCarouselPage(it)
                                 },
                                 onEditCard = { openEditCardPage(it, carousel.id, carousel.carouselType ?: CarouselType.Anime) },
-                                onDeleteCard = { deleteCard(it) },
+                                onDeleteCard = { data, parentId -> deleteCard(data, parentId) },
+                                onDeleteCarousel = deleteCarousel,
                                 modifier = Modifier.offset(
                                     y = -arrangementSpacing
                                 )
@@ -356,7 +358,8 @@ fun CarouselPreview(
                 onWatchAllClick = {},
                 onEditCarouselSettings = {},
                 onEditCard = {},
-                onDeleteCard = {}
+                onDeleteCard = {_,_ -> },
+                onDeleteCarousel = {_,_ -> }
             )
         }
     }
@@ -374,7 +377,8 @@ private fun Carousel(
     onClickCard: (ObjectData2) -> Unit,
     onWatchAllClick: (() -> Unit)? = null,
     onEditCard: (ObjectData2) -> Unit,
-    onDeleteCard: (Long) -> Unit
+    onDeleteCard: (ObjectData2, Long?) -> Unit,
+    onDeleteCarousel: (ObjectData2, Long?) -> Unit
 ) {
     val haptic = LocalHapticFeedback.current
 
@@ -385,14 +389,9 @@ private fun Carousel(
     val rightInset = with(density) { rightInsetPx.toDp() }
     val leftInset = with(density) { leftInsetPx.toDp() }
 
-    val isAttached = remember { mutableStateOf(false) }
-
     BoxWithConstraints(
         modifier = modifier
             .fillMaxWidth()
-            .onGloballyPositioned { coords ->
-                isAttached.value = coords.isAttached
-            }
     ) {
         val columnWidth = maxWidth
         Box(
@@ -485,6 +484,22 @@ private fun Carousel(
                                     painter = painterResource(R.drawable.settings_ico),
                                     modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
                                     tint = MaterialTheme.colorScheme.onBackground,
+                                    contentDescription = null
+                                )
+                            }
+
+                            PopupMenuItem(
+                                text = stringResource(R.string.delete),
+                                onClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                                    onDeleteCarousel(carouselData, null)
+                                    isExpanded.value = false
+                                }
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.delete_ico),
+                                    modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
+                                    tint = LocalCustomColors.current.closeButton,
                                     contentDescription = null
                                 )
                             }
@@ -745,7 +760,7 @@ private fun Carousel(
                                     },
                                     onCardClick = { onClickCard(it) },
                                     onCardEdit = { onEditCard(it) },
-                                    onCardDelete = { onDeleteCard(it) }
+                                    onCardDelete = { onDeleteCard(it, carouselData.id) }
                                 )
                             } else {
                                 Card(
@@ -765,7 +780,7 @@ private fun Carousel(
                                     layoutType = card.layoutType,
                                     onClick = { onClickCard(card) },
                                     onEdit = { onEditCard(card) },
-                                    onDelete = { onDeleteCard(card.id) }
+                                    onDelete = { onDeleteCard(card, carouselData.id) }
                                 )
                             }
                         }
@@ -822,7 +837,7 @@ private fun Carousel(
                             marginBetweenElements = MaterialTheme.spacing.marginBetweenElementsInGrid,
                             onCardClick = { onClickCard(it) },
                             onCardEdit = { onEditCard(it) },
-                            onCardDelete = { onDeleteCard(it) }
+                            onCardDelete = { onDeleteCard(it, carouselData.id) }
                         )
                     } else {
                         Box(

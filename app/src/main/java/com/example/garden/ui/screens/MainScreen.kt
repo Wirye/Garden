@@ -285,7 +285,6 @@ private fun LayerContent(
                                 )
                             }
                         },
-
                         openEditCardPage = { data, parentId, carouselType ->
                             coroutineScope.launch {
                                 layersViewModel.openLayer(
@@ -293,8 +292,17 @@ private fun LayerContent(
                                 )
                             }
                         },
-
-                        deleteCard = {
+                        deleteCard = { data, parentId ->
+                            coroutineScope.launch {
+                                val item = data.toObjectData(parentId)
+                                mainViewModel.deleteObject(item)
+                            }
+                        },
+                        deleteCarousel = { data, parentId ->
+                            coroutineScope.launch {
+                                val item = data.toObjectData(parentId)
+                                mainViewModel.deleteObject(item)
+                            }
                         }
                     )
                 }

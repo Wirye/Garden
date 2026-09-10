@@ -795,6 +795,10 @@ class MainViewModel(
 
     }
 
+    suspend fun deleteObject(objectData: ObjectData) {
+        dao.deleteAndShiftPositions(objectData)
+    }
+
     suspend fun insertCarousel(objectData: ObjectData, page: PageType): Long {
         val position = dao.getMaxPositionOnPage(null, page) ?: -1
         objectData.position = position + 1

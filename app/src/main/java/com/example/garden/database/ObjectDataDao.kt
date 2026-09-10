@@ -1,9 +1,11 @@
 package com.example.garden.database
 
 import androidx.room.Dao
+import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 
@@ -38,4 +40,23 @@ interface ObjectDataDao {
 
     @Query("DELETE FROM objectData")
     suspend fun deleteAll()
+
+    @Query("""
+        UPDATE objectData 
+        SET position = position - 1 
+        WHERE parentId = :parentId AND position > :currentPosition
+    """)
+    suspend fun decrementPositionsAfter(parentId: Long?, currentPosition: Int)
+
+    @Delete
+    suspend fun deleteObject(item: ObjectData)
+
+    @Transaction
+    suspend fun deleteAndShiftPositions(item: ObjectData) {
+        decrementPositionsAfter(
+            parentId = item.parentId,
+            currentPosition = item.position
+        )
+        deleteObject(item)
+    }
 }

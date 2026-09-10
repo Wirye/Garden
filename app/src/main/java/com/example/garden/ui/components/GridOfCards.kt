@@ -29,7 +29,7 @@ fun GridOfCards(
     marginBetweenElements: Dp,
     onCardClick: (ObjectData2) -> Unit,
     onCardEdit: (ObjectData2) -> Unit,
-    onCardDelete: (Long) -> Unit
+    onCardDelete: (ObjectData2) -> Unit
 ) {
     val items = gridInfo.childs.sortedBy { it.position }
     if (items.isNotEmpty()) {
@@ -66,7 +66,7 @@ fun GridOfCards(
                     layoutType = item.layoutType,
                     onClick = { onCardClick(item) },
                     onEdit = { onCardEdit(item) },
-                    onDelete = { onCardDelete(item.id) }
+                    onDelete = { onCardDelete(item) }
                 )
             }
 
@@ -93,7 +93,7 @@ fun GridOfCards(
                         layoutType = item.layoutType,
                         onClick = { },
                         onEdit = { onCardEdit(item) },
-                        onDelete = { onCardDelete(item.id) }
+                        onDelete = { onCardDelete(item) }
                     )
                 }
             }
