@@ -2,7 +2,6 @@ package com.example.garden.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.garden.appsettings.SettingsManager
 import com.example.garden.database.CardSize
 import com.example.garden.database.CarouselType
 import com.example.garden.database.ElementType
@@ -28,7 +27,10 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-class MainViewModel(private val dao: ObjectDataDao, private val groupDao: GroupsDataDao, private val settingsManager: SettingsManager) : ViewModel() {
+class MainViewModel(
+    private val dao: ObjectDataDao,
+    private val groupDao: GroupsDataDao
+) : ViewModel() {
     val uiDataFlow: StateFlow<List<ObjectData2>> = dao.getAll()
         .map { allItems ->
             val roots = allItems.filter { it.parentId == null }.sortedBy { it.position }
@@ -42,8 +44,19 @@ class MainViewModel(private val dao: ObjectDataDao, private val groupDao: Groups
         )
 
     private fun build(current: ObjectData, allItems: List<ObjectData>): ObjectData2 {
-        val dataSource = if (current.link?.type == LinkType.INSERT && current.link?.targetId != null) { allItems.find { it.id == current.link?.targetId } ?: current } else { current }
-        val childs = allItems.filter { it.parentId == if (dataSource != current) {dataSource.id} else {current.id } }.sortedBy { it.position }
+        val dataSource =
+            if (current.link?.type == LinkType.INSERT && current.link?.targetId != null) {
+                allItems.find { it.id == current.link?.targetId } ?: current
+            } else {
+                current
+            }
+        val childs = allItems.filter {
+            it.parentId == if (dataSource != current) {
+                dataSource.id
+            } else {
+                current.id
+            }
+        }.sortedBy { it.position }
         return ObjectData2(
             id = current.id,
             page = current.page,
@@ -73,12 +86,103 @@ class MainViewModel(private val dao: ObjectDataDao, private val groupDao: Groups
             adaptiveGridSize = current.adaptiveGridSize,
             maxObjectsInOneLineForAdaptiveSize = current.maxObjectsInOneLineForAdaptiveSize,
             maxLinesForAdaptiveSize = current.maxLinesForAdaptiveSize,
-            childs = childs.map { build(it,allItems) },
-            link = dataSource.link,
+            childs = childs.map { build(it, allItems) },
+            link = current.link,
             elementType = dataSource.elementType,
             genre = dataSource.genre
         )
     }
+
+    suspend fun buildObject(id: Long): ObjectData2? {
+        val item = dao.getById(id)
+        if (item != null) {
+            val childs = dao.getChilds(item.id)
+            val newChilds = mutableListOf<ObjectData2>()
+
+            childs.forEach {
+                val child = buildObject(it.id)
+                if (child != null) {
+                    newChilds.add(child)
+                }
+            }
+
+            return ObjectData2(
+                id = item.id,
+                page = item.page,
+                position = item.position,
+                name = item.name,
+                showAlreadyWatchedLine = item.showAlreadyWatchedLine,
+                showIco = item.showIco,
+                childsShowName = item.childsShowName,
+                childsNamePosition = item.childsNamePosition,
+                childsShowAlreadyWatchedLine = item.childsShowAlreadyWatchedLine,
+                childsShowAuthor = item.childsShowAuthor,
+                image = item.image,
+                description = item.description,
+                author = item.author,
+                type = item.type,
+                alreadyWatched = item.alreadyWatched,
+                length = item.length,
+                carouselType = item.carouselType,
+                carouselCollectionType = item.carouselCollectionType,
+                childsSize = item.childsSize,
+                childsCornerRadius = item.childsCornerRadius,
+                layoutType = item.layoutType,
+                dovodchik = item.dovodchik,
+                showDovodchikDots = item.showDovodchikDots,
+                objectsInOneLine = item.objectsInOneLine,
+                maxLines = item.maxLines,
+                adaptiveGridSize = item.adaptiveGridSize,
+                maxObjectsInOneLineForAdaptiveSize = item.maxObjectsInOneLineForAdaptiveSize,
+                maxLinesForAdaptiveSize = item.maxLinesForAdaptiveSize,
+                childs = newChilds,
+                link = item.link,
+                elementType = item.elementType,
+                genre = item.genre,
+            )
+        }
+
+        return null
+    }
+
+    suspend fun getParentCard(card: ObjectData2): ObjectData2 {
+        return resolveParentRecursively(
+            currentCard = card,
+            visitedIds = mutableSetOf(card.id),
+            depth = 0
+        )
+    }
+
+    private tailrec suspend fun resolveParentRecursively(
+        currentCard: ObjectData2,
+        visitedIds: MutableSet<Long>,
+        depth: Int,
+        maxDepth: Int = 20
+    ): ObjectData2 {
+        val link = currentCard.link
+
+        if (link == null || link.type != LinkType.INSERT || link.targetId == null || depth >= maxDepth) {
+            return currentCard
+        }
+
+        val targetId = link.targetId
+
+        if (visitedIds.contains(targetId)) {
+            return currentCard
+        }
+
+        val targetCard = buildObject(targetId) ?: return currentCard
+
+        visitedIds.add(targetId)
+
+        return resolveParentRecursively(
+            currentCard = targetCard,
+            visitedIds = visitedIds,
+            depth = depth + 1,
+            maxDepth = maxDepth
+        )
+    }
+
     fun insert() {
         viewModelScope.launch(Dispatchers.IO) {
             val cr1 = ObjectData(
@@ -685,15 +789,15 @@ class MainViewModel(private val dao: ObjectDataDao, private val groupDao: Groups
             dao.insert(cd16)
 
             groupDao.deleteAll()
-            groupDao.insert(GroupsData(0,0, 2, 0))
-            groupDao.insert(GroupsData(0,0,3,1))
+            groupDao.insert(GroupsData(0, 0, 2, 0))
+            groupDao.insert(GroupsData(0, 0, 3, 1))
         }
 
     }
 
     suspend fun insertCarousel(objectData: ObjectData, page: PageType): Long {
         val position = dao.getMaxPositionOnPage(null, page) ?: -1
-        objectData.position = position+1
+        objectData.position = position + 1
         objectData.page = page
         val carouselId = dao.insert(objectData)
         return carouselId
@@ -709,7 +813,7 @@ class MainViewModel(private val dao: ObjectDataDao, private val groupDao: Groups
 
     suspend fun insertCard(objectData: ObjectData, parentId: Long): Long {
         val position = dao.getMaxPosition(parentId) ?: -1
-        objectData.position = position+1
+        objectData.position = position + 1
         objectData.parentId = parentId
         val cardId = dao.insert(objectData)
         return cardId
@@ -721,7 +825,7 @@ class MainViewModel(private val dao: ObjectDataDao, private val groupDao: Groups
             id = 0,
             page = PageType.Home,
             parentId = parentId,
-            position = position+1,
+            position = position + 1,
             name = episodeInfo.name,
             showAlreadyWatchedLine = false,
             showIco = false,
@@ -747,13 +851,14 @@ class MainViewModel(private val dao: ObjectDataDao, private val groupDao: Groups
         val episodeId = dao.insert(data)
         return episodeId
     }
+
     suspend fun insertChapter(chapterInfo: ChapterInfo, parentId: Long): Long {
         val position = dao.getMaxPosition(parentId) ?: -1
         val data = ObjectData(
             id = 0,
             page = PageType.Home,
             parentId = parentId,
-            position = position+1,
+            position = position + 1,
             name = chapterInfo.name,
             alreadyWatched = 0,
             length = chapterInfo.childs.size.toLong(),
@@ -780,7 +885,11 @@ class MainViewModel(private val dao: ObjectDataDao, private val groupDao: Groups
         return chapterId
     }
 
-    fun insertCardWithEpisodes(cardInfo: ObjectData, episodesInfo: List<EpisodeInfo>, parentId: Long) {
+    fun insertCardWithEpisodes(
+        cardInfo: ObjectData,
+        episodesInfo: List<EpisodeInfo>,
+        parentId: Long
+    ) {
         viewModelScope.launch {
             val cardId = insertCard(cardInfo, parentId)
             for (i in episodesInfo.indices) {
@@ -789,7 +898,11 @@ class MainViewModel(private val dao: ObjectDataDao, private val groupDao: Groups
         }
     }
 
-    fun insertCardWithChapters(cardInfo: ObjectData, chaptersInfo: List<ChapterInfo>, parentId: Long) {
+    fun insertCardWithChapters(
+        cardInfo: ObjectData,
+        chaptersInfo: List<ChapterInfo>,
+        parentId: Long
+    ) {
         viewModelScope.launch {
             val cardId = insertCard(cardInfo, parentId)
             for (i in chaptersInfo.indices) {
@@ -798,7 +911,13 @@ class MainViewModel(private val dao: ObjectDataDao, private val groupDao: Groups
         }
     }
 
-    fun insertMusicCard(cardInfo: ObjectData, parentId: Long, song: LinkData?, verticalVideo: LinkData?, horizontalVideo: LinkData?) {
+    fun insertMusicCard(
+        cardInfo: ObjectData,
+        parentId: Long,
+        song: LinkData?,
+        verticalVideo: LinkData?,
+        horizontalVideo: LinkData?
+    ) {
         viewModelScope.launch {
             val cardId = insertCard(cardInfo, parentId)
             if (song != null) {

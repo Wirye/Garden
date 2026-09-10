@@ -11,11 +11,9 @@ import kotlinx.coroutines.flow.Flow
 interface ObjectDataDao {
     @Query("SELECT * FROM objectData")
     fun getAll(): Flow<List<ObjectData>>
-    // Найти элементы конкретной страницы (например, только Home)
     @Query("SELECT * FROM objectData WHERE page = :pageId AND parentId IS NULL ORDER BY position ASC")
     suspend fun getCarouselsForPage(pageId: PageType): List<ObjectData>
 
-    // Найти все карточки внутри конкретной карусели
     @Query("SELECT * FROM objectData WHERE parentId = :parentId ORDER BY position ASC")
     suspend fun getChilds(parentId: Long): List<ObjectData>
 
@@ -29,7 +27,7 @@ interface ObjectDataDao {
     suspend fun getMaxPosition(parentId: Long?): Int?
     @Query("SELECT MAX(position) FROM objectData WHERE ((:parentId IS NULL AND parentId IS NULL) OR parentId = :parentId) AND page = :page")
     suspend fun getMaxPositionOnPage(parentId: Long?, page: PageType): Int?
-    @Query("SELECT * FROM objectData WHERE id = :id")
+    @Query("SELECT * FROM objectData WHERE id = :id LIMIT 1")
     suspend fun getById(id: Long): ObjectData?
 
     @Query("SELECT position FROM objectData WHERE id = :id")

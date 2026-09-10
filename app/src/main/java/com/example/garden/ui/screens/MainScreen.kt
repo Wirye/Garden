@@ -215,6 +215,7 @@ private fun LayerContent(
             when (layer) {
                 is Layer.MainPage -> {
                     val mainViewModel: MainViewModel = viewModel()
+                    val coroutineScope = rememberCoroutineScope()
                     val carouselsList by mainViewModel.uiDataFlow.collectAsStateWithLifecycle()
                     val topBarHeightState = remember { mutableStateOf(0.dp) }
                     MainPageTopBar(
@@ -278,15 +279,21 @@ private fun LayerContent(
                             )
                         },
                         openEditCarouselPage = {
-                            layersViewModel.openLayer(
-                                it.toLayerCreateCarouselPage()
-                            )
+                            coroutineScope.launch {
+                                layersViewModel.openLayer(
+                                    mainViewModel.getParentCard(it).toLayerCreateCarouselPage()
+                                )
+                            }
                         },
+
                         openEditCardPage = { data, parentId, carouselType ->
-                            layersViewModel.openLayer(
-                                data.toLayerCreateCardPage(parentId, carouselType)
-                            )
+                            coroutineScope.launch {
+                                layersViewModel.openLayer(
+                                    mainViewModel.getParentCard(data).toLayerCreateCardPage(parentId = parentId, carouselType = carouselType)
+                                )
+                            }
                         },
+
                         deleteCard = {
                         }
                     )

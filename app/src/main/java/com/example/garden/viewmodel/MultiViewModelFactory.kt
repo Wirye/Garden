@@ -12,7 +12,7 @@ class MultiViewModelFactory(private val dao: ObjectDataDao, private val groupsDa
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         return when {
             modelClass.isAssignableFrom(MainViewModel::class.java) -> {
-                MainViewModel(dao, groupsDao, settings) as T
+                MainViewModel(dao, groupsDao) as T
             }
 
             else -> throw IllegalArgumentException("Неизвестный класс ViewModel: ${modelClass.name}")
