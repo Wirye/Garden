@@ -843,7 +843,7 @@ fun CreateCardPage(
                                 remember { mutableStateOf(false) }
 
                             val openVerticalVideoPicker = rememberFilePicker(
-                                mimeTypes = arrayOf("audio/*")
+                                mimeTypes = arrayOf("video/*")
                             ) { uri ->
                                 if (uri != null) {
                                     stateViewModel.update {
