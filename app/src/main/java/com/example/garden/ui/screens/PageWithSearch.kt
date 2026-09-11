@@ -294,8 +294,7 @@ fun PageWithSearch(
             OutlinedTextField(
                 state = searchState,
                 modifier = Modifier
-                    .weight(1f)
-                    .padding(horizontal = MaterialTheme.spacing.small),
+                    .weight(1f),
                 shape = CircleShape,
                 colors = OutlinedTextFieldDefaults.colors(
                     unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
