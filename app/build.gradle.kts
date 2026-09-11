@@ -87,4 +87,5 @@ dependencies {
     implementation(libs.haze)
     implementation(libs.haze.materials)
     implementation(libs.reorderable)
+    implementation(libs.crypto)
 }

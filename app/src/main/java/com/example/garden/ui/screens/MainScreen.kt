@@ -49,6 +49,7 @@ import com.example.garden.ui.utils.hazeSourcesForUpperLayers
 import com.example.garden.ui.utils.toLayerCreateCardPage
 import com.example.garden.ui.utils.toLayerCreateCarouselPage
 import com.example.garden.ui.utils.toObjectData
+import com.example.garden.viewmodel.AuthViewModel
 import com.example.garden.viewmodel.LayersViewModel
 import com.example.garden.viewmodel.MainViewModel
 import com.example.garden.viewmodel.ResultSenderViewModel
@@ -77,6 +78,7 @@ val LocalHazeStates = compositionLocalOf { HazeStates() }
 fun MainScreen(
     layersViewModel: LayersViewModel,
     resultSenderViewModel: ResultSenderViewModel,
+    authViewModel: AuthViewModel,
 ) {
     val backStack = layersViewModel.backStack
     val mainPagesBackStack = layersViewModel.mainPagesStack
@@ -122,7 +124,8 @@ fun MainScreen(
                             bottomBarHeight = bottomBarHeight.value,
                             layerIndex = index,
                             layersViewModel = layersViewModel,
-                            resultSenderViewModel = resultSenderViewModel
+                            resultSenderViewModel = resultSenderViewModel,
+                            authViewModel = authViewModel
                         )
                     }
                 }
@@ -208,7 +211,8 @@ private fun LayerContent(
     isTopLayer: Boolean,
     bottomBarHeight: Dp,
     layerIndex: Int,
-    resultSenderViewModel: ResultSenderViewModel
+    resultSenderViewModel: ResultSenderViewModel,
+    authViewModel: AuthViewModel
 ) {
     CompositionLocalProvider(LocalLayerIndex provides layerIndex) {
         Box(modifier = modifier.fillMaxSize()) {
@@ -234,6 +238,9 @@ private fun LayerContent(
                         isTopLayer = isTopLayer,
                         topBarHeight = topBarHeightState.value,
                         bottomBarHeight = bottomBarHeight,
+                        openSettings = {
+                            layersViewModel.openLayer(Layer.AppSettings())
+                        },
                         openCreateCardPage = { parentId, carouselType ->
                             layersViewModel.openLayer(
                                 Layer.CreateCardPage(
@@ -374,6 +381,13 @@ private fun LayerContent(
                         }
                     )
                 }
+
+                is Layer.AppSettings -> {
+                    AppSettings(
+                        authViewModel = authViewModel,
+                        onClose = closeLayer
+                    )
+                }
             }
         }
     }
@@ -394,7 +408,8 @@ private fun LayerScreen(
     useBlurForDimming: Boolean = false,
     closeLayer: () -> Unit,
     hazeState: HazeState,
-    resultSenderViewModel: ResultSenderViewModel
+    resultSenderViewModel: ResultSenderViewModel,
+    authViewModel: AuthViewModel
 ) {
     val coroutineScope = rememberCoroutineScope()
     val density = LocalDensity.current
@@ -593,7 +608,8 @@ private fun LayerScreen(
                 bottomBarHeight = bottomBarHeight,
                 layerIndex = layerIndex,
                 layersViewModel = layersViewModel,
-                resultSenderViewModel = resultSenderViewModel
+                resultSenderViewModel = resultSenderViewModel,
+                authViewModel = authViewModel
             )
         }
     }

@@ -120,6 +120,7 @@ fun MainPage(
     isTopLayer: Boolean,
     topBarHeight: Dp,
     bottomBarHeight: Dp,
+    openSettings: () -> Unit,
     openCreateCardPage: (Long, CarouselType) -> Unit,
     openCreateCarouselPage: () -> Unit,
     openEditCarouselPage: (ObjectData2) -> Unit,
@@ -278,7 +279,7 @@ fun MainPage(
                 .align(Alignment.TopCenter),
             isStrokeVisible = isStrokeVisible,
             onSearch = {},
-            onSettings = {},
+            onSettings = openSettings,
             onAddCarousel = {
                 openCreateCarouselPage()
             },

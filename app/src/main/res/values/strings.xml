@@ -140,4 +140,6 @@
     <string name="spacer"></string>
     <string name="save">Сохранить</string>
     <string name="Placeholder">Заглушка</string>
+    <string name="Account">Аккаунт</string>
+    <string name="Logout">Выйти</string>
 </resources>

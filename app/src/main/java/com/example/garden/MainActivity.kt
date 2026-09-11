@@ -18,6 +18,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import com.example.garden.appsettings.AuthManager
 import com.example.garden.database.CardSize
 import com.example.garden.database.CarouselType
 import com.example.garden.database.CollectionType
@@ -35,10 +36,11 @@ import com.example.garden.ui.screens.MainScreen
 import com.example.garden.ui.screens.PageWithSearchInput
 import com.example.garden.ui.theme.GardenTheme
 import com.example.garden.utils.getValidLayerId
+import com.example.garden.viewmodel.AuthViewModel
 import com.example.garden.viewmodel.LayersViewModel
 import com.example.garden.viewmodel.MainViewModel
-import com.example.garden.viewmodel.MultiViewModelFactory
 import com.example.garden.viewmodel.ResultSenderViewModel
+import com.example.garden.viewmodel.utils.viewModelFactory
 import kotlinx.parcelize.Parcelize
 
 sealed class Layer (
@@ -116,6 +118,11 @@ sealed class Layer (
         var startsInfo: PageWithSearchInput,
         val key: String
     ): Layer()
+
+    @Parcelize
+    data class AppSettings(
+        val nothing: Int = 0,
+    ): Layer()
 }
 
 @Parcelize
@@ -153,10 +160,18 @@ val LocalCustomColors = staticCompositionLocalOf { CustomColors() }
 class MainActivity : ComponentActivity() {
     private val viewModel: MainViewModel by viewModels {
         val app = application as App
-        MultiViewModelFactory(app.dao, app.groupsDao, app.settingsManager, resources.displayMetrics.density)
+        viewModelFactory {
+            MainViewModel(app.dao, app.groupsDao)
+        }
     }
     private val layersViewModel: LayersViewModel by viewModels()
     private val resultSenderViewModel: ResultSenderViewModel by viewModels()
+
+    private val authViewModel: AuthViewModel by viewModels {
+        viewModelFactory {
+            AuthViewModel(AuthManager(applicationContext))
+        }
+    }
 
     @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -183,7 +198,7 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.fillMaxSize(),
                         color = MaterialTheme.colorScheme.background
                     ) {
-                        MainScreen(layersViewModel, resultSenderViewModel)
+                        MainScreen(layersViewModel, resultSenderViewModel, authViewModel)
                     }
                 }
             }
