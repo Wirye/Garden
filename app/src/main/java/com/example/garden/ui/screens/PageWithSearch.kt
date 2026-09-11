@@ -259,13 +259,13 @@ fun PageWithSearch(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
             .padding(
-                top = MaterialTheme.spacing.medium + topInset,
-                start = MaterialTheme.spacing.medium + leftInset,
-                end = MaterialTheme.spacing.medium + rightInset
+                top = MaterialTheme.spacing.screenHorizontal + topInset,
+                start = MaterialTheme.spacing.screenHorizontal + leftInset,
+                end = MaterialTheme.spacing.screenHorizontal + rightInset
             )
             .blockGestures()
             .clearFocus(focusManager),
-        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.screenHorizontal)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
