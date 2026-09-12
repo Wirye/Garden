@@ -456,6 +456,50 @@ private fun LayerContent(
                         }
                     }
                 }
+
+                is Layer.GoogleLoginPage -> {
+                    var cockies by remember { mutableStateOf("") }
+                    val context = LocalContext.current
+
+                    GoogleLoginPage(
+                        modifier = Modifier.fillMaxSize(),
+                        onSuccessAuth = {
+                            Log.e("COOCki", it)
+                            cockies = it
+                            closeLayer()
+                        },
+                        onClose = closeLayer
+                    )
+
+                    val loginingErrorText = stringResource(R.string.FailedToLoadProfilePleaseTryLoggingInAgain)
+
+                    LaunchedEffect(cockies, loginingErrorText) {
+                        if (cockies.isNotEmpty()) {
+                            withContext(Dispatchers.IO) {
+                                val result = authViewModel.fetchGoogleUserProfile(cockies)
+
+                                result.onSuccess { profile ->
+                                    authViewModel.onGoogleSignInSuccess(
+                                        email = profile.handleOrEmail ?: "",
+                                        avatarUrl = profile.avatarUrl,
+                                        nickName = profile.name,
+                                        token = "google_session",
+                                        cookies = cockies
+                                    )
+                                }.onFailure { error ->
+                                    withContext(Dispatchers.Main) {
+                                        Toast.makeText(
+                                            context,
+                                            error.message
+                                                ?: loginingErrorText,
+                                            Toast.LENGTH_LONG
+                                        ).show()
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }

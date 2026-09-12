@@ -120,12 +120,17 @@ sealed class Layer (
 
     @Parcelize
     data class AppSettings(
-        val nothing: Int = 0,
+        val nothing: Int = 0
     ): Layer()
 
     @Parcelize
     data class AniLibertyLoginPage(
-        val nothing: Int = 0,
+        val nothing: Int = 0
+    ) : Layer()
+
+    @Parcelize
+    data class GoogleLoginPage(
+        val nothing: Int = 0
     ) : Layer()
 }
 
