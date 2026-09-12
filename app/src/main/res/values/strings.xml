@@ -143,4 +143,9 @@
     <string name="Placeholder">Заглушка</string>
     <string name="Account">Аккаунт</string>
     <string name="Logout">Выйти</string>
+    <string name="aniLibertyLogin">Вход в АниЛиберти</string>
+    <string name="FailedToLoadProfilePleaseTryLoggingInAgain">Не удалось загрузить профиль, пожалуйста попробуйте авторизоваться снова</string>
+    <string name="PersonalizedContentWillBecomeUnavailable">Персонализированный контент станет недоступен</string>
+    <string name="LogoutFromAniLiberty">Выйти из АниЛиберти?</string>
+    <string name="LogoutFromGoogle">Выйти из google?</string>
 </resources>

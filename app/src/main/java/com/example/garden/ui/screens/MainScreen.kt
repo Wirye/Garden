@@ -1,5 +1,7 @@
 package com.example.garden.ui.screens
 
+import android.util.Log
+import android.widget.Toast
 import androidx.activity.BackEventCompat
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
@@ -26,16 +28,20 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.garden.Layer
+import com.example.garden.R
 import com.example.garden.database.CardSize
 import com.example.garden.database.CarouselType
 import com.example.garden.database.ElementType
@@ -58,8 +64,10 @@ import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
 import dev.chrisbanes.haze.materials.HazeMaterials
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlin.time.Duration.Companion.milliseconds
 
 class HazeLayers(
@@ -295,7 +303,10 @@ private fun LayerContent(
                         openEditCardPage = { data, parentId, carouselType ->
                             coroutineScope.launch {
                                 layersViewModel.openLayer(
-                                    mainViewModel.getParentCard(data).toLayerCreateCardPage(parentId = parentId, carouselType = carouselType)
+                                    mainViewModel.getParentCard(data).toLayerCreateCardPage(
+                                        parentId = parentId,
+                                        carouselType = carouselType
+                                    )
                                 )
                             }
                         },
@@ -332,9 +343,19 @@ private fun LayerContent(
                         onCloseAndApply = { objData, layer ->
                             coroutineScope.launch {
                                 if (layer.cardId == null) {
-                                    when(layer.cardType) {
-                                        ElementType.AnimeCard -> mainViewModel.insertCardWithEpisodes(objData, layer.episodesList, layer.parentId)
-                                        ElementType.MangaCard -> mainViewModel.insertCardWithChapters(objData, layer.chaptersList, layer.parentId)
+                                    when (layer.cardType) {
+                                        ElementType.AnimeCard -> mainViewModel.insertCardWithEpisodes(
+                                            objData,
+                                            layer.episodesList,
+                                            layer.parentId
+                                        )
+
+                                        ElementType.MangaCard -> mainViewModel.insertCardWithChapters(
+                                            objData,
+                                            layer.chaptersList,
+                                            layer.parentId
+                                        )
+
                                         ElementType.MusicCard -> mainViewModel.insertMusicCard(
                                             objData,
                                             layer.parentId,
@@ -342,6 +363,7 @@ private fun LayerContent(
                                             layer.verticalVideo,
                                             layer.horizontalVideo
                                         )
+
                                         else -> {}
                                     }
                                 } else {
@@ -385,8 +407,54 @@ private fun LayerContent(
                 is Layer.AppSettings -> {
                     AppSettings(
                         authViewModel = authViewModel,
+                        layersViewModel = layersViewModel,
                         onClose = closeLayer
                     )
+                }
+
+                is Layer.AniLibertyLoginPage -> {
+                    var token by remember { mutableStateOf("") }
+
+                    val context = LocalContext.current
+
+                    AniLibertyLoginPage(
+                        modifier = Modifier.fillMaxSize(),
+                        authViewModel = authViewModel,
+                        onSuccessAuth = {
+                            closeLayer()
+                            token = it
+                            Log.e("IT", it)
+                        },
+                        onClose = closeLayer
+                    )
+
+                    val loginingErrorText = stringResource(R.string.FailedToLoadProfilePleaseTryLoggingInAgain)
+
+                    LaunchedEffect(Unit, token, loginingErrorText) {
+                        if (token.isNotEmpty()) {
+                            withContext(Dispatchers.IO) {
+                                val result = authViewModel.fetchAniLibertyUserProfile(token)
+
+                                result.onSuccess { profile ->
+                                    authViewModel.onAniLibertySignInSuccess(
+                                        token = token,
+                                        cookies = "",
+                                        nickName = profile.username,
+                                        avatarUrl = profile.avatarUrl
+                                    )
+                                }.onFailure { error ->
+                                    withContext(Dispatchers.Main) {
+                                        Toast.makeText(
+                                            context,
+                                            error.message
+                                                ?: loginingErrorText,
+                                            Toast.LENGTH_LONG
+                                        ).show()
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }

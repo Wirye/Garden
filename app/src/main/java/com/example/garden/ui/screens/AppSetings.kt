@@ -45,6 +45,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.garden.Layer
 import com.example.garden.LocalCustomColors
 import com.example.garden.R
 import com.example.garden.database.ImageData
@@ -58,10 +59,12 @@ import com.example.garden.ui.theme.spacing
 import com.example.garden.ui.utils.blockGestures
 import com.example.garden.ui.utils.clearFocus
 import com.example.garden.viewmodel.AuthViewModel
+import com.example.garden.viewmodel.LayersViewModel
 
 @Composable
 fun AppSettings(
     authViewModel: AuthViewModel,
+    layersViewModel: LayersViewModel,
     onClose: () -> Unit
 ) {
     val uiState by authViewModel.uiState.collectAsStateWithLifecycle()
@@ -79,14 +82,14 @@ fun AppSettings(
     val rightInset = with(density) { rightInsetPx.toDp() }
     val leftInset = with(density) { leftInsetPx.toDp() }
 
-    val isGoogleAuthorized by remember { mutableStateOf(uiState.isGoogleAuthorized) }
-    val googleUserName by remember { mutableStateOf(uiState.googleNickName) }
-    val linkToGoogleAvatar: String? by remember { mutableStateOf(uiState.googleAvatarUrl) }
-    val googleEmail: String? by remember { mutableStateOf(uiState.googleEmail) }
+    val isGoogleAuthorized = uiState.isGoogleAuthorized
+    val googleUserName = uiState.googleNickName
+    val linkToGoogleAvatar = uiState.googleAvatarUrl
+    val googleEmail = uiState.googleEmail
 
-    val isAniLibertyAuthorized by remember { mutableStateOf(uiState.isAniLibertyAuthorized) }
-    val aniLibertyUserName by remember { mutableStateOf(uiState.aniLibertyNickName) }
-    val linkToAniLibertyAvatar: String? by remember { mutableStateOf(uiState.aniLibertyAvatarUrl) }
+    val isAniLibertyAuthorized = uiState.isAniLibertyAuthorized
+    val aniLibertyUserName = uiState.aniLibertyNickName
+    val linkToAniLibertyAvatar = uiState.aniLibertyAvatarUrl
 
     val searchState = rememberTextFieldState(initialText = "")
 
@@ -135,8 +138,8 @@ fun AppSettings(
                     .fillMaxWidth(),
                 shape = CircleShape,
                 colors = OutlinedTextFieldDefaults.colors(
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0f),
+                    focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0f),
                     focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                     unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh
                 ),
@@ -169,14 +172,16 @@ fun AppSettings(
                 modifier = Modifier
                     .clip(
                         if (isGoogleAuthorized) {
-                            MaterialTheme.shapes.medium.copy(
+                            MaterialTheme.shapes.extraLarge.copy(
                                 bottomStart = CornerSize(0.dp),
                                 bottomEnd = CornerSize(0.dp)
                             )
-                        } else MaterialTheme.shapes.medium
+                        } else MaterialTheme.shapes.extraLarge
                     )
                     .background(MaterialTheme.colorScheme.surfaceVariant)
-                    .clickable {}
+                    .clickable {
+                        haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                    }
             ) {
                 Row(
                     modifier = Modifier
@@ -220,8 +225,8 @@ fun AppSettings(
                 var isLogoutAskExpanded by remember { mutableStateOf(false) }
                 if (isLogoutAskExpanded) {
                     ConfirmLogoutDialog(
-                        title = "Выйти из Google?",
-                        message = "Персонализированный контент станет недоступен",
+                        title = stringResource(R.string.LogoutFromGoogle),
+                        message = stringResource(R.string.PersonalizedContentWillBecomeUnavailable),
                         onConfirm = { isLogoutAskExpanded = false },
                         onDismiss = { isLogoutAskExpanded = false }
                     )
@@ -230,13 +235,16 @@ fun AppSettings(
                 Box(
                     modifier = Modifier
                         .clip(
-                            MaterialTheme.shapes.medium.copy(
+                            MaterialTheme.shapes.extraLarge.copy(
                                 topStart = CornerSize(0.dp),
                                 topEnd = CornerSize(0.dp)
                             )
                         )
                         .background(MaterialTheme.colorScheme.surfaceVariant)
-                        .clickable { isLogoutAskExpanded = true }
+                        .clickable {
+                            haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                            isLogoutAskExpanded = true
+                        }
                 ) {
                     Row(
                         modifier = Modifier
@@ -251,7 +259,7 @@ fun AppSettings(
                         ) {
                             AppAsyncImage(
                                 imageData = if (linkToGoogleAvatar != null) ImageData.Url(
-                                    linkToGoogleAvatar ?: ""
+                                    linkToGoogleAvatar
                                 ) else null,
                                 contentDescription = null,
                                 contentScale = ContentScale.Crop,
@@ -295,14 +303,21 @@ fun AppSettings(
                 modifier = Modifier
                     .clip(
                         if (isAniLibertyAuthorized) {
-                            MaterialTheme.shapes.medium.copy(
+                            MaterialTheme.shapes.extraLarge.copy(
                                 bottomStart = CornerSize(0.dp),
                                 bottomEnd = CornerSize(0.dp)
                             )
-                        } else MaterialTheme.shapes.medium
+                        } else MaterialTheme.shapes.extraLarge
                     )
                     .background(MaterialTheme.colorScheme.surfaceVariant)
-                    .clickable {}
+                    .clickable {
+                        if (!isAniLibertyAuthorized) {
+                            haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                            layersViewModel.openLayer(
+                                Layer.AniLibertyLoginPage()
+                            )
+                        }
+                    }
             ) {
                 Row(
                     modifier = Modifier
@@ -346,10 +361,11 @@ fun AppSettings(
                 var isLogoutAskExpanded by remember { mutableStateOf(false) }
                 if (isLogoutAskExpanded) {
                     ConfirmLogoutDialog(
-                        title = "Выйти из AniLiberty?",
-                        message = "Вы потеряете доступ к рекомендациям и плейлистам YouTube Music.",
+                        title = stringResource(R.string.LogoutFromAniLiberty),
+                        message = stringResource(R.string.PersonalizedContentWillBecomeUnavailable),
                         onConfirm = {
                             isLogoutAskExpanded = false
+                            authViewModel.logoutAniLiberty()
                         },
                         onDismiss = { isLogoutAskExpanded = false }
                     )
@@ -358,13 +374,16 @@ fun AppSettings(
                 Box(
                     modifier = Modifier
                         .clip(
-                            MaterialTheme.shapes.medium.copy(
+                            MaterialTheme.shapes.extraLarge.copy(
                                 topStart = CornerSize(0.dp),
                                 topEnd = CornerSize(0.dp)
                             )
                         )
                         .background(MaterialTheme.colorScheme.surfaceVariant)
-                        .clickable { isLogoutAskExpanded = true }
+                        .clickable {
+                            haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                            isLogoutAskExpanded = true
+                        }
                 ) {
                     Row(
                         modifier = Modifier
@@ -379,7 +398,7 @@ fun AppSettings(
                         ) {
                             AppAsyncImage(
                                 imageData = if (linkToAniLibertyAvatar != null) ImageData.Url(
-                                    linkToAniLibertyAvatar ?: ""
+                                    linkToAniLibertyAvatar
                                 ) else null,
                                 contentDescription = null,
                                 contentScale = ContentScale.Crop,
@@ -415,6 +434,8 @@ fun ConfirmLogoutDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    val haptic = LocalHapticFeedback.current
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
@@ -425,14 +446,20 @@ fun ConfirmLogoutDialog(
         },
         confirmButton = {
             TextButton(
-                onClick = onConfirm
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                    onConfirm()
+                }
             ) {
                 Text(text = "Выйти")
             }
         },
         dismissButton = {
             TextButton(
-                onClick = onDismiss
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                    onDismiss()
+                }
             ) {
                 Text(text = "Отмена")
             }
