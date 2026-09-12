@@ -1,24 +1,24 @@
 package com.example.garden.ui.utils
 
 import android.util.Log
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.runtime.Composable
+import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.garden.database.ElementType
 import com.example.garden.database.LayoutType
 import com.example.garden.database.ObjectData2
 import com.example.garden.database.PageType
-import com.example.garden.ui.theme.spacing
-import com.example.garden.ui.theme.windowSizeClass
 import kotlin.math.ceil
 import kotlin.math.round
 
-@Composable
 fun uploadLayoutTypeToCarouselChilds(
     parent: ObjectData2,
-    lineWidth: Dp
-) : List<ObjectData2> {
+    lineWidth: Dp,
+    spacingMedium: Dp,
+    spacingMarginBetweenElementsInGrid: Dp,
+    widthSizeClass: WindowWidthSizeClass,
+    spacingScreenHorizontal: Dp,
+): List<ObjectData2> {
     val parent = uploadLayoutType(parent)
     val childs = parent.childs
     val layoutType = parent.layoutType
@@ -27,31 +27,31 @@ fun uploadLayoutTypeToCarouselChilds(
     else if (childs[0].layoutType == LayoutType.CARD_GRID) return childs
     else {
         val ress = mutableListOf<ObjectData2>()
-        val paddingHorizontal = MaterialTheme.spacing.screenHorizontal
         val lineWidth = when (layoutType) {
-            LayoutType.CAROUSEL_FROM_FLAT_GRID -> lineWidth - paddingHorizontal
-            else -> lineWidth - (paddingHorizontal * 2)
+            LayoutType.CAROUSEL_FROM_FLAT_GRID -> lineWidth - spacingScreenHorizontal
+            else -> lineWidth - (spacingScreenHorizontal * 2)
         }
         if (parent.adaptiveGridSize) {
             if (parent.childsSize == null) {
-                Log.d("Carousel (uploadLayoutTypeToChilds)", "Childs doesn't have size")
+                Log.e("Carousel (uploadLayoutTypeToChilds)", "Childs doesn't have size")
                 return emptyList()
             }
             val cardType = parent.childs.first().elementType
             val width = when (layoutType) {
                 LayoutType.CAROUSEL_FROM_FLAT_GRID -> lineWidth
-                else -> parent.childsSize?.toDp(
+                else -> parent.childsSize.toDp(
                     cardType,
                     lineWidth,
-                    MaterialTheme.windowSizeClass.widthSizeClass
-                )?.width ?: return emptyList()
+                    widthSizeClass
+                ).width
             }
 
-            val margin = when(layoutType) {
+            val margin = when (layoutType) {
                 LayoutType.CAROUSEL_FROM_FLAT_GRID -> 0.dp
-                else -> MaterialTheme.spacing.marginBetweenElementsInGrid
+                else -> spacingMarginBetweenElementsInGrid
             }
-            val amountOfCards = cardScaleCalcForGrid(width, lineWidth, margin, null).second.toInt()
+            val amountOfCards =
+                cardScaleCalcForGrid(width, lineWidth, margin, null, spacingMedium).second.toInt()
             val res = calculateObjectsInOneLineAndMaxLinesForAdaptiveGridSize(parent, amountOfCards)
             val maxLines = res.second ?: Int.MAX_VALUE
             val objectsInOneLine = res.first
@@ -65,8 +65,9 @@ fun uploadLayoutTypeToCarouselChilds(
                 val childss = mutableListOf<ObjectData2>()
                 for (i in currentI until currentI + (maxLines * objectsInOneLine)) {
                     if (i <= childs.indices.last) {
-                        val child = childs[i]
-                        child.position = currentPosition
+                        val child = childs[i].copy(
+                            position = currentPosition
+                        )
                         currentPosition += 1
                         childss.add(child)
                         currentI += 1
@@ -97,24 +98,25 @@ fun uploadLayoutTypeToCarouselChilds(
             }
         } else {
             if (parent.childsSize == null) {
-                Log.d("Carousel (uploadLayoutTypeToChilds)", "Childs doesn't have size")
+                Log.e("Carousel (uploadLayoutTypeToChilds)", "Childs doesn't have size")
                 return emptyList()
             }
             val cardType = parent.childs.first().elementType
             val width = when (layoutType) {
                 LayoutType.CAROUSEL_FROM_FLAT_GRID -> lineWidth
-                else -> parent.childsSize?.toDp(
+                else -> parent.childsSize.toDp(
                     cardType,
                     lineWidth,
-                    MaterialTheme.windowSizeClass.widthSizeClass
-                )?.width ?: return emptyList()
+                    widthSizeClass
+                ).width
             }
 
-            val margin = when(layoutType) {
+            val margin = when (layoutType) {
                 LayoutType.CAROUSEL_FROM_FLAT_GRID -> 0.dp
-                else -> MaterialTheme.spacing.marginBetweenElementsInGrid
+                else -> spacingMarginBetweenElementsInGrid
             }
-            val amountOfCards = cardScaleCalcForGrid(width, lineWidth, margin, null).second.toInt()
+            val amountOfCards =
+                cardScaleCalcForGrid(width, lineWidth, margin, null, spacingMedium).second.toInt()
             val objectsInOneLine = parent.objectsInOneLine ?: amountOfCards
             val maxLines = parent.maxLines ?: Int.MAX_VALUE
             val amountOfGrids =
@@ -127,8 +129,9 @@ fun uploadLayoutTypeToCarouselChilds(
                 val childss = mutableListOf<ObjectData2>()
                 for (i in currentI until currentI + (maxLines * objectsInOneLine)) {
                     if (i <= childs.indices.last) {
-                        val child = childs[i]
-                        child.position = currentPosition
+                        val child = childs[i].copy(
+
+                        )
                         currentPosition += 1
                         childss.add(child)
                         currentI += 1
@@ -164,7 +167,7 @@ fun uploadLayoutTypeToCarouselChilds(
 
 private fun uploadLayoutType(
     parent: ObjectData2
-) : ObjectData2 {
+): ObjectData2 {
     if (parent.childs.isEmpty()) return parent
     val layoutType = parent.layoutType
     val isGridMode = parent.childs.first().layoutType !in listOf(
@@ -172,10 +175,16 @@ private fun uploadLayoutType(
         LayoutType.CARD_FLAT_GRID,
     )
 
-    val availableLayoutTypes = when(layoutType) {
+    val availableLayoutTypes = when (layoutType) {
         LayoutType.DEFAULT -> listOf(LayoutType.DEFAULT)
-        LayoutType.CAROUSEL_GRID, LayoutType.CAROUSEL_FROM_GRID -> if (isGridMode) listOf(LayoutType.DEFAULT) else listOf(LayoutType.CARD_GRID)
-        LayoutType.CAROUSEL_FROM_FLAT_GRID -> if (isGridMode) listOf(LayoutType.FLAT_GRID_ITEM) else listOf(LayoutType.CARD_FLAT_GRID)
+        LayoutType.CAROUSEL_GRID, LayoutType.CAROUSEL_FROM_GRID -> if (isGridMode) listOf(LayoutType.DEFAULT) else listOf(
+            LayoutType.CARD_GRID
+        )
+
+        LayoutType.CAROUSEL_FROM_FLAT_GRID -> if (isGridMode) listOf(LayoutType.FLAT_GRID_ITEM) else listOf(
+            LayoutType.CARD_FLAT_GRID
+        )
+
         LayoutType.CARD_FLAT_GRID -> listOf(LayoutType.FLAT_GRID_ITEM)
         LayoutType.CARD_GRID -> listOf(LayoutType.DEFAULT)
         LayoutType.FLAT_GRID_ITEM -> listOf()
@@ -187,12 +196,18 @@ private fun uploadLayoutType(
         val child = parent.childs[i]
         val childLayoutType = child.layoutType
         if (childLayoutType !in availableLayoutTypes) {
-            child.layoutType = availableLayoutTypes[0]
+            val newChild = child.copy(
+                layoutType = availableLayoutTypes[0]
+            )
+            newChilds.add(newChild)
+        } else {
+            newChilds.add(child)
         }
-        newChilds.add(child)
     }
 
-    parent.childs = newChilds
+    val parent = parent.copy(
+        childs = newChilds
+    )
     return parent
 }
 
@@ -216,7 +231,7 @@ fun calculateObjectsInOneLineAndMaxLinesForAdaptiveGridSize(
     } else if (parent.maxObjectsInOneLineForAdaptiveSize == null) {
         maxLines = parent.maxLinesForAdaptiveSize
     } else {
-        val maxObjectsInOneLineForAdaptiveSize = parent.maxObjectsInOneLineForAdaptiveSize!!
+        val maxObjectsInOneLineForAdaptiveSize = parent.maxObjectsInOneLineForAdaptiveSize
         val objectsInOneLinee = parent.objectsInOneLine!!
         val maxLinesForAdaptiveSize = parent.maxLinesForAdaptiveSize!!
         val maxLiness = parent.maxLines!!

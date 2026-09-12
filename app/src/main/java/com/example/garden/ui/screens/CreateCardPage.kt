@@ -69,7 +69,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -92,6 +91,14 @@ import com.example.garden.ui.components.GenreEditorGenresType
 import com.example.garden.ui.components.PopupMenuItem
 import com.example.garden.ui.components.SelectableDropDownMenuWithBlur
 import com.example.garden.ui.components.SmartFilePicker
+import com.example.garden.ui.components.icons.AddIco
+import com.example.garden.ui.components.icons.ChevronForward
+import com.example.garden.ui.components.icons.CloseIco
+import com.example.garden.ui.components.icons.DownloadIco2
+import com.example.garden.ui.components.icons.EditIco
+import com.example.garden.ui.components.icons.MoreVertIco
+import com.example.garden.ui.components.icons.PauseIco
+import com.example.garden.ui.components.icons.PlayArrowFilledIco
 import com.example.garden.ui.components.rememberFilePicker
 import com.example.garden.ui.theme.dimens
 import com.example.garden.ui.theme.spacing
@@ -352,7 +359,7 @@ fun CreateCardPage(
                     ), shape = MaterialTheme.shapes.small
                 ) {
                     Icon(
-                        painter = painterResource(R.drawable.close_ico),
+                        imageVector = CloseIco,
                         contentDescription = null,
                         modifier = Modifier.size(MaterialTheme.dimens.iconLarge)
                     )
@@ -382,7 +389,7 @@ fun CreateCardPage(
                             softWrap = false
                         )
                         Icon(
-                            painter = painterResource(R.drawable.chevron_forward),
+                            imageVector = ChevronForward,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier
@@ -432,7 +439,7 @@ fun CreateCardPage(
                         isExtraButtonsMenuOpened.value = true
                     }) {
                         Icon(
-                            painter = painterResource(R.drawable.more_vert_ico),
+                            imageVector = MoreVertIco,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.onBackground,
                             modifier = Modifier.size(MaterialTheme.dimens.iconLarge)
@@ -453,7 +460,7 @@ fun CreateCardPage(
                                 },
                                 icon = {
                                     Icon(
-                                        painter = painterResource(R.drawable.download_ico_2),
+                                        imageVector = DownloadIco2,
                                         contentDescription = null,
                                         modifier = Modifier.size(MaterialTheme.dimens.iconLarge)
                                     )
@@ -640,9 +647,7 @@ fun CreateCardPage(
                                         targetState = isSelected, label = "icon"
                                     ) { isSelected ->
                                         Icon(
-                                            painter = if (isSelected) painterResource(R.drawable.edit_ico) else painterResource(
-                                                R.drawable.add_ico
-                                            ),
+                                            imageVector = if (isSelected) EditIco else AddIco,
                                             contentDescription = null,
                                             modifier = Modifier.size(MaterialTheme.dimens.iconLarge)
                                         )
@@ -755,7 +760,7 @@ fun CreateCardPage(
                                     )
                                 ) {
                                     Icon(
-                                        painter = painterResource(R.drawable.edit_ico),
+                                        imageVector = EditIco,
                                         modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
                                         contentDescription = null
                                     )
@@ -790,7 +795,7 @@ fun CreateCardPage(
                                     )
                                 ) {
                                     Icon(
-                                        painter = painterResource(R.drawable.edit_ico),
+                                        imageVector = EditIco,
                                         modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
                                         contentDescription = null
                                     )
@@ -970,11 +975,7 @@ fun CreateCardPage(
                                                     targetState = isSelected, label = "icon"
                                                 ) { isSelected ->
                                                     Icon(
-                                                        painter = if (isSelected.value) painterResource(
-                                                            R.drawable.edit_ico
-                                                        ) else painterResource(
-                                                            R.drawable.add_ico
-                                                        ),
+                                                        imageVector = if (isSelected.value) EditIco else AddIco,
                                                         contentDescription = null,
                                                         modifier = Modifier.size(MaterialTheme.dimens.iconLarge)
                                                     )
@@ -1026,11 +1027,7 @@ fun CreateCardPage(
                                                         targetState = isSongPlaying, label = "icon"
                                                     ) { isSongPlaying ->
                                                         Icon(
-                                                            painter = if (isSongPlaying.value) painterResource(
-                                                                R.drawable.pause_ico
-                                                            ) else painterResource(
-                                                                R.drawable.play_arrow_filled_ico
-                                                            ),
+                                                            imageVector = if (isSongPlaying.value) PauseIco else PlayArrowFilledIco,
                                                             contentDescription = null,
                                                             modifier = Modifier.size(MaterialTheme.dimens.iconLarge)
                                                         )
@@ -1080,11 +1077,7 @@ fun CreateCardPage(
                                                         label = "icon"
                                                     ) { state ->
                                                         Icon(
-                                                            painter = if (state) painterResource(
-                                                                R.drawable.edit_ico
-                                                            ) else painterResource(
-                                                                R.drawable.add_ico
-                                                            ),
+                                                            imageVector = if (state) EditIco else AddIco,
                                                             contentDescription = null,
                                                             modifier = Modifier.size(MaterialTheme.dimens.iconLarge)
                                                         )
@@ -1122,11 +1115,7 @@ fun CreateCardPage(
                                                         label = "icon"
                                                     ) { state ->
                                                         Icon(
-                                                            painter = if (state) painterResource(
-                                                                R.drawable.edit_ico
-                                                            ) else painterResource(
-                                                                R.drawable.add_ico
-                                                            ),
+                                                            imageVector = if (state) EditIco else AddIco,
                                                             contentDescription = null,
                                                             modifier = Modifier.size(MaterialTheme.dimens.iconLarge)
                                                         )
@@ -1164,7 +1153,7 @@ fun CreateCardPage(
                                     )
                                 ) {
                                     Icon(
-                                        painter = painterResource(R.drawable.edit_ico),
+                                        imageVector = EditIco,
                                         modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
                                         contentDescription = null
                                     )
@@ -1226,7 +1215,7 @@ fun CreateCardPage(
                     ) {
                         if (!isEditMode) {
                             Icon(
-                                painter = painterResource(R.drawable.add_ico),
+                                imageVector = AddIco,
                                 modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
                                 contentDescription = null
                             )

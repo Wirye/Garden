@@ -2,7 +2,6 @@ package com.example.garden.ui.screens
 
 import android.annotation.SuppressLint
 import android.os.Parcelable
-import android.util.Log
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -49,7 +48,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -65,6 +63,13 @@ import com.example.garden.database.LinkData
 import com.example.garden.database.LinkType
 import com.example.garden.ui.components.AsyncImageWithAddPlaceholder
 import com.example.garden.ui.components.SmartFilePicker
+import com.example.garden.ui.components.icons.AddIco
+import com.example.garden.ui.components.icons.CloseIco
+import com.example.garden.ui.components.icons.DeleteIco
+import com.example.garden.ui.components.icons.DragHandleIco
+import com.example.garden.ui.components.icons.EditIco
+import com.example.garden.ui.components.icons.MoreVertIco
+import com.example.garden.ui.components.icons.SearchIco
 import com.example.garden.ui.components.rememberFilePicker
 import com.example.garden.ui.theme.dimens
 import com.example.garden.ui.theme.spacing
@@ -285,7 +290,7 @@ fun PageWithSearch(
                 shape = MaterialTheme.shapes.small
             ) {
                 Icon(
-                    painter = painterResource(R.drawable.close_ico),
+                    imageVector = CloseIco,
                     contentDescription = null,
                     modifier = Modifier.size(MaterialTheme.dimens.iconLarge)
                 )
@@ -313,7 +318,7 @@ fun PageWithSearch(
                 },
                 leadingIcon = {
                     Icon(
-                        painter = painterResource(R.drawable.search_ico),
+                        imageVector = SearchIco,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(MaterialTheme.dimens.iconMedium)
@@ -327,7 +332,7 @@ fun PageWithSearch(
                 focusManager.clearFocus()
             }) {
                 Icon(
-                    painter = painterResource(R.drawable.more_vert_ico),
+                    imageVector = MoreVertIco,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onBackground,
                     modifier = Modifier.size(MaterialTheme.dimens.iconLarge)
@@ -427,7 +432,7 @@ fun PageWithSearch(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
-                        painter = painterResource(R.drawable.add_ico),
+                        imageVector = AddIco,
                         contentDescription = null,
                         modifier = Modifier.size(MaterialTheme.dimens.iconMedium)
                     )
@@ -447,7 +452,6 @@ fun PageWithSearch(
                 onClick = {
                     focusManager.clearFocus()
                     resultSenderViewModel.sendResult(requestKey = layer.key, data = PageWithSearchSaveOutput(inputList))
-                    Log.e("LLL", "$inputList")
                     onClose()
                 },
                 modifier = Modifier
@@ -611,7 +615,7 @@ private fun PageWithSearchItem(
                     onEdit()
                 }) {
                     Icon(
-                        painter = painterResource(R.drawable.edit_ico),
+                        imageVector = EditIco,
                         contentDescription = "Редактировать",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(MaterialTheme.dimens.iconMedium)
@@ -620,7 +624,7 @@ private fun PageWithSearchItem(
             }
 
             Icon(
-                painter = painterResource(R.drawable.drag_handle_ico),
+                imageVector = DragHandleIco,
                 contentDescription = "Переместить",
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = dragModifier
@@ -633,7 +637,7 @@ private fun PageWithSearchItem(
                 onDelete()
             }) {
                 Icon(
-                    painter = painterResource(R.drawable.delete_ico),
+                    imageVector = DeleteIco,
                     contentDescription = "Удалить",
                     tint = MaterialTheme.colorScheme.error,
                     modifier = Modifier.size(MaterialTheme.dimens.iconMedium)

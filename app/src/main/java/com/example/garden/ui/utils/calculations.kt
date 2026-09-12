@@ -1,27 +1,17 @@
 package com.example.garden.ui.utils
 
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.times
-import com.example.garden.database.LayoutType
-import com.example.garden.database.ObjectData2
-import com.example.garden.ui.theme.dimens
-import com.example.garden.ui.theme.spacing
-import com.example.garden.ui.theme.windowSizeClass
 
-@Composable
 fun cardScaleCalcForGrid(
     width: Dp,
     lineWidth: Dp, // Excluding indents, grid width will be lineWidth - (spacing.screenHorizontal * 2)
     marginBetweenElements: Dp,
-    maxObjectsInLine: Int?
+    maxObjectsInLine: Int?,
+    spacingMedium: Dp,
 ): Pair<Dp, Float> {
     var res: Dp
     var amountCards = 0f
-    val gridWidth = lineWidth - MaterialTheme.spacing.screenHorizontal
+    val gridWidth = lineWidth - spacingMedium
     val availableWidth = (gridWidth - (marginBetweenElements * (amountCards - 1)))
     amountCards = maxObjectsInLine?.toFloat() ?: (availableWidth / width)
     res = (availableWidth / amountCards)

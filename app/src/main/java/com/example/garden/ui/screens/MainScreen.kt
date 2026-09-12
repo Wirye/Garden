@@ -223,7 +223,7 @@ private fun LayerContent(
                     val carouselsList by mainViewModel.uiDataFlow.collectAsStateWithLifecycle()
                     val topBarHeightState = remember { mutableStateOf(0.dp) }
                     MainPageTopBar(
-                        offsetPx = 0f,
+                        offsetPx = { 0f },
                         active = false,
                         heightState = { topBarHeightState.value = it },
                         onSearch = {},

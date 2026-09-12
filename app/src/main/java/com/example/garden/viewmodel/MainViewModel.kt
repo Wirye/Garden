@@ -45,8 +45,8 @@ class MainViewModel(
 
     private fun build(current: ObjectData, allItems: List<ObjectData>): ObjectData2 {
         val dataSource =
-            if (current.link?.type == LinkType.INSERT && current.link?.targetId != null) {
-                allItems.find { it.id == current.link?.targetId } ?: current
+            if (current.link?.type == LinkType.INSERT && current.link.targetId != null) {
+                allItems.find { it.id == current.link.targetId } ?: current
             } else {
                 current
             }
@@ -801,25 +801,31 @@ class MainViewModel(
 
     suspend fun insertCarousel(objectData: ObjectData, page: PageType): Long {
         val position = dao.getMaxPositionOnPage(null, page) ?: -1
-        objectData.position = position + 1
-        objectData.page = page
-        val carouselId = dao.insert(objectData)
+        val newObject = objectData.copy(
+            position = position + 1,
+            page = page
+        )
+        val carouselId = dao.insert(newObject)
         return carouselId
     }
 
     suspend fun editObject(objectData: ObjectData) {
         val position = dao.getPositionById(objectData.id)
         if (position != null) {
-            objectData.position = position
-            dao.updateObject(objectData)
+            val newObject = objectData.copy(
+                position = position
+            )
+            dao.updateObject(newObject)
         }
     }
 
     suspend fun insertCard(objectData: ObjectData, parentId: Long): Long {
         val position = dao.getMaxPosition(parentId) ?: -1
-        objectData.position = position + 1
-        objectData.parentId = parentId
-        val cardId = dao.insert(objectData)
+        val newObject = objectData.copy(
+            position = position + 1,
+            parentId = parentId
+        )
+        val cardId = dao.insert(newObject)
         return cardId
     }
 

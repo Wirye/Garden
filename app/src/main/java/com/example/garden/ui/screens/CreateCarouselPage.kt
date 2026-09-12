@@ -68,12 +68,10 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -81,8 +79,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
 import com.example.garden.Layer
 import com.example.garden.LocalCustomColors
 import com.example.garden.R
@@ -92,12 +88,17 @@ import com.example.garden.database.CollectionType
 import com.example.garden.database.ImageData
 import com.example.garden.database.LayoutType
 import com.example.garden.database.SizeType
+import com.example.garden.ui.components.AppAsyncImage
 import com.example.garden.ui.components.AsyncImageWithAddPlaceholder
 import com.example.garden.ui.components.SelectableDropDownMenuWithBlur
 import com.example.garden.ui.components.SmartFilePicker
+import com.example.garden.ui.components.icons.AddIco
+import com.example.garden.ui.components.icons.ChevronForward
+import com.example.garden.ui.components.icons.CloseIco
 import com.example.garden.ui.components.rememberFilePicker
 import com.example.garden.ui.theme.dimens
 import com.example.garden.ui.theme.spacing
+import com.example.garden.ui.theme.windowInfo
 import com.example.garden.ui.utils.blockGestures
 import com.example.garden.ui.utils.clearFocus
 import com.example.garden.ui.utils.dataForModel
@@ -265,7 +266,7 @@ fun CreateCarouselPage(
                 ), shape = MaterialTheme.shapes.small
             ) {
                 Icon(
-                    painter = painterResource(R.drawable.close_ico),
+                    imageVector = CloseIco,
                     contentDescription = null,
                     modifier = Modifier.size(MaterialTheme.dimens.iconLarge)
                 )
@@ -295,7 +296,7 @@ fun CreateCarouselPage(
                         softWrap = false
                     )
                     Icon(
-                        painter = painterResource(R.drawable.chevron_forward),
+                        imageVector = ChevronForward,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier
@@ -387,7 +388,10 @@ fun CreateCarouselPage(
                                         !stateViewModel.maxLinesForAdaptiveGridSizeZeroError &&
                                         !stateViewModel.layoutTypeError
                                     ) {
-                                        CarouselPreview(info = stateViewModel.state)
+                                        CarouselPreview(
+                                            lineWidth = MaterialTheme.windowInfo.widthDp - MaterialTheme.spacing.screenHorizontal*2 - leftInset - rightInset - MaterialTheme.spacing.medium,
+                                            info = stateViewModel.state
+                                        )
                                     } else {
                                         Text(
                                             text = stringResource(R.string.error),
@@ -667,7 +671,7 @@ fun CreateCarouselPage(
                                                     )
 
                                                     Icon(
-                                                        painter = painterResource(R.drawable.chevron_forward),
+                                                        imageVector = ChevronForward,
                                                         contentDescription = null,
                                                         modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
                                                         tint = MaterialTheme.colorScheme.onSurfaceVariant
@@ -1733,7 +1737,7 @@ fun CreateCarouselPage(
                                                         ) {
                                                             if(!isEditMode) {
                                                                 Icon(
-                                                                    painter = painterResource(R.drawable.add_ico),
+                                                                    imageVector = AddIco,
                                                                     modifier = Modifier.size(
                                                                         MaterialTheme.dimens.iconLarge
                                                                     ),
@@ -1876,13 +1880,8 @@ private fun CarouselCollectionPicker(
                                     ),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    AsyncImage(
-                                        model = ImageRequest.Builder(LocalContext.current)
-                                            .data(collection.displayIco.dataForModel())
-                                            .placeholder(R.drawable.placeholder)
-                                            .error(R.drawable.placeholder)
-                                            .crossfade(true)
-                                            .build(),
+                                    AppAsyncImage(
+                                        imageData = collection.displayIco,
                                         contentDescription = null,
                                         contentScale = ContentScale.Crop,
                                         modifier = Modifier

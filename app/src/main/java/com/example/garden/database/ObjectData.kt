@@ -1,11 +1,12 @@
 package com.example.garden.database
 
 import android.os.Parcelable
-import androidx.annotation.DrawableRes
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.example.garden.R
+import com.example.garden.ui.components.icons.CloseIco
 import kotlinx.parcelize.Parcelize
 
 interface CollectionTypeInterface : Parcelable {
@@ -37,7 +38,7 @@ interface CollectionTypeInterface : Parcelable {
 enum class CollectionType : CollectionTypeInterface {
     None {
         override val displayNameId: Int = R.string.absent
-        override val displayIco: ImageData = ImageData.Resource(R.drawable.close_ico)
+        override val displayIco: ImageData = ImageData.Resource(SavedIcons.CLOSE_ICO)
         override val overrideEnabled: Boolean = false
         override val isAddCardEnable: Boolean = true
         override val forCarouselType: List<CarouselType>? = null
@@ -383,11 +384,21 @@ enum class CardSize : Parcelable {
     SMALL, MEDIUM, LARGE
 }
 
+@Parcelize
+enum class SavedIcons : Parcelable {
+    CLOSE_ICO;
+
+    val imageVector: ImageVector
+        get() = when (this) {
+            CLOSE_ICO -> CloseIco
+        }
+}
+
 sealed interface ImageData : Parcelable {
 
     @Parcelize
     data class Resource(
-        @param:DrawableRes val resId: Int
+        val ico: SavedIcons
     ) : ImageData
 
     @Parcelize
@@ -413,54 +424,54 @@ data class LinkData(
 data class ObjectData(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
-    var parentId: Long? = null,
+    val parentId: Long? = null,
 
     // Навигация
-    var page: PageType,
-    var position: Int,          // Позиция на странице/в родителе
+    val page: PageType,
+    val position: Int,          // Позиция на странице/в родителе
 
     // Имя
-    var name: String? = null,   // Название (для карусели или карточки)
-    var showAlreadyWatchedLine: Boolean = true,
-    var showIco: Boolean = false,  // Это для каруселей, чтобы показывать рядом с названием карусели ник и аватарку пользователя
-    var childsShowName: Boolean = false, // Показывать ли название
-    var childsNamePosition: Int? = 0, // 1 - Внутри карточки 0 - снаружи
-    var childsShowAlreadyWatchedLine: Boolean = true,
-    var childsShowAuthor: Boolean = false,
+    val name: String? = null,   // Название (для карусели или карточки)
+    val showAlreadyWatchedLine: Boolean = true,
+    val showIco: Boolean = false,  // Это для каруселей, чтобы показывать рядом с названием карусели ник и аватарку пользователя
+    val childsShowName: Boolean = false, // Показывать ли название
+    val childsNamePosition: Int? = 0, // 1 - Внутри карточки 0 - снаружи
+    val childsShowAlreadyWatchedLine: Boolean = true,
+    val childsShowAuthor: Boolean = false,
 
     // Изображение (оно же превью)
-    var image: ImageData? = null,
+    val image: ImageData? = null,
 
     // Доп. инфа
-    var description: String? = null,
-    var author: String? = null,
-    var type: String? = null,  // Аниме, манга, музыка и т.д
-    var alreadyWatched: Long, // Минуты и секунды до куда досмотрел пользователь
-    var length: Long,  // Минуты и секунды всей длинны
-    var carouselType: CarouselType? = null, // Тип карусели, нужен для того, чтобы знать, что туда можно класть (какие карточки добавлять)
-    var carouselCollectionType: CollectionType? = null, // Отвечает за подборки карточек
+    val description: String? = null,
+    val author: String? = null,
+    val type: String? = null,  // Аниме, манга, музыка и т.д
+    val alreadyWatched: Long, // Минуты и секунды до куда досмотрел пользователь
+    val length: Long,  // Минуты и секунды всей длинны
+    val carouselType: CarouselType? = null, // Тип карусели, нужен для того, чтобы знать, что туда можно класть (какие карточки добавлять)
+    val carouselCollectionType: CollectionType? = null, // Отвечает за подборки карточек
 
     // Размеры (для карточек)
-    var childsCornerRadius: SizeType? = null,
-    var childsSize: CardSize? = null,
+    val childsCornerRadius: SizeType? = null,
+    val childsSize: CardSize? = null,
 
-    var layoutType: LayoutType = LayoutType.DEFAULT,
+    val layoutType: LayoutType = LayoutType.DEFAULT,
 
-    var dovodchik: Boolean = false,
-    var showDovodchikDots: Boolean = false,
+    val dovodchik: Boolean = false,
+    val showDovodchikDots: Boolean = false,
 
-    // Для layout type 0
-    var objectsInOneLine: Int? = null,
-    var maxLines: Int? = null,
-    var adaptiveGridSize: Boolean = false,
-    var maxObjectsInOneLineForAdaptiveSize: Int? = null,
-    var maxLinesForAdaptiveSize: Int? = null,
+    // Для grid layout type
+    val objectsInOneLine: Int? = null,
+    val maxLines: Int? = null,
+    val adaptiveGridSize: Boolean = false,
+    val maxObjectsInOneLineForAdaptiveSize: Int? = null,
+    val maxLinesForAdaptiveSize: Int? = null,
 
     // Ссылка (куда ведет элемент)
     @Embedded(prefix = "lnk_")
-    var link: LinkData? = null,
+    val link: LinkData? = null,
 
     // Тип элемента (для удобства фильтрации и только для неё, про макет с.м link -> template)
-    var elementType: ElementType,
-    var genre: List<GridGenreItem>? = null,
+    val elementType: ElementType,
+    val genre: List<GridGenreItem>? = null,
 )

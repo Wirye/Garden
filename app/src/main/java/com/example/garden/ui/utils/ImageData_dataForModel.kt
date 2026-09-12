@@ -6,6 +6,6 @@ fun ImageData.dataForModel() : Any {
     return when(this) {
         is ImageData.Device -> this.path
         is ImageData.Url -> this.url
-        is ImageData.Resource -> this.resId
+        is ImageData.Resource -> this.ico.imageVector
     }
 }

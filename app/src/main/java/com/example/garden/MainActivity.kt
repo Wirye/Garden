@@ -27,7 +27,6 @@ import com.example.garden.database.GridGenreItem
 import com.example.garden.database.ImageData
 import com.example.garden.database.LayoutType
 import com.example.garden.database.LinkData
-import com.example.garden.database.ObjectData2
 import com.example.garden.database.PageType
 import com.example.garden.database.SizeType
 import com.example.garden.ui.screens.ChapterInfo
@@ -82,7 +81,7 @@ sealed class Layer (
         var episodesList: List<EpisodeInfo>,
         var cardType: ElementType,
         var chaptersList: List<ChapterInfo>,
-        var cardsList: List<ObjectData2>,
+        var cardsList: List<Long>,
         var horizontalVideo: LinkData? = null,
         var verticalVideo: LinkData? = null,
         var song: LinkData? = null,
@@ -153,6 +152,7 @@ object ResultKeys {
 data class CustomColors(
     val closeButton: Color = Color(0xffdb4242),
     val onCloseButton: Color = Color(0xffffffff),
+    val placeholder: Color = Color(0x59AFAFAF),
 )
 
 val LocalCustomColors = staticCompositionLocalOf { CustomColors() }

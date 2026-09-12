@@ -36,7 +36,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -44,6 +43,8 @@ import androidx.compose.ui.window.DialogWindowProvider
 import androidx.core.view.WindowCompat
 import com.example.garden.LocalCustomColors
 import com.example.garden.R
+import com.example.garden.ui.components.icons.DeleteIco
+import com.example.garden.ui.components.icons.EditIco
 import com.example.garden.ui.theme.dimens
 import com.example.garden.ui.theme.spacing
 import dev.chrisbanes.haze.HazeState
@@ -167,7 +168,7 @@ fun SmartFilePicker(
                             contentPadding = PaddingValues(MaterialTheme.spacing.medium)
                         ) {
                             Icon(
-                                painter = painterResource(R.drawable.delete_ico),
+                                imageVector = DeleteIco,
                                 contentDescription = null,
                                 modifier = Modifier.size(MaterialTheme.dimens.iconLarge)
                             )
@@ -199,7 +200,7 @@ fun SmartFilePicker(
                             contentPadding = PaddingValues(MaterialTheme.spacing.medium)
                         ) {
                             Icon(
-                                painter = painterResource(R.drawable.edit_ico),
+                                imageVector = EditIco,
                                 contentDescription = null,
                                 modifier = Modifier.size(MaterialTheme.dimens.iconLarge)
                             )

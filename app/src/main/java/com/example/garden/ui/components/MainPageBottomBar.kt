@@ -23,11 +23,20 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import com.example.garden.R
 import com.example.garden.database.PageType
+import com.example.garden.ui.components.icons.AnimeIco
+import com.example.garden.ui.components.icons.AnimeIcoFill
+import com.example.garden.ui.components.icons.DownloadIco
+import com.example.garden.ui.components.icons.DownloadIcoFill
+import com.example.garden.ui.components.icons.HomeIco
+import com.example.garden.ui.components.icons.HomeIcoFill
+import com.example.garden.ui.components.icons.MangaIco
+import com.example.garden.ui.components.icons.MangaIcoFill
+import com.example.garden.ui.components.icons.MusicIco
+import com.example.garden.ui.components.icons.MusicIcoFill
 import com.example.garden.ui.theme.dimens
 import com.example.garden.ui.theme.spacing
 
@@ -86,7 +95,7 @@ fun MainPageBottomBar(
                         .heightIn(min = MaterialTheme.dimens.minButtonHeight)
                 ) {
                     Icon(
-                        painter = painterResource(if (pageState == PageType.Home) R.drawable.home_ico_fill else R.drawable.home_ico),
+                        imageVector = if (pageState == PageType.Home) HomeIcoFill else HomeIco,
                         modifier = Modifier.size(MaterialTheme.dimens.iconMedium),
                         tint = buttonColor,
                         contentDescription = null
@@ -110,7 +119,7 @@ fun MainPageBottomBar(
                         .heightIn(min = MaterialTheme.dimens.minButtonHeight)
                 ) {
                     Icon(
-                        painter = painterResource(if (pageState == PageType.Anime) R.drawable.anime_ico_fill else R.drawable.anime_ico),
+                        imageVector = if (pageState == PageType.Anime) AnimeIcoFill else AnimeIco,
                         modifier = Modifier.size(MaterialTheme.dimens.iconMedium),
                         tint = buttonColor,
                         contentDescription = null
@@ -133,7 +142,7 @@ fun MainPageBottomBar(
                         .heightIn(min = MaterialTheme.dimens.minButtonHeight)
                 ) {
                     Icon(
-                        painter = painterResource(if (pageState == PageType.Music) R.drawable.music_ico_fill else R.drawable.music_ico),
+                        imageVector = if (pageState == PageType.Music) MusicIcoFill else MusicIco,
                         modifier = Modifier.size(MaterialTheme.dimens.iconMedium),
                         tint = buttonColor,
                         contentDescription = null
@@ -156,7 +165,7 @@ fun MainPageBottomBar(
                         .heightIn(min = MaterialTheme.dimens.minButtonHeight)
                 ) {
                     Icon(
-                        painter = painterResource(if (pageState == PageType.Manga) R.drawable.manga_ico_fill else R.drawable.manga_ico),
+                        imageVector = if (pageState == PageType.Manga) MangaIcoFill else MangaIco,
                         modifier = Modifier.size(MaterialTheme.dimens.iconMedium),
                         tint = buttonColor,
                         contentDescription = null
@@ -179,7 +188,7 @@ fun MainPageBottomBar(
                         .heightIn(min = MaterialTheme.dimens.minButtonHeight)
                 ) {
                     Icon(
-                        painter = painterResource(if (pageState == PageType.Download) R.drawable.download_ico_fill else R.drawable.download_ico),
+                        imageVector = if (pageState == PageType.Download) DownloadIcoFill else DownloadIco,
                         modifier = Modifier.size(MaterialTheme.dimens.iconMedium),
                         tint = buttonColor,
                         contentDescription = null

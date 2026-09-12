@@ -1,12 +1,11 @@
 package com.example.garden.ui.components
 
 import android.content.Intent
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import android.net.Uri
-import android.util.Log
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.platform.LocalContext
 
@@ -30,7 +29,7 @@ fun rememberFilePicker(
                 context.contentResolver.takePersistableUriPermission(it, takeFlags)
 
                 currentOnResult(it)
-            } catch (e: Exception) { }
+            } catch (_: Exception) { }
         }
     }
 

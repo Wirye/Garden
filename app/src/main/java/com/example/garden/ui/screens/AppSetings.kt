@@ -37,20 +37,22 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
 import com.example.garden.LocalCustomColors
 import com.example.garden.R
+import com.example.garden.database.ImageData
+import com.example.garden.ui.components.AppAsyncImage
+import com.example.garden.ui.components.icons.CloseIco
+import com.example.garden.ui.components.icons.LoginIco
+import com.example.garden.ui.components.icons.LogoutIco
+import com.example.garden.ui.components.icons.SearchIco
 import com.example.garden.ui.theme.dimens
 import com.example.garden.ui.theme.spacing
 import com.example.garden.ui.utils.blockGestures
@@ -120,7 +122,7 @@ fun AppSettings(
                 shape = MaterialTheme.shapes.small
             ) {
                 Icon(
-                    painter = painterResource(R.drawable.close_ico),
+                    imageVector = CloseIco,
                     contentDescription = null,
                     modifier = Modifier.size(MaterialTheme.dimens.iconLarge)
                 )
@@ -149,7 +151,7 @@ fun AppSettings(
                 },
                 leadingIcon = {
                     Icon(
-                        painter = painterResource(R.drawable.search_ico),
+                        imageVector = SearchIco,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(MaterialTheme.dimens.iconMedium)
@@ -187,13 +189,8 @@ fun AppSettings(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
                     ) {
-                        AsyncImage(
-                            model = ImageRequest.Builder(LocalContext.current)
-                                .data("https://www.google.com/s2/favicons?domain=google.com&sz=128")
-                                .placeholder(R.drawable.placeholder)
-                                .error(R.drawable.placeholder)
-                                .crossfade(true)
-                                .build(),
+                        AppAsyncImage(
+                            imageData = ImageData.Url("https://www.google.com/s2/favicons?domain=google.com&sz=128"),
                             contentDescription = null,
                             contentScale = ContentScale.Crop,
                             modifier = Modifier
@@ -210,7 +207,7 @@ fun AppSettings(
 
                     if (!isGoogleAuthorized) {
                         Icon(
-                            painter = painterResource(R.drawable.login_ico),
+                            imageVector = LoginIco,
                             contentDescription = null,
                             modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
@@ -252,13 +249,10 @@ fun AppSettings(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
                         ) {
-                            AsyncImage(
-                                model = ImageRequest.Builder(LocalContext.current)
-                                    .data(linkToGoogleAvatar)
-                                    .placeholder(R.drawable.placeholder)
-                                    .error(R.drawable.placeholder)
-                                    .crossfade(true)
-                                    .build(),
+                            AppAsyncImage(
+                                imageData = if (linkToGoogleAvatar != null) ImageData.Url(
+                                    linkToGoogleAvatar ?: ""
+                                ) else null,
                                 contentDescription = null,
                                 contentScale = ContentScale.Crop,
                                 modifier = Modifier
@@ -282,7 +276,7 @@ fun AppSettings(
                         }
 
                         Icon(
-                            painter = painterResource(R.drawable.logout_ico),
+                            imageVector = LogoutIco,
                             contentDescription = null,
                             modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
@@ -321,13 +315,8 @@ fun AppSettings(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
                     ) {
-                        AsyncImage(
-                            model = ImageRequest.Builder(LocalContext.current)
-                                .data("https://www.google.com/s2/favicons?domain=aniliberty.top&sz=128")
-                                .placeholder(R.drawable.placeholder)
-                                .error(R.drawable.placeholder)
-                                .crossfade(true)
-                                .build(),
+                        AppAsyncImage(
+                            imageData = ImageData.Url("https://www.google.com/s2/favicons?domain=aniliberty.top&sz=128"),
                             contentDescription = null,
                             contentScale = ContentScale.Crop,
                             modifier = Modifier
@@ -344,7 +333,7 @@ fun AppSettings(
 
                     if (!isAniLibertyAuthorized) {
                         Icon(
-                            painter = painterResource(R.drawable.login_ico),
+                            imageVector = LoginIco,
                             contentDescription = null,
                             modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
@@ -388,13 +377,10 @@ fun AppSettings(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
                         ) {
-                            AsyncImage(
-                                model = ImageRequest.Builder(LocalContext.current)
-                                    .data(linkToAniLibertyAvatar)
-                                    .placeholder(R.drawable.placeholder)
-                                    .error(R.drawable.placeholder)
-                                    .crossfade(true)
-                                    .build(),
+                            AppAsyncImage(
+                                imageData = if (linkToAniLibertyAvatar != null) ImageData.Url(
+                                    linkToAniLibertyAvatar ?: ""
+                                ) else null,
                                 contentDescription = null,
                                 contentScale = ContentScale.Crop,
                                 modifier = Modifier
@@ -410,7 +396,7 @@ fun AppSettings(
                         }
 
                         Icon(
-                            painter = painterResource(R.drawable.logout_ico),
+                            imageVector = LogoutIco,
                             contentDescription = null,
                             modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)

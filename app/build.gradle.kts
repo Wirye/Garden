@@ -24,11 +24,13 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
     compileOptions {
@@ -88,4 +90,5 @@ dependencies {
     implementation(libs.haze.materials)
     implementation(libs.reorderable)
     implementation(libs.crypto)
+    implementation(libs.androidx.profileinstaller)
 }

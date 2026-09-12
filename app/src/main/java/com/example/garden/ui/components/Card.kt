@@ -43,25 +43,23 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
 import com.example.garden.LocalCustomColors
 import com.example.garden.R
 import com.example.garden.database.ImageData
 import com.example.garden.database.LayoutType
 import com.example.garden.database.SizeType
+import com.example.garden.ui.components.icons.DeleteIco
+import com.example.garden.ui.components.icons.EditIco
+import com.example.garden.ui.components.icons.MoreVertIco
 import com.example.garden.ui.screens.LocalHazeLayers
 import com.example.garden.ui.screens.LocalHazeStates
 import com.example.garden.ui.screens.LocalLayerIndex
 import com.example.garden.ui.theme.dimens
 import com.example.garden.ui.theme.spacing
-import com.example.garden.ui.utils.dataForModel
 import com.example.garden.ui.utils.hazeSourcesForUpperLayers
 import com.example.garden.ui.utils.toDp
 import com.example.garden.ui.utils.toShape
@@ -120,13 +118,8 @@ fun Card(
                     horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    AsyncImage(
-                        model = ImageRequest.Builder(LocalContext.current)
-                            .data(image?.dataForModel())
-                            .placeholder(R.drawable.placeholder)
-                            .error(R.drawable.placeholder)
-                            .crossfade(true)
-                            .build(),
+                    AppAsyncImage(
+                        imageData = image,
                         contentDescription = null,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier
@@ -178,7 +171,7 @@ fun Card(
                     }
                 ) {
                     Icon(
-                        painter = painterResource(R.drawable.more_vert_ico),
+                        imageVector = MoreVertIco,
                         modifier = Modifier.size(MaterialTheme.dimens.iconMedium),
                         tint = MaterialTheme.colorScheme.onBackground,
                         contentDescription = null
@@ -227,13 +220,8 @@ fun Card(
                     .aspectRatio(aspectRatio)
                     .clip(cornerRadius.toShape())
             ) {
-                AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(image?.dataForModel())
-                        .placeholder(R.drawable.placeholder)
-                        .error(R.drawable.placeholder)
-                        .crossfade(true)
-                        .build(),
+                AppAsyncImage(
+                    imageData = image,
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
@@ -394,7 +382,7 @@ private fun ExtraOptions(
                         }
                     ) {
                         Icon(
-                            painter = painterResource(R.drawable.edit_ico),
+                            imageVector = EditIco,
                             modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
                             contentDescription = null
                         )
@@ -433,7 +421,7 @@ private fun ExtraOptions(
                         }
                     ) {
                         Icon(
-                            painter = painterResource(R.drawable.delete_ico),
+                            imageVector = DeleteIco,
                             modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
                             tint = LocalCustomColors.current.closeButton,
                             contentDescription = null

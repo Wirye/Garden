@@ -1,8 +1,6 @@
 package com.example.garden.ui.components
 
-import androidx.compose.animation.core.MutableTransitionState
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.rememberTransition
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -19,7 +17,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -38,10 +35,14 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import com.example.garden.R
+import com.example.garden.ui.components.icons.AddIco
+import com.example.garden.ui.components.icons.EditIco
+import com.example.garden.ui.components.icons.MoreVertIco
+import com.example.garden.ui.components.icons.SearchIco
+import com.example.garden.ui.components.icons.SettingsIco
 import com.example.garden.ui.screens.LocalHazeLayers
 import com.example.garden.ui.theme.dimens
 import com.example.garden.ui.theme.spacing
@@ -49,7 +50,7 @@ import com.example.garden.ui.theme.spacing
 @Composable
 fun MainPageTopBar(
     modifier: Modifier = Modifier,
-    offsetPx: Float,
+    offsetPx: () -> Float,
     isStrokeVisible: Boolean = true,
     active: Boolean = true,
     heightState: (Dp) -> Unit = {},
@@ -61,20 +62,13 @@ fun MainPageTopBar(
     val haptic = LocalHapticFeedback.current
 
     val strokeWidth = with(LocalDensity.current) { MaterialTheme.dimens.strokeExtraThin.toPx() }
-    val strokeState = remember { MutableTransitionState(isStrokeVisible) }
-    LaunchedEffect(isStrokeVisible) {
-        strokeState.targetState = isStrokeVisible
-    }
-    val strokeTransition = rememberTransition(strokeState, "stroke alpha")
-    val strokeAlpha by strokeTransition.animateFloat(
-        transitionSpec = { tween(durationMillis = 200) },
+
+    val strokeAlpha by animateFloatAsState(
+        targetValue = if (isStrokeVisible) 0.3f else 0f,
+        animationSpec = tween(durationMillis = 200),
         label = "stroke alpha"
-    ) { state ->
-        if (state)
-            0.5f
-        else
-            0f
-    }
+    )
+
     val density = LocalDensity.current
     val topInsetPx = WindowInsets.safeDrawing.getTop(density)
     val rightInsetPx = WindowInsets.safeDrawing.getRight(density, LocalLayoutDirection.current)
@@ -94,7 +88,7 @@ fun MainPageTopBar(
                 .fillMaxWidth()
                 .padding(top = topInset, start = leftInset, end = rightInset)
                 .graphicsLayer {
-                    translationY = if (active) offsetPx else -Float.MAX_VALUE
+                    translationY = if (active) offsetPx() else -size.height
                     alpha = if (!active) 0f else 1f
                 }
                 .background(Color.Transparent)
@@ -102,7 +96,8 @@ fun MainPageTopBar(
                     val y = size.height - strokeWidth / 2
 
                     drawLine(
-                        color = Color.White.copy(alpha = strokeAlpha),
+                        color = Color.White,
+                        alpha = strokeAlpha,
                         start = Offset(0f, y),
                         end = Offset(size.width, y),
                         strokeWidth = strokeWidth
@@ -134,7 +129,7 @@ fun MainPageTopBar(
                         },
                     ) {
                         Icon(
-                            painter = painterResource(R.drawable.search_ico),
+                            imageVector = SearchIco,
                             modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
                             tint = MaterialTheme.colorScheme.onBackground,
                             contentDescription = null
@@ -148,7 +143,7 @@ fun MainPageTopBar(
                         },
                     ) {
                         Icon(
-                            painter = painterResource(R.drawable.settings_ico),
+                            imageVector = SettingsIco,
                             modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
                             tint = MaterialTheme.colorScheme.onBackground,
                             contentDescription = null
@@ -163,7 +158,7 @@ fun MainPageTopBar(
                             },
                         ) {
                             Icon(
-                                painter = painterResource(R.drawable.more_vert_ico),
+                                imageVector = MoreVertIco,
                                 modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
                                 tint = MaterialTheme.colorScheme.onBackground,
                                 contentDescription = null
@@ -184,7 +179,7 @@ fun MainPageTopBar(
                                 }
                             ) {
                                 Icon(
-                                    painter = painterResource(R.drawable.edit_ico),
+                                    imageVector = EditIco,
                                     modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
                                     tint = MaterialTheme.colorScheme.onBackground,
                                     contentDescription = null
@@ -200,7 +195,7 @@ fun MainPageTopBar(
                                 }
                             ) {
                                 Icon(
-                                    painter = painterResource(R.drawable.add_ico),
+                                    imageVector = AddIco,
                                     modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
                                     tint = MaterialTheme.colorScheme.onBackground,
                                     contentDescription = null

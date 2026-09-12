@@ -76,7 +76,7 @@ class ImageDataConverter {
     @TypeConverter
     fun fromImageData(imageData: ImageData?): String? {
         return when (imageData) {
-            is ImageData.Resource -> "RES:${imageData.resId}"
+            is ImageData.Resource -> "RES:${imageData.ico.name}"
             is ImageData.Device -> "DEV:${imageData.path}"
             is ImageData.Url -> "URL:${imageData.url}"
             null -> null
@@ -88,8 +88,10 @@ class ImageDataConverter {
         if (data == null) return null
         return when {
             data.startsWith("RES:") -> {
-                val resId = data.removePrefix("RES:").toIntOrNull() ?: 0
-                ImageData.Resource(resId)
+                val iconName = data.removePrefix("RES:")
+                val icon = runCatching { SavedIcons.valueOf(iconName) }
+                    .getOrDefault(SavedIcons.CLOSE_ICO)
+                ImageData.Resource(icon)
             }
             data.startsWith("DEV:") -> {
                 val path = data.removePrefix("DEV:")
