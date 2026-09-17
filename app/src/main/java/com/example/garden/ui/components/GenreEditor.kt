@@ -32,6 +32,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -99,10 +100,9 @@ fun GenreEditor(
             restore = { mutableStateListOf<GridGenreItem>().apply { addAll(it) } }
         )
     ) {
-        mutableStateListOf<GridGenreItem>().apply {
-            addAll(initList.filter { it.getGenreClass() == (if (genreType == GenreEditorGenresType.ANIME)
-                Genre::class.java else MusicGenre::class.java) })
-        }
+        initList.filter { item ->
+            if (genreType == GenreEditorGenresType.ANIME) item is Genre else item is MusicGenre
+        }.toMutableStateList()
     }
 
     val selectedExtraInfo = rememberSaveable(

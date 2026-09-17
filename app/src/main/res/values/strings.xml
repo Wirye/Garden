@@ -148,4 +148,5 @@
     <string name="PersonalizedContentWillBecomeUnavailable">Персонализированный контент станет недоступен</string>
     <string name="LogoutFromAniLiberty">Выйти из АниЛиберти?</string>
     <string name="LogoutFromGoogle">Выйти из google?</string>
+    <string name="TheProductOfColumnsAndRowsCannotExceedThirty">Произведение столбцов и строк не может превышать 30</string>
 </resources>

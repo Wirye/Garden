@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -50,10 +51,8 @@ import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
@@ -64,7 +63,6 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -82,7 +80,6 @@ import com.example.garden.database.CardSize
 import com.example.garden.database.ElementType
 import com.example.garden.database.ImageData
 import com.example.garden.database.LinkData
-import com.example.garden.database.LinkType
 import com.example.garden.database.ObjectData
 import com.example.garden.ui.components.AsyncImageWithAddPlaceholder
 import com.example.garden.ui.components.DropDownMenuWithBlur
@@ -112,8 +109,9 @@ import com.example.garden.ui.utils.getAspectRatio
 import com.example.garden.ui.utils.getCardWidth
 import com.example.garden.ui.utils.getLargeCardWidth
 import com.example.garden.ui.utils.hazeSourcesForUpperLayers
+import com.example.garden.ui.utils.toChapterInfo
+import com.example.garden.ui.utils.toEpisodeInfo
 import com.example.garden.ui.utils.toObjectData
-import com.example.garden.utils.getMediaDuration
 import com.example.garden.viewmodel.CreateCardViewModel
 import com.example.garden.viewmodel.LayersViewModel
 import com.example.garden.viewmodel.PageWithSearchSaveOutput
@@ -121,7 +119,6 @@ import com.example.garden.viewmodel.ResultSenderViewModel
 import dev.chrisbanes.haze.hazeSource
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
-import kotlinx.coroutines.launch
 
 @Suppress("UNCHECKED_CAST")
 @Composable
@@ -140,8 +137,6 @@ fun CreateCardPage(
 
     val isEditMode by remember(stateViewModel.state.cardId) { mutableStateOf(stateViewModel.state.cardId != null) }
 
-    val songLength = rememberSaveable { mutableLongStateOf(0L) }
-
     LaunchedEffect(stateViewModel, layer) {
         stateViewModel.onUpdate = { updated ->
             layer.name = updated.name
@@ -150,7 +145,6 @@ fun CreateCardPage(
             layer.image = updated.image
             layer.genreList = updated.genreList
             layer.horizontalVideo = updated.horizontalVideo
-            layer.verticalVideo = updated.verticalVideo
             layer.song = updated.song
             layer.episodesList = updated.episodesList
             layer.chaptersList = updated.chaptersList
@@ -173,7 +167,7 @@ fun CreateCardPage(
         layersViewModel.openLayer(
             layer = Layer.PageWithSearch(
                 startsInfo = PageWithSearchInput(
-                    items = currentEpisodes,
+                    items = currentEpisodes.map { it.toEpisodeInfo() },
                     initType = PageWithSearchItemsDefaults.BaseEpisode
                 ),
                 key = currentPendingEditEpisodesKey.value
@@ -188,7 +182,7 @@ fun CreateCardPage(
         layersViewModel.openLayer(
             layer = Layer.PageWithSearch(
                 startsInfo = PageWithSearchInput(
-                    items = currentChapters,
+                    items = currentChapters.map { it.toChapterInfo() },
                     initType = PageWithSearchItemsDefaults.BaseChapter
                 ),
                 key = currentPendingEditChaptersKey.value
@@ -332,167 +326,137 @@ fun CreateCardPage(
             hazeState = LocalHazeLayers.current.mainScreen
         )
 
-        Column(
+        val bannerShape = MaterialTheme.shapes.medium
+
+        LazyColumn(
+            state = listState,
+            verticalArrangement = Arrangement.spacedBy(spacing),
             modifier = Modifier
                 .fillMaxSize()
-                .padding(
-                    top = MaterialTheme.spacing.screenHorizontal + topInset,
-                    bottom = 0.dp,
-                    start = MaterialTheme.spacing.screenHorizontal + leftInset,
-                    end = MaterialTheme.spacing.screenHorizontal + rightInset
-                ),
-            verticalArrangement = Arrangement.spacedBy(spacing)
+                .imePadding(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            contentPadding = PaddingValues(
+                bottom = MaterialTheme.spacing.extraLarge +
+                        MaterialTheme.dimens.minButtonHeight + bottomInset,
+                start = MaterialTheme.spacing.screenHorizontal + leftInset,
+                end = MaterialTheme.spacing.screenHorizontal + rightInset
+            )
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                FilledIconButton(
-                    onClick = {
-                        focusManager.clearFocus()
-                        haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
-                        onClose()
-                    }, colors = IconButtonDefaults.filledIconButtonColors(
-                        containerColor = LocalCustomColors.current.closeButton,
-                        contentColor = LocalCustomColors.current.onCloseButton
-                    ), shape = MaterialTheme.shapes.small
-                ) {
-                    Icon(
-                        imageVector = CloseIco,
-                        contentDescription = null,
-                        modifier = Modifier.size(MaterialTheme.dimens.iconLarge)
-                    )
-                }
+            item("topBarSpacer") {
+                Spacer(modifier = Modifier.height(topInset+ MaterialTheme.spacing.screenHorizontal - spacing))
+            }
 
-                val isCardTypeSelectMenuOpened = remember { mutableStateOf(false) }
-                Box(
-                    modifier = Modifier.weight(1f, fill = false)
+            item("topBarText") {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .clickable(
-                                onClick = {
-                                    focusManager.clearFocus()
-                                    haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
-                                    isCardTypeSelectMenuOpened.value = true
-                                }
-                            ),
-                        verticalAlignment = Alignment.CenterVertically
+                    Spacer(modifier = Modifier.size(MaterialTheme.dimens.minButtonHeight))
+
+                    val isCardTypeSelectMenuOpened = remember { mutableStateOf(false) }
+                    Box(
+                        modifier = Modifier.weight(1f, fill = false)
                     ) {
-                        Text(
-                            text = stringResource(R.string.creatingCard),
-                            style = MaterialTheme.typography.titleLarge,
-                            color = MaterialTheme.colorScheme.onBackground,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                            softWrap = false
-                        )
-                        Icon(
-                            imageVector = ChevronForward,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        Row(
                             modifier = Modifier
-                                .size(MaterialTheme.dimens.iconLarge)
-                                .rotate(90f)
-                        )
-                    }
-
-                    val availableCardTypes = remember(stateViewModel.state.carouselType) {
-                        mutableStateOf(
-                            if (!isEditMode) stateViewModel.state.carouselType.availableCardTypes() else listOf(
-                                stateViewModel.state.cardType
+                                .clickable(
+                                    onClick = {
+                                        focusManager.clearFocus()
+                                        haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                                        isCardTypeSelectMenuOpened.value = true
+                                    }
+                                ),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = stringResource(R.string.creatingCard),
+                                style = MaterialTheme.typography.titleLarge,
+                                color = MaterialTheme.colorScheme.onBackground,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                                softWrap = false
                             )
-                        )
-                    }
+                            Icon(
+                                imageVector = ChevronForward,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier
+                                    .size(MaterialTheme.dimens.iconLarge)
+                                    .rotate(90f)
+                            )
+                        }
 
-                    val selectedIndex =
-                        remember(stateViewModel.state.cardType, availableCardTypes) {
-                            {
-                                if (availableCardTypes.value.indexOf(stateViewModel.state.cardType) != -1) {
-                                    availableCardTypes.value.indexOf(stateViewModel.state.cardType)
-                                } else {
-                                    0
+                        val availableCardTypes = remember(stateViewModel.state.carouselType) {
+                            mutableStateOf(
+                                if (!isEditMode) stateViewModel.state.carouselType.availableCardTypes() else listOf(
+                                    stateViewModel.state.cardType
+                                )
+                            )
+                        }
+
+                        val selectedIndex =
+                            remember(stateViewModel.state.cardType, availableCardTypes) {
+                                {
+                                    if (availableCardTypes.value.indexOf(stateViewModel.state.cardType) != -1) {
+                                        availableCardTypes.value.indexOf(stateViewModel.state.cardType)
+                                    } else {
+                                        0
+                                    }
                                 }
                             }
-                        }
 
-                    SelectableDropDownMenuWithBlur(
-                        expanded = { isCardTypeSelectMenuOpened.value },
-                        onDismissRequest = { isCardTypeSelectMenuOpened.value = false },
-                        hazeState = LocalHazeLayers.current.mainScreen,
-                        selectedIndex = selectedIndex(),
-                        onSelect = {
-                            haptic.performHapticFeedback(HapticFeedbackType.VirtualKey)
-                            stateViewModel.update { copy(cardType = availableCardTypes.value[it]) }
-                        },
-                        items = availableCardTypes.value.map { stringResource(it.displayNameId) }
-                    )
-                }
-
-
-                val isExtraButtonsMenuOpened = remember { mutableStateOf(false) }
-                Box {
-                    IconButton(onClick = {
-                        focusManager.clearFocus()
-                        haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
-                        isExtraButtonsMenuOpened.value = true
-                    }) {
-                        Icon(
-                            imageVector = MoreVertIco,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onBackground,
-                            modifier = Modifier.size(MaterialTheme.dimens.iconLarge)
+                        SelectableDropDownMenuWithBlur(
+                            expanded = { isCardTypeSelectMenuOpened.value },
+                            onDismissRequest = { isCardTypeSelectMenuOpened.value = false },
+                            hazeState = LocalHazeLayers.current.mainScreen,
+                            selectedIndex = selectedIndex(),
+                            onSelect = {
+                                haptic.performHapticFeedback(HapticFeedbackType.VirtualKey)
+                                stateViewModel.update { copy(cardType = availableCardTypes.value[it]) }
+                            },
+                            items = availableCardTypes.value.map { stringResource(it.displayNameId) }
                         )
                     }
 
-                    DropDownMenuWithBlur(
-                        expanded = { isExtraButtonsMenuOpened.value },
-                        onDismissRequest = { isExtraButtonsMenuOpened.value = false },
-                        hazeState = LocalHazeLayers.current.mainScreen
-                    ) {
-                        if (stateViewModel.state.cardType == ElementType.AnimeCard) {
-                            PopupMenuItem(
-                                text = stringResource(R.string.importFromAniLiberty),
-                                onClick = {
-                                    haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
-                                    isExtraButtonsMenuOpened.value = false
-                                },
-                                icon = {
-                                    Icon(
-                                        imageVector = DownloadIco2,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(MaterialTheme.dimens.iconLarge)
-                                    )
-                                }
-                            )
-                        }
-                    }
+
+                    Spacer(modifier = Modifier.size(MaterialTheme.dimens.minButtonHeight))
                 }
             }
 
-            val bannerShape = MaterialTheme.shapes.medium
+            if (isBannerIsSingle) {
+                item("banner") {
+                    AsyncImageWithAddPlaceholder(
+                        model = stateViewModel.state.image?.dataForModel(),
+                        shape = bannerShape,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(stateViewModel.state.cardType.getAspectRatio())
+                            .clickable(onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                                isBannerImageChangeDialogExpanded.value = true
+                            })
+                            .hazeSource(LocalHazeLayers.current.mainScreen)
+                            .hazeSourcesForUpperLayers(
+                                LocalHazeStates.current.hazeStates, LocalLayerIndex.current
+                            )
+                    )
+                }
+            }
 
-            LazyColumn(
-                state = listState,
-                verticalArrangement = Arrangement.spacedBy(spacing),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f, fill = false)
-                    .imePadding(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                contentPadding = PaddingValues(
-                    bottom = MaterialTheme.spacing.extraLarge +
-                            MaterialTheme.dimens.minButtonHeight + bottomInset
-                )
-            ) {
-                if (isBannerIsSingle) {
-                    item("banner") {
+            item("baseSettings") {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(spacing),
+                    verticalAlignment = Alignment.Top,
+                    modifier = Modifier.height(IntrinsicSize.Max)
+                ) {
+                    val bannerHeightState = remember { mutableStateOf(0.dp) }
+                    if (!isBannerIsSingle) {
                         AsyncImageWithAddPlaceholder(
                             model = stateViewModel.state.image?.dataForModel(),
                             shape = bannerShape,
                             modifier = Modifier
-                                .fillMaxWidth()
+                                .width(bannerWidth)
                                 .aspectRatio(stateViewModel.state.cardType.getAspectRatio())
                                 .clickable(onClick = {
                                     haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
@@ -504,217 +468,18 @@ fun CreateCardPage(
                                 )
                         )
                     }
-                }
 
-                item("baseSettings") {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(spacing),
-                        verticalAlignment = Alignment.Top,
-                        modifier = Modifier.height(IntrinsicSize.Max)
+                    val columnHeightState = remember { mutableStateOf(0.dp) }
+
+                    Column(
+                        modifier = Modifier
+                            .widthIn(minInputWidth, maxInputWidth)
+                            .weight(1f, fill = true),
+                        verticalArrangement = Arrangement.spacedBy(spacing)
                     ) {
-                        val bannerHeightState = remember { mutableStateOf(0.dp) }
-                        if (!isBannerIsSingle) {
-                            AsyncImageWithAddPlaceholder(
-                                model = stateViewModel.state.image?.dataForModel(),
-                                shape = bannerShape,
-                                modifier = Modifier
-                                    .width(bannerWidth)
-                                    .aspectRatio(stateViewModel.state.cardType.getAspectRatio())
-                                    .clickable(onClick = {
-                                        haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
-                                        isBannerImageChangeDialogExpanded.value = true
-                                    })
-                                    .hazeSource(LocalHazeLayers.current.mainScreen)
-                                    .hazeSourcesForUpperLayers(
-                                        LocalHazeStates.current.hazeStates, LocalLayerIndex.current
-                                    )
-                            )
-                        }
-
-                        val columnHeightState = remember { mutableStateOf(0.dp) }
-
-                        Column(
-                            modifier = Modifier
-                                .widthIn(minInputWidth, maxInputWidth)
-                                .weight(1f, fill = true),
-                            verticalArrangement = Arrangement.spacedBy(spacing)
-                        ) {
-                            OutlinedTextField(
-                                modifier = Modifier.fillMaxWidth(),
-                                state = nameState,
-                                shape = MaterialTheme.shapes.medium,
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-                                ),
-                                textStyle = MaterialTheme.typography.bodyLarge.copy(
-                                    color = MaterialTheme.colorScheme.onSurface
-                                ),
-                                placeholder = {
-                                    Text(
-                                        text = stringResource(R.string.title),
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                },
-                                contentPadding = PaddingValues(MaterialTheme.spacing.small),
-                                lineLimits = TextFieldLineLimits.SingleLine
-                            )
-
-                            OutlinedTextField(
-                                modifier = Modifier.fillMaxWidth(),
-                                state = authorState,
-                                shape = MaterialTheme.shapes.medium,
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-                                ),
-                                textStyle = MaterialTheme.typography.bodyLarge.copy(
-                                    color = MaterialTheme.colorScheme.onSurface
-                                ),
-                                placeholder = {
-                                    Text(
-                                        text = stringResource(R.string.author),
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                },
-                                contentPadding = PaddingValues(MaterialTheme.spacing.small),
-                                lineLimits = TextFieldLineLimits.SingleLine
-                            )
-
-                            val isSelected = remember(
-                                stateViewModel,
-                                stateViewModel.state.genreList
-                            ) { stateViewModel.state.genreList.isNotEmpty() }
-
-                            val containerColor by animateColorAsState(
-                                targetValue = if (isSelected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
-                                label = "containerColor"
-                            )
-                            val contentColor by animateColorAsState(
-                                targetValue = if (isSelected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
-                                label = "contentColor"
-                            )
-
-                            var isBottomSheetOpen by rememberSaveable { mutableStateOf(false) }
-
-                            val genreType = remember(stateViewModel.state.cardType) {
-                                mutableStateOf(
-                                    if (stateViewModel.state.cardType == ElementType.MusicCard) {
-                                        GenreEditorGenresType.MUSIC
-                                    } else {
-                                        GenreEditorGenresType.ANIME
-                                    }
-                                )
-                            }
-
-                            if (isBottomSheetOpen) {
-                                GenreEditor(
-                                    onDismiss = { isBottomSheetOpen = false },
-                                    onApply = { newGenres ->
-                                        stateViewModel.update { copy(genreList = newGenres) }
-                                    },
-                                    initList = stateViewModel.state.genreList,
-                                    genreType = genreType.value
-                                )
-                            }
-
-                            Button(
-                                onClick = {
-                                    haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
-                                    isBottomSheetOpen = true
-                                    focusManager.clearFocus()
-                                },
-                                shape = CircleShape,
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = containerColor, contentColor = contentColor
-                                ),
-                                modifier = Modifier.fillMaxWidth(),
-                                contentPadding = PaddingValues(MaterialTheme.spacing.medium)
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(
-                                        MaterialTheme.spacing.small
-                                    )
-                                ) {
-                                    AnimatedContent(
-                                        targetState = isSelected, label = "icon"
-                                    ) { isSelected ->
-                                        Icon(
-                                            imageVector = if (isSelected) EditIco else AddIco,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(MaterialTheme.dimens.iconLarge)
-                                        )
-                                    }
-
-                                    Text(
-                                        text = if (isSelected) stringResource(R.string.editGenres) else stringResource(
-                                            R.string.selectGenres
-                                        ),
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                        style = MaterialTheme.typography.labelLarge,
-                                        modifier = Modifier.weight(1f, fill = false)
-                                    )
-                                }
-                            }
-                        }
-
-                        if (isDescriptionInOneLineWithName && isDescriptionExists) {
-                            OutlinedTextField(
-                                shape = MaterialTheme.shapes.medium,
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-                                ),
-                                modifier = Modifier
-                                    .weight(1f, fill = true)
-                                    .widthIn(minInputWidth, maxInputWidth)
-                                    .then(
-                                        if (bannerHeightState.value != 0.dp || columnHeightState.value != 0.dp) {
-                                            Modifier.height(
-                                                max(
-                                                    bannerHeightState.value,
-                                                    columnHeightState.value
-                                                )
-                                            )
-                                        } else {
-                                            Modifier
-                                        }
-                                    ),
-                                state = descriptionState,
-                                textStyle = MaterialTheme.typography.bodyLarge.copy(
-                                    color = MaterialTheme.colorScheme.onSurface
-                                ),
-                                placeholder = {
-                                    Text(
-                                        text = stringResource(R.string.description),
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                },
-                                contentPadding = PaddingValues(MaterialTheme.spacing.small),
-                            )
-                        }
-                    }
-                }
-
-                if (!isDescriptionInOneLineWithName && isDescriptionExists) {
-                    item("description") {
                         OutlinedTextField(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .widthIn(minInputWidth, maxInputWidth)
-                                .aspectRatio(16f / 9f),
-                            state = descriptionState,
+                            modifier = Modifier.fillMaxWidth(),
+                            state = nameState,
                             shape = MaterialTheme.shapes.medium,
                             colors = OutlinedTextFieldDefaults.colors(
                                 unfocusedBorderColor = MaterialTheme.colorScheme.outline,
@@ -722,6 +487,148 @@ fun CreateCardPage(
                                 focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                                 unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh
                             ),
+                            textStyle = MaterialTheme.typography.bodyLarge.copy(
+                                color = MaterialTheme.colorScheme.onSurface
+                            ),
+                            placeholder = {
+                                Text(
+                                    text = stringResource(R.string.title),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            },
+                            contentPadding = PaddingValues(MaterialTheme.spacing.small),
+                            lineLimits = TextFieldLineLimits.SingleLine
+                        )
+
+                        OutlinedTextField(
+                            modifier = Modifier.fillMaxWidth(),
+                            state = authorState,
+                            shape = MaterialTheme.shapes.medium,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                            ),
+                            textStyle = MaterialTheme.typography.bodyLarge.copy(
+                                color = MaterialTheme.colorScheme.onSurface
+                            ),
+                            placeholder = {
+                                Text(
+                                    text = stringResource(R.string.author),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            },
+                            contentPadding = PaddingValues(MaterialTheme.spacing.small),
+                            lineLimits = TextFieldLineLimits.SingleLine
+                        )
+
+                        val isSelected = remember(
+                            stateViewModel,
+                            stateViewModel.state.genreList
+                        ) { stateViewModel.state.genreList.isNotEmpty() }
+
+                        val containerColor by animateColorAsState(
+                            targetValue = if (isSelected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
+                            label = "containerColor"
+                        )
+                        val contentColor by animateColorAsState(
+                            targetValue = if (isSelected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                            label = "contentColor"
+                        )
+
+                        var isBottomSheetOpen by rememberSaveable { mutableStateOf(false) }
+
+                        val genreType = remember(stateViewModel.state.cardType) {
+                            mutableStateOf(
+                                if (stateViewModel.state.cardType == ElementType.MusicCard) {
+                                    GenreEditorGenresType.MUSIC
+                                } else {
+                                    GenreEditorGenresType.ANIME
+                                }
+                            )
+                        }
+
+                        if (isBottomSheetOpen) {
+                            GenreEditor(
+                                onDismiss = { isBottomSheetOpen = false },
+                                onApply = { newGenres ->
+                                    stateViewModel.update { copy(genreList = newGenres) }
+                                },
+                                initList = stateViewModel.state.genreList,
+                                genreType = genreType.value
+                            )
+                        }
+
+                        Button(
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                                isBottomSheetOpen = true
+                                focusManager.clearFocus()
+                            },
+                            shape = CircleShape,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = containerColor, contentColor = contentColor
+                            ),
+                            modifier = Modifier.fillMaxWidth(),
+                            contentPadding = PaddingValues(MaterialTheme.spacing.medium)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(
+                                    MaterialTheme.spacing.small
+                                )
+                            ) {
+                                AnimatedContent(
+                                    targetState = isSelected, label = "icon"
+                                ) { isSelected ->
+                                    Icon(
+                                        imageVector = if (isSelected) EditIco else AddIco,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(MaterialTheme.dimens.iconLarge)
+                                    )
+                                }
+
+                                Text(
+                                    text = if (isSelected) stringResource(R.string.editGenres) else stringResource(
+                                        R.string.selectGenres
+                                    ),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    style = MaterialTheme.typography.labelLarge,
+                                    modifier = Modifier.weight(1f, fill = false)
+                                )
+                            }
+                        }
+                    }
+
+                    if (isDescriptionInOneLineWithName && isDescriptionExists) {
+                        OutlinedTextField(
+                            shape = MaterialTheme.shapes.medium,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                            ),
+                            modifier = Modifier
+                                .weight(1f, fill = true)
+                                .widthIn(minInputWidth, maxInputWidth)
+                                .then(
+                                    if (bannerHeightState.value != 0.dp || columnHeightState.value != 0.dp) {
+                                        Modifier.height(
+                                            max(
+                                                bannerHeightState.value,
+                                                columnHeightState.value
+                                            )
+                                        )
+                                    } else {
+                                        Modifier
+                                    }
+                                ),
+                            state = descriptionState,
                             textStyle = MaterialTheme.typography.bodyLarge.copy(
                                 color = MaterialTheme.colorScheme.onSurface
                             ),
@@ -736,234 +643,270 @@ fun CreateCardPage(
                         )
                     }
                 }
+            }
 
-                item("contentSettings") {
-                    when (stateViewModel.state.cardType) {
-                        ElementType.AnimeCard -> {
-                            Button(
-                                onClick = {
-                                    haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
-                                    focusManager.clearFocus()
-                                    onEditEpisodes(ResultKeys.getPageWithSearchKey())
-                                },
-                                shape = CircleShape,
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                                ),
-                                contentPadding = PaddingValues(MaterialTheme.spacing.medium)
+            if (!isDescriptionInOneLineWithName && isDescriptionExists) {
+                item("description") {
+                    OutlinedTextField(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .widthIn(minInputWidth, maxInputWidth)
+                            .aspectRatio(16f / 9f),
+                        state = descriptionState,
+                        shape = MaterialTheme.shapes.medium,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                        ),
+                        textStyle = MaterialTheme.typography.bodyLarge.copy(
+                            color = MaterialTheme.colorScheme.onSurface
+                        ),
+                        placeholder = {
+                            Text(
+                                text = stringResource(R.string.description),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        },
+                        contentPadding = PaddingValues(MaterialTheme.spacing.small),
+                    )
+                }
+            }
+
+            item("contentSettings") {
+                when (stateViewModel.state.cardType) {
+                    ElementType.AnimeCard -> {
+                        Button(
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                                focusManager.clearFocus()
+                                onEditEpisodes(ResultKeys.getPageWithSearchKey())
+                            },
+                            shape = CircleShape,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                            ),
+                            contentPadding = PaddingValues(MaterialTheme.spacing.medium)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(
+                                    MaterialTheme.spacing.small
+                                )
                             ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(
-                                        MaterialTheme.spacing.small
-                                    )
-                                ) {
-                                    Icon(
-                                        imageVector = EditIco,
-                                        modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
-                                        contentDescription = null
-                                    )
-                                    Text(
-                                        text = stringResource(R.string.editEpisodes),
-                                        style = MaterialTheme.typography.labelLarge,
-                                        modifier = Modifier.weight(1f, fill = false),
-                                        overflow = TextOverflow.Ellipsis
+                                Icon(
+                                    imageVector = EditIco,
+                                    modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
+                                    contentDescription = null
+                                )
+                                Text(
+                                    text = stringResource(R.string.editEpisodes),
+                                    style = MaterialTheme.typography.labelLarge,
+                                    modifier = Modifier.weight(1f, fill = false),
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                    }
+
+                    ElementType.MangaCard -> {
+                        Button(
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                                focusManager.clearFocus()
+                                onEditChapters(ResultKeys.getPageWithSearchKey())
+                            },
+                            shape = CircleShape,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                            ),
+                            contentPadding = PaddingValues(MaterialTheme.spacing.medium)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(
+                                    MaterialTheme.spacing.small
+                                )
+                            ) {
+                                Icon(
+                                    imageVector = EditIco,
+                                    modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
+                                    contentDescription = null
+                                )
+                                Text(
+                                    text = stringResource(R.string.editChapters),
+                                    style = MaterialTheme.typography.labelLarge,
+                                    modifier = Modifier.weight(1f, fill = false)
+                                )
+                            }
+                        }
+                    }
+
+                    ElementType.MusicCard -> {
+                        val isHorizontalVideoChangeDialogExpanded =
+                            remember { mutableStateOf(false) }
+
+                        val openHorizontalVideoPicker = rememberFilePicker(
+                            mimeTypes = arrayOf("video/*")
+                        ) { uri ->
+                            if (uri != null) {
+                                stateViewModel.update {
+                                    copy(
+                                        horizontalVideo = LinkData.Device(
+                                            path = uri.toString()
+                                        )
                                     )
                                 }
                             }
                         }
 
-                        ElementType.MangaCard -> {
-                            Button(
-                                onClick = {
-                                    haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
-                                    focusManager.clearFocus()
-                                    onEditChapters(ResultKeys.getPageWithSearchKey())
-                                },
-                                shape = CircleShape,
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                                ),
-                                contentPadding = PaddingValues(MaterialTheme.spacing.medium)
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(
-                                        MaterialTheme.spacing.small
-                                    )
-                                ) {
-                                    Icon(
-                                        imageVector = EditIco,
-                                        modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
-                                        contentDescription = null
-                                    )
-                                    Text(
-                                        text = stringResource(R.string.editChapters),
-                                        style = MaterialTheme.typography.labelLarge,
-                                        modifier = Modifier.weight(1f, fill = false)
+                        SmartFilePicker(
+                            expanded = isHorizontalVideoChangeDialogExpanded.value,
+                            onDismiss = { isHorizontalVideoChangeDialogExpanded.value = false },
+                            onFileDelete = {
+                                isHorizontalVideoChangeDialogExpanded.value = false
+                                stateViewModel.update {
+                                    copy(horizontalVideo = null)
+                                }
+                            },
+                            onFileChange = {
+                                isHorizontalVideoChangeDialogExpanded.value = false
+                                openHorizontalVideoPicker()
+                            },
+                            hazeState = LocalHazeLayers.current.mainScreen
+                        )
+
+                        val isSongChangeDialogExpanded = remember { mutableStateOf(false) }
+
+                        val openSongPicker = rememberFilePicker(
+                            mimeTypes = arrayOf("audio/*")
+                        ) { uri ->
+                            if (uri != null) {
+                                stateViewModel.update {
+                                    copy(
+                                        song = LinkData.Device(
+                                            path = uri.toString()
+                                        )
                                     )
                                 }
                             }
                         }
 
-                        ElementType.MusicCard -> {
-                            val isHorizontalVideoChangeDialogExpanded =
-                                remember { mutableStateOf(false) }
-
-                            val openHorizontalVideoPicker = rememberFilePicker(
-                                mimeTypes = arrayOf("video/*")
-                            ) { uri ->
-                                if (uri != null) {
-                                    stateViewModel.update {
-                                        copy(
-                                            horizontalVideo = LinkData(
-                                                type = LinkType.CONTENT,
-                                                targetId = null,
-                                                contentPath = uri.toString()
-                                            )
-                                        )
-                                    }
+                        SmartFilePicker(
+                            expanded = isSongChangeDialogExpanded.value,
+                            onDismiss = { isSongChangeDialogExpanded.value = false },
+                            onFileDelete = {
+                                isSongChangeDialogExpanded.value = false
+                                stateViewModel.update {
+                                    copy(song = null)
                                 }
-                            }
+                            },
+                            onFileChange = {
+                                isSongChangeDialogExpanded.value = false
+                                openSongPicker()
+                            },
+                            hazeState = LocalHazeLayers.current.mainScreen
+                        )
 
-                            SmartFilePicker(
-                                expanded = isHorizontalVideoChangeDialogExpanded.value,
-                                onDismiss = { isHorizontalVideoChangeDialogExpanded.value = false },
-                                onFileDelete = {
-                                    isHorizontalVideoChangeDialogExpanded.value = false
-                                    stateViewModel.update {
-                                        copy(horizontalVideo = null)
-                                    }
-                                },
-                                onFileChange = {
-                                    isHorizontalVideoChangeDialogExpanded.value = false
-                                    openHorizontalVideoPicker()
-                                },
-                                hazeState = LocalHazeLayers.current.mainScreen
-                            )
+                        val isSelected = remember(stateViewModel, stateViewModel.state.song) {
+                            mutableStateOf(stateViewModel.state.song != null)
+                        }
 
-                            val isVerticalVideoChangeDialogExpanded =
-                                remember { mutableStateOf(false) }
+                        val isSongPlaying = remember { mutableStateOf(false) }
 
-                            val openVerticalVideoPicker = rememberFilePicker(
-                                mimeTypes = arrayOf("video/*")
-                            ) { uri ->
-                                if (uri != null) {
-                                    stateViewModel.update {
-                                        copy(
-                                            verticalVideo = LinkData(
-                                                type = LinkType.CONTENT,
-                                                targetId = null,
-                                                contentPath = uri.toString()
+                        val backgroundColor by animateColorAsState(
+                            targetValue = if (isSelected.value) MaterialTheme.colorScheme.surfaceContainerHigh else Color.Transparent,
+                            animationSpec = tween(durationMillis = 300),
+                            label = "backgroundColor"
+                        )
+
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .width(IntrinsicSize.Max)
+                                    .clip(MaterialTheme.shapes.medium)
+                                    .background(backgroundColor)
+                                    .animateContentSize(animationSpec = tween(300))
+                                    .padding(if (isSelected.value) MaterialTheme.spacing.medium else 0.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Button(
+                                        onClick = {
+                                            haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                                            focusManager.clearFocus()
+                                            isSongChangeDialogExpanded.value = true
+                                        },
+                                        shape = CircleShape,
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                                        ),
+                                        contentPadding = PaddingValues(MaterialTheme.spacing.medium),
+                                        modifier = Modifier.weight(1f, fill = true)
+                                    ) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(
+                                                MaterialTheme.spacing.small
                                             )
-                                        )
-                                    }
-                                }
-                            }
-
-                            SmartFilePicker(
-                                expanded = isVerticalVideoChangeDialogExpanded.value,
-                                onDismiss = { isVerticalVideoChangeDialogExpanded.value = false },
-                                onFileDelete = {
-                                    isVerticalVideoChangeDialogExpanded.value = false
-                                    stateViewModel.update {
-                                        copy(verticalVideo = null)
-                                    }
-                                },
-                                onFileChange = {
-                                    isVerticalVideoChangeDialogExpanded.value = false
-                                    openVerticalVideoPicker()
-                                },
-                                hazeState = LocalHazeLayers.current.mainScreen
-                            )
-
-                            val isSongChangeDialogExpanded = remember { mutableStateOf(false) }
-
-                            val coroutineScope = rememberCoroutineScope()
-                            val context = LocalContext.current
-
-                            val openSongPicker = rememberFilePicker(
-                                mimeTypes = arrayOf("audio/*")
-                            ) { uri ->
-                                if (uri != null) {
-                                    coroutineScope.launch {
-                                        stateViewModel.update {
-                                            copy(
-                                                song = LinkData(
-                                                    type = LinkType.CONTENT,
-                                                    targetId = null,
-                                                    contentPath = uri.toString()
+                                        ) {
+                                            AnimatedContent(
+                                                targetState = isSelected, label = "icon"
+                                            ) { isSelected ->
+                                                Icon(
+                                                    imageVector = if (isSelected.value) EditIco else AddIco,
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(MaterialTheme.dimens.iconLarge)
                                                 )
+                                            }
+                                            Text(
+                                                text = if (isSelected.value) stringResource(
+                                                    R.string.changeSong
+                                                ) else stringResource(R.string.selectSong),
+                                                style = MaterialTheme.typography.labelLarge,
+                                                modifier = Modifier.weight(1f, fill = false),
+                                                overflow = TextOverflow.Ellipsis
                                             )
                                         }
-
-                                        songLength.longValue =
-                                            context.getMediaDuration(uri.toString())
                                     }
-                                }
-                            }
 
-                            SmartFilePicker(
-                                expanded = isSongChangeDialogExpanded.value,
-                                onDismiss = { isSongChangeDialogExpanded.value = false },
-                                onFileDelete = {
-                                    isSongChangeDialogExpanded.value = false
-                                    stateViewModel.update {
-                                        copy(song = null)
-                                    }
-                                },
-                                onFileChange = {
-                                    isSongChangeDialogExpanded.value = false
-                                    openSongPicker()
-                                },
-                                hazeState = LocalHazeLayers.current.mainScreen
-                            )
-
-                            val isSelected = remember(stateViewModel, stateViewModel.state.song) {
-                                mutableStateOf(stateViewModel.state.song != null)
-                            }
-
-                            val isSongPlaying = remember { mutableStateOf(false) }
-
-                            val backgroundColor by animateColorAsState(
-                                targetValue = if (isSelected.value) MaterialTheme.colorScheme.surfaceContainerHigh else Color.Transparent,
-                                animationSpec = tween(durationMillis = 300),
-                                label = "backgroundColor"
-                            )
-
-                            Box(
-                                modifier = Modifier.fillMaxSize(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Column(
-                                    modifier = Modifier
-                                        .width(IntrinsicSize.Max)
-                                        .clip(MaterialTheme.shapes.medium)
-                                        .background(backgroundColor)
-                                        .animateContentSize(animationSpec = tween(300))
-                                        .padding(if (isSelected.value) MaterialTheme.spacing.medium else 0.dp),
-                                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally
-                                ) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                    AnimatedVisibility(
+                                        visible = isSelected.value,
+                                        enter = fadeIn(tween(300)) + expandHorizontally(
+                                            tween(
+                                                300
+                                            )
+                                        ),
+                                        exit = fadeOut(tween(200)) + shrinkHorizontally(
+                                            tween(
+                                                200
+                                            )
+                                        )
                                     ) {
                                         Button(
                                             onClick = {
-                                                haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                                                haptic.performHapticFeedback(HapticFeedbackType.VirtualKey)
                                                 focusManager.clearFocus()
-                                                isSongChangeDialogExpanded.value = true
+                                                isSongPlaying.value = !isSongPlaying.value
                                             },
                                             shape = CircleShape,
                                             colors = ButtonDefaults.buttonColors(
                                                 containerColor = MaterialTheme.colorScheme.secondaryContainer,
                                                 contentColor = MaterialTheme.colorScheme.onSecondaryContainer
                                             ),
-                                            contentPadding = PaddingValues(MaterialTheme.spacing.medium),
-                                            modifier = Modifier.weight(1f, fill = true)
+                                            contentPadding = PaddingValues(MaterialTheme.spacing.medium)
                                         ) {
                                             Row(
                                                 verticalAlignment = Alignment.CenterVertically,
@@ -972,201 +915,173 @@ fun CreateCardPage(
                                                 )
                                             ) {
                                                 AnimatedContent(
-                                                    targetState = isSelected, label = "icon"
-                                                ) { isSelected ->
+                                                    targetState = isSongPlaying, label = "icon"
+                                                ) { isSongPlaying ->
                                                     Icon(
-                                                        imageVector = if (isSelected.value) EditIco else AddIco,
+                                                        imageVector = if (isSongPlaying.value) PauseIco else PlayArrowFilledIco,
                                                         contentDescription = null,
                                                         modifier = Modifier.size(MaterialTheme.dimens.iconLarge)
                                                     )
                                                 }
-                                                Text(
-                                                    text = if (isSelected.value) stringResource(
-                                                        R.string.changeSong
-                                                    ) else stringResource(R.string.selectSong),
-                                                    style = MaterialTheme.typography.labelLarge,
-                                                    modifier = Modifier.weight(1f, fill = false),
-                                                    overflow = TextOverflow.Ellipsis
-                                                )
-                                            }
-                                        }
-
-                                        AnimatedVisibility(
-                                            visible = isSelected.value,
-                                            enter = fadeIn(tween(300)) + expandHorizontally(
-                                                tween(
-                                                    300
-                                                )
-                                            ),
-                                            exit = fadeOut(tween(200)) + shrinkHorizontally(
-                                                tween(
-                                                    200
-                                                )
-                                            )
-                                        ) {
-                                            Button(
-                                                onClick = {
-                                                    haptic.performHapticFeedback(HapticFeedbackType.VirtualKey)
-                                                    focusManager.clearFocus()
-                                                    isSongPlaying.value = !isSongPlaying.value
-                                                },
-                                                shape = CircleShape,
-                                                colors = ButtonDefaults.buttonColors(
-                                                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                                                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                                                ),
-                                                contentPadding = PaddingValues(MaterialTheme.spacing.medium)
-                                            ) {
-                                                Row(
-                                                    verticalAlignment = Alignment.CenterVertically,
-                                                    horizontalArrangement = Arrangement.spacedBy(
-                                                        MaterialTheme.spacing.small
-                                                    )
-                                                ) {
-                                                    AnimatedContent(
-                                                        targetState = isSongPlaying, label = "icon"
-                                                    ) { isSongPlaying ->
-                                                        Icon(
-                                                            imageVector = if (isSongPlaying.value) PauseIco else PlayArrowFilledIco,
-                                                            contentDescription = null,
-                                                            modifier = Modifier.size(MaterialTheme.dimens.iconLarge)
-                                                        )
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-
-                                    AnimatedVisibility(
-                                        visible = isSelected.value,
-                                        enter = fadeIn(
-                                            tween(
-                                                300,
-                                                delayMillis = 100
-                                            )
-                                        ) + expandVertically(tween(300)),
-                                        exit = fadeOut(tween(150)) + shrinkVertically(tween(150))
-                                    ) {
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                        ) {
-                                            Button(
-                                                onClick = {
-                                                    haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
-                                                    focusManager.clearFocus()
-                                                    isHorizontalVideoChangeDialogExpanded.value =
-                                                        true
-                                                },
-                                                modifier = Modifier.weight(1f),
-                                                shape = MaterialTheme.shapes.medium,
-                                                colors = ButtonDefaults.buttonColors(
-                                                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                                                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                                                ),
-                                                contentPadding = PaddingValues(MaterialTheme.spacing.large)
-                                            ) {
-                                                Column(
-                                                    verticalArrangement = Arrangement.spacedBy(
-                                                        MaterialTheme.spacing.small
-                                                    ),
-                                                    horizontalAlignment = Alignment.CenterHorizontally
-                                                ) {
-                                                    AnimatedContent(
-                                                        targetState = stateViewModel.state.horizontalVideo != null,
-                                                        label = "icon"
-                                                    ) { state ->
-                                                        Icon(
-                                                            imageVector = if (state) EditIco else AddIco,
-                                                            contentDescription = null,
-                                                            modifier = Modifier.size(MaterialTheme.dimens.iconLarge)
-                                                        )
-                                                    }
-                                                    Text(
-                                                        text = stringResource(R.string.HorizontalVideo),
-                                                        style = MaterialTheme.typography.labelLarge,
-                                                        overflow = TextOverflow.Ellipsis
-                                                    )
-                                                }
-                                            }
-
-                                            Button(
-                                                onClick = {
-                                                    haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
-                                                    focusManager.clearFocus()
-                                                    isVerticalVideoChangeDialogExpanded.value = true
-                                                },
-                                                modifier = Modifier.weight(1f),
-                                                shape = MaterialTheme.shapes.medium,
-                                                colors = ButtonDefaults.buttonColors(
-                                                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                                                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                                                ),
-                                                contentPadding = PaddingValues(MaterialTheme.spacing.large)
-                                            ) {
-                                                Column(
-                                                    verticalArrangement = Arrangement.spacedBy(
-                                                        MaterialTheme.spacing.small
-                                                    ),
-                                                    horizontalAlignment = Alignment.CenterHorizontally
-                                                ) {
-                                                    AnimatedContent(
-                                                        targetState = stateViewModel.state.verticalVideo != null,
-                                                        label = "icon"
-                                                    ) { state ->
-                                                        Icon(
-                                                            imageVector = if (state) EditIco else AddIco,
-                                                            contentDescription = null,
-                                                            modifier = Modifier.size(MaterialTheme.dimens.iconLarge)
-                                                        )
-                                                    }
-                                                    Text(
-                                                        text = stringResource(R.string.VerticalVideo),
-                                                        style = MaterialTheme.typography.labelLarge,
-                                                        overflow = TextOverflow.Ellipsis
-                                                    )
-                                                }
                                             }
                                         }
                                     }
                                 }
-                            }
-                        }
 
-                        ElementType.PlaylistCard -> {
-                            Button(
-                                onClick = {
-                                    haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
-                                    focusManager.clearFocus()
-                                },
-                                shape = CircleShape,
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                                ),
-                                contentPadding = PaddingValues(MaterialTheme.spacing.medium)
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(
-                                        MaterialTheme.spacing.small
-                                    )
+                                AnimatedVisibility(
+                                    visible = isSelected.value,
+                                    enter = fadeIn(
+                                        tween(
+                                            300,
+                                            delayMillis = 100
+                                        )
+                                    ) + expandVertically(tween(300)),
+                                    exit = fadeOut(tween(150)) + shrinkVertically(tween(150))
                                 ) {
-                                    Icon(
-                                        imageVector = EditIco,
-                                        modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
-                                        contentDescription = null
-                                    )
-                                    Text(
-                                        text = stringResource(R.string.editContent),
-                                        style = MaterialTheme.typography.labelLarge,
-                                        modifier = Modifier.weight(1f, fill = false)
-                                    )
+                                    Button(
+                                        onClick = {
+                                            haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                                            focusManager.clearFocus()
+                                            isHorizontalVideoChangeDialogExpanded.value =
+                                                true
+                                        },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = MaterialTheme.shapes.medium,
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                                        ),
+                                        contentPadding = PaddingValues(MaterialTheme.spacing.large)
+                                    ) {
+                                        Column(
+                                            verticalArrangement = Arrangement.spacedBy(
+                                                MaterialTheme.spacing.small
+                                            ),
+                                            horizontalAlignment = Alignment.CenterHorizontally
+                                        ) {
+                                            AnimatedContent(
+                                                targetState = stateViewModel.state.horizontalVideo != null,
+                                                label = "icon"
+                                            ) { state ->
+                                                Icon(
+                                                    imageVector = if (state) EditIco else AddIco,
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(MaterialTheme.dimens.iconLarge)
+                                                )
+                                            }
+                                            Text(
+                                                text = stringResource(R.string.HorizontalVideo),
+                                                style = MaterialTheme.typography.labelLarge,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
+                    }
 
-                        else -> {}
+                    ElementType.PlaylistCard -> {
+                        Button(
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                                focusManager.clearFocus()
+                            },
+                            shape = CircleShape,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                            ),
+                            contentPadding = PaddingValues(MaterialTheme.spacing.medium)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(
+                                    MaterialTheme.spacing.small
+                                )
+                            ) {
+                                Icon(
+                                    imageVector = EditIco,
+                                    modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
+                                    contentDescription = null
+                                )
+                                Text(
+                                    text = stringResource(R.string.editContent),
+                                    style = MaterialTheme.typography.labelLarge,
+                                    modifier = Modifier.weight(1f, fill = false)
+                                )
+                            }
+                        }
+                    }
+
+                    else -> {}
+                }
+            }
+        }
+
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(top = topInset + MaterialTheme.spacing.screenHorizontal, start = MaterialTheme.spacing.screenHorizontal + leftInset)
+        ) {
+            FilledIconButton(
+                onClick = {
+                    focusManager.clearFocus()
+                    haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                    onClose()
+                }, colors = IconButtonDefaults.filledIconButtonColors(
+                    containerColor = LocalCustomColors.current.closeButton,
+                    contentColor = LocalCustomColors.current.onCloseButton
+                ), shape = MaterialTheme.shapes.small
+            ) {
+                Icon(
+                    imageVector = CloseIco,
+                    contentDescription = null,
+                    modifier = Modifier.size(MaterialTheme.dimens.iconLarge)
+                )
+            }
+        }
+
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = topInset + MaterialTheme.spacing.screenHorizontal, end = MaterialTheme.spacing.screenHorizontal + rightInset)
+        ) {
+            val isExtraButtonsMenuOpened = remember { mutableStateOf(false) }
+            Box {
+                IconButton(onClick = {
+                    focusManager.clearFocus()
+                    haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                    isExtraButtonsMenuOpened.value = true
+                }) {
+                    Icon(
+                        imageVector = MoreVertIco,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onBackground,
+                        modifier = Modifier.size(MaterialTheme.dimens.iconLarge)
+                    )
+                }
+
+                DropDownMenuWithBlur(
+                    expanded = { isExtraButtonsMenuOpened.value },
+                    onDismissRequest = { isExtraButtonsMenuOpened.value = false },
+                    hazeState = LocalHazeLayers.current.mainScreen
+                ) {
+                    if (stateViewModel.state.cardType == ElementType.AnimeCard) {
+                        PopupMenuItem(
+                            text = stringResource(R.string.importFromAniLiberty),
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                                isExtraButtonsMenuOpened.value = false
+                            },
+                            icon = {
+                                Icon(
+                                    imageVector = DownloadIco2,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(MaterialTheme.dimens.iconLarge)
+                                )
+                            }
+                        )
                     }
                 }
             }
@@ -1199,7 +1114,7 @@ fun CreateCardPage(
                         haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
                         focusManager.clearFocus()
                         onCloseAndApply(
-                            stateViewModel.state.toObjectData(songLength.longValue),
+                            stateViewModel.state.toObjectData(),
                             stateViewModel.state
                         )
                     },
@@ -1242,7 +1157,7 @@ fun CreateCardPage(
                         val newEpisodes = newData.items.filterIsInstance<EpisodeInfo>().toList()
 
                         stateViewModel.update {
-                            copy(episodesList = newEpisodes)
+                            copy(episodesList = newEpisodes.map { it.toEpisodeInfo(newEpisodes.indexOf(it)) })
                         }
                     }
                     currentPendingEditEpisodesKey.value = ""
@@ -1254,7 +1169,7 @@ fun CreateCardPage(
                         val newChapters = newData.items.filterIsInstance<ChapterInfo>().toList()
 
                         stateViewModel.update {
-                            copy(chaptersList = newChapters)
+                            copy(chaptersList = newChapters.map { it.toChapterInfo(newChapters.indexOf(it)) })
                         }
                     }
                     currentPendingEditChaptersKey.value = ""

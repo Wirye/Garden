@@ -13,10 +13,10 @@ data class WindowInfo(
 data class Spacing(
     val extraSmall: Dp = 4.dp,
     val small: Dp = 8.dp,
-    val medium: Dp = 16.dp,       // Стандартный внутренний отступ
-    val large: Dp = 24.dp,        // Отступ между крупными секциями
+    val medium: Dp = 16.dp,
+    val large: Dp = 24.dp,
     val extraLarge: Dp = 32.dp,
-    val screenHorizontal: Dp = 16.dp, // Отступ от краев экрана
+    val screenHorizontal: Dp = 16.dp,
     val marginBetweenElementsInGrid: Dp = 8.dp,
     val dotSpacing: Dp = 6.dp
 )
@@ -37,6 +37,7 @@ data class Dimens(
     val shadowElevation: Dp = 16.dp,
     val activeDotWidth: Dp = 18.dp,
     val dotSize: Dp = 7.dp,
+    val flatGridItemHeight: Dp = 100.dp
 )
 
 private val tabletDimens = Dimens(maxPopupElementWidth = 400.dp)

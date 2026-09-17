@@ -10,12 +10,16 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.visible
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -60,7 +64,6 @@ import com.example.garden.R
 import com.example.garden.ResultKeys
 import com.example.garden.database.ImageData
 import com.example.garden.database.LinkData
-import com.example.garden.database.LinkType
 import com.example.garden.ui.components.AsyncImageWithAddPlaceholder
 import com.example.garden.ui.components.SmartFilePicker
 import com.example.garden.ui.components.icons.AddIco
@@ -163,7 +166,7 @@ fun PageWithSearch(
                         EpisodeInfo(
                             id = generateNewChapterId(),
                             name = "",
-                            link = LinkData(type = LinkType.CONTENT, targetId = null, contentPath = uri.toString()),
+                            link = LinkData.Device(path = uri.toString()),
                             length = context.getMediaDuration(uri.toString()),
                             image = null
                         )
@@ -179,7 +182,7 @@ fun PageWithSearch(
                         ChapterInfo(
                             id = generateNewChapterId(),
                             name = "",
-                            link = LinkData(type = LinkType.SELF, targetId = null, contentPath = null),
+                            link = LinkData.Self,
                             childs = mutableListOf()
                         )
                     )
@@ -197,7 +200,7 @@ fun PageWithSearch(
                 ChapterInfo(
                     id = generateNewChapterId(),
                     name = "",
-                    link = LinkData(type = LinkType.SELF, targetId = null, contentPath = null),
+                    link = LinkData.Self,
                     childs = mutableListOf(),
                     length = null,
                     image = null
@@ -221,7 +224,7 @@ fun PageWithSearch(
         listState,
         PaddingValues(0.dp)
     ) { from, to ->
-        inputList.add(to.index, inputList.removeAt(from.index))
+        inputList.add(to.index - 3, inputList.removeAt(from.index - 3))
     }
 
     val density = LocalDensity.current
@@ -259,98 +262,77 @@ fun PageWithSearch(
             }
     }
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .padding(
-                top = MaterialTheme.spacing.screenHorizontal + topInset,
-                start = MaterialTheme.spacing.screenHorizontal + leftInset,
-                end = MaterialTheme.spacing.screenHorizontal + rightInset
-            )
             .blockGestures()
-            .clearFocus(focusManager),
-        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.screenHorizontal)
+            .clearFocus(focusManager)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            FilledIconButton(
-                onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
-                    focusManager.clearFocus()
-                    onClose()
-                },
-                colors = IconButtonDefaults.filledIconButtonColors(
-                    containerColor = LocalCustomColors.current.closeButton,
-                    contentColor = LocalCustomColors.current.onCloseButton
-                ),
-                shape = MaterialTheme.shapes.small
-            ) {
-                Icon(
-                    imageVector = CloseIco,
-                    contentDescription = null,
-                    modifier = Modifier.size(MaterialTheme.dimens.iconLarge)
-                )
-            }
-
-            OutlinedTextField(
-                state = searchState,
-                modifier = Modifier
-                    .weight(1f),
-                shape = CircleShape,
-                colors = OutlinedTextFieldDefaults.colors(
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0f),
-                    focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0f),
-                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-                ),
-                placeholder = {
-                    Text(
-                        text = stringResource(R.string.Search),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                },
-                leadingIcon = {
-                    Icon(
-                        imageVector = SearchIco,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(MaterialTheme.dimens.iconMedium)
-                    )
-                },
-                lineLimits = TextFieldLineLimits.SingleLine
-            )
-
-            IconButton(onClick = {
-                haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
-                focusManager.clearFocus()
-            }) {
-                Icon(
-                    imageVector = MoreVertIco,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier.size(MaterialTheme.dimens.iconLarge)
-                )
-            }
-        }
-
         Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
+                .fillMaxSize()
         ) {
             LazyColumn(
                 state = listState,
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
-                contentPadding = PaddingValues(bottom = MaterialTheme.spacing.extraLarge + MaterialTheme.spacing.medium + bottomInset)
+                modifier = Modifier.fillMaxSize().imePadding(),
+                contentPadding = PaddingValues(
+                    start = MaterialTheme.spacing.screenHorizontal + leftInset,
+                    end = MaterialTheme.spacing.screenHorizontal + rightInset,
+                    bottom = MaterialTheme.spacing.extraLarge*4 + MaterialTheme.spacing.medium + bottomInset
+                )
             ) {
+                item("topBarSpacer") {
+                    Spacer(modifier = Modifier.fillMaxWidth().height(MaterialTheme.spacing.screenHorizontal + topInset))
+                }
+
+                item("topBarText") {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Spacer(modifier = Modifier.size(MaterialTheme.dimens.minButtonHeight))
+
+                        OutlinedTextField(
+                            state = searchState,
+                            modifier = Modifier
+                                .weight(1f),
+                            shape = CircleShape,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0f),
+                                focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0f),
+                                focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                            ),
+                            placeholder = {
+                                Text(
+                                    text = stringResource(R.string.Search),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = SearchIco,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(MaterialTheme.dimens.iconMedium)
+                                )
+                            },
+                            lineLimits = TextFieldLineLimits.SingleLine
+                        )
+
+                        Spacer(modifier = Modifier.size(MaterialTheme.dimens.minButtonHeight))
+                    }
+                }
+
+                item("spacer") {
+                    Spacer(modifier = Modifier.fillMaxWidth().height(MaterialTheme.spacing.screenHorizontal))
+                }
+
                 itemsIndexed(
                     items = inputList,
                     key = { _, item -> item.id }
@@ -396,7 +378,10 @@ fun PageWithSearch(
                             )
                         }
                     }
+
+                    Spacer(modifier = Modifier.fillMaxWidth().height(MaterialTheme.spacing.small))
                 }
+
                 if (inputList.isEmpty()) {
                     item("nothingIsHereText") {
                         Box(
@@ -412,62 +397,140 @@ fun PageWithSearch(
                     }
                 }
             }
+        }
 
-            Button(
+        Row(
+            modifier = Modifier.fillMaxWidth().align(Alignment.TopStart).padding(
+                start = MaterialTheme.spacing.screenHorizontal + leftInset,
+                top = MaterialTheme.spacing.screenHorizontal + topInset,
+                end = MaterialTheme.spacing.screenHorizontal + rightInset
+            ),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            FilledIconButton(
                 onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
                     focusManager.clearFocus()
-                    onAddItem()
+                    onClose()
                 },
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = MaterialTheme.spacing.medium),
-                shape = CircleShape,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                )
+                colors = IconButtonDefaults.filledIconButtonColors(
+                    containerColor = LocalCustomColors.current.closeButton,
+                    contentColor = LocalCustomColors.current.onCloseButton
+                ),
+                shape = MaterialTheme.shapes.small
             ) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                Icon(
+                    imageVector = CloseIco,
+                    contentDescription = null,
+                    modifier = Modifier.size(MaterialTheme.dimens.iconLarge)
+                )
+            }
+
+            OutlinedTextField(
+                state = rememberTextFieldState(),
+                modifier = Modifier
+                    .weight(1f)
+                    .visible(false),
+                shape = CircleShape,
+                colors = OutlinedTextFieldDefaults.colors(
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0f),
+                    focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0f),
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                ),
+                placeholder = {
+                    Text(
+                        text = stringResource(R.string.Search),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                },
+                leadingIcon = {
                     Icon(
-                        imageVector = AddIco,
+                        imageVector = SearchIco,
                         contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(MaterialTheme.dimens.iconMedium)
                     )
-                    Text(
-                        text = stringResource(R.string.add),
-                        style = MaterialTheme.typography.labelLarge
-                    )
-                }
+                },
+                lineLimits = TextFieldLineLimits.SingleLine
+            )
+
+            IconButton(onClick = {
+                haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                focusManager.clearFocus()
+            }) {
+                Icon(
+                    imageVector = MoreVertIco,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.size(MaterialTheme.dimens.iconLarge)
+                )
             }
         }
 
         Box(
             modifier = Modifier
+                .align(Alignment.BottomCenter)
                 .fillMaxWidth()
         ) {
-            Button(
-                onClick = {
-                    focusManager.clearFocus()
-                    resultSenderViewModel.sendResult(requestKey = layer.key, data = PageWithSearchSaveOutput(inputList))
-                    onClose()
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = MaterialTheme.spacing.screenHorizontal + bottomInset),
-                shape = CircleShape,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary
-                )
+            Column(
+                modifier = Modifier.padding(bottom = MaterialTheme.spacing.screenHorizontal + bottomInset),
+                verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(
-                    text = stringResource(R.string.Save),
-                    style = MaterialTheme.typography.labelLarge,
-                    modifier = Modifier.padding(vertical = MaterialTheme.spacing.small)
-                )
+                Button(
+                    onClick = {
+                        focusManager.clearFocus()
+                        haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                        onAddItem()
+                    },
+                    shape = CircleShape,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                ) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = AddIco,
+                            contentDescription = null,
+                            modifier = Modifier.size(MaterialTheme.dimens.iconMedium)
+                        )
+                        Text(
+                            text = stringResource(R.string.add),
+                            style = MaterialTheme.typography.labelLarge
+                        )
+                    }
+                }
+
+                Button(
+                    onClick = {
+                        focusManager.clearFocus()
+                        haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                        resultSenderViewModel.sendResult(requestKey = layer.key, data = PageWithSearchSaveOutput(inputList))
+                        onClose()
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                    shape = CircleShape,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    )
+                ) {
+                    Text(
+                        text = stringResource(R.string.Save),
+                        style = MaterialTheme.typography.labelLarge,
+                        modifier = Modifier.padding(vertical = MaterialTheme.spacing.small)
+                    )
+                }
             }
         }
     }
@@ -667,7 +730,7 @@ interface PageWithSearchItem: Parcelable {
 }
 
 private var episodeId = 0L
-private fun generateNewChapterId(): Long {
+fun generateNewChapterId(): Long {
     val res = episodeId
     episodeId += 1L
     return res
@@ -694,7 +757,7 @@ data class ChapterInfo(
     override val name: String,
     override val link: LinkData,
     override val length: Long? = null,
-    override val childs: MutableList<PageWithSearchItem>
+    override val childs: MutableList<PageWithSearchItem>,
 ) : PageWithSearchItem {
     override fun copyWithName(newName: String) = copy(name = newName)
     override fun copyWithImage(newImage: ImageData?) = copy()
@@ -722,14 +785,14 @@ object PageWithSearchItemsDefaults {
    val BaseChapter = ChapterInfo(
         id = 0L,
         name = "",
-        link = LinkData(type = LinkType.SELF, targetId = null, contentPath = null),
+        link = LinkData.Self,
         childs = mutableListOf()
    )
 
     val BaseEpisode = EpisodeInfo(
         id = 0L,
         name = "",
-        link = LinkData(type = LinkType.CONTENT, targetId = null, contentPath = null),
+        link = LinkData.Device(""),
         length = 0L,
         image = null
     )

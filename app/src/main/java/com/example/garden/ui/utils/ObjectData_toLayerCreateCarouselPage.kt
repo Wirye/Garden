@@ -1,31 +1,31 @@
 package com.example.garden.ui.utils
 
 import com.example.garden.Layer
-import com.example.garden.database.CardSize
-import com.example.garden.database.CarouselType
-import com.example.garden.database.ObjectData2
+import com.example.garden.database.ObjectData
+import com.example.garden.database.PageType
 
-fun ObjectData2.toLayerCreateCarouselPage() : Layer.CreateCarouselPage {
+fun ObjectData.Carousel.toLayerCreateCarouselPage(page: PageType) : Layer.CreateCarouselPage {
     return Layer.CreateCarouselPage(
         carouselId = this.id,
-        name = this.name ?: "",
-        carouselType = this.carouselType ?: CarouselType.Anime,
+        carouselPosition = this.position,
+        name = this.name,
+        carouselType = this.carouselType,
         layoutType = this.layoutType,
-        page = this.page,
-        childsSize = this.childsSize ?: CardSize.MEDIUM,
+        page = page,
+        childsSize = this.childsSize,
         carouselCollectionType = this.carouselCollectionType,
         childsShowName = this.childsShowName,
         childsShowAuthor = this.childsShowAuthor,
         childsCornerRadius = this.childsCornerRadius,
         childsNamePosition = this.childsNamePosition,
-        childsShowAlreadyWatchedLine = this.showAlreadyWatchedLine,
+        childsShowAlreadyWatchedLine = this.childsShowAlreadyWatchedLine,
         dovodchik = this.dovodchik,
         showDovodchikDots = this.showDovodchikDots,
         objectsInOneLine = this.objectsInOneLine,
         maxLines = this.maxLines,
         adaptiveGridSize = this.adaptiveGridSize,
         showIco = this.showIco,
-        ico = this.image,
+        ico = this.ico,
         maxObjectsInOneLineForAdaptiveSize = this.maxObjectsInOneLineForAdaptiveSize,
         maxLinesForAdaptiveSize = this.maxLinesForAdaptiveSize
     )

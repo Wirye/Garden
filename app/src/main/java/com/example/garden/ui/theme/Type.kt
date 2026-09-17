@@ -8,16 +8,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.example.garden.R
 
-// 1. Объявляем семейство шрифтов Google Sans
 val GoogleSans = FontFamily(
     Font(R.font.google_sans_regular, FontWeight.Normal),
     Font(R.font.google_sans_medium, FontWeight.Medium),
     Font(R.font.google_sans_bold, FontWeight.Bold)
 )
 
-// 2. Настраиваем общую типографику
 val Typography = Typography(
-    // Заголовок экрана (например, "Главная", "Настройки")
     displayLarge = TextStyle(
         fontFamily = GoogleSans,
         fontWeight = FontWeight.Normal,
@@ -38,7 +35,6 @@ val Typography = Typography(
         lineHeight = 44.sp
     ),
 
-    // --- HEADLINE (Заголовки экранов и крупных секций) ---
     headlineLarge = TextStyle(
         fontFamily = GoogleSans,
         fontWeight = FontWeight.Normal,
@@ -58,7 +54,6 @@ val Typography = Typography(
         lineHeight = 32.sp
     ),
 
-    // --- TITLE (Заголовки карточек, диалогов, TopAppBar) ---
     titleLarge = TextStyle(
         fontFamily = GoogleSans,
         fontWeight = FontWeight.Medium,
@@ -80,7 +75,6 @@ val Typography = Typography(
         letterSpacing = 0.1.sp
     ),
 
-    // --- BODY (Основной текст, статьи, абзацы) ---
     bodyLarge = TextStyle(
         fontFamily = GoogleSans,
         fontWeight = FontWeight.Normal,
@@ -103,7 +97,6 @@ val Typography = Typography(
         letterSpacing = 0.4.sp
     ),
 
-    // --- LABEL (Кнопки, чипы, бэджи, иконки в BottomBar) ---
     labelLarge = TextStyle(
         fontFamily = GoogleSans,
         fontWeight = FontWeight.Medium,

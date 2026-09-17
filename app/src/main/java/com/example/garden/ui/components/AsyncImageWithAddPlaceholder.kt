@@ -49,14 +49,16 @@ fun AsyncImageWithAddPlaceholder(
         Box(
             modifier = modifier.clip(shape)
         ) {
-            if (state is AsyncImagePainter.State.Success && model != null) {
+            if (model != null) {
                 Image(
                     painter = painter,
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
                 )
-            } else {
+            }
+
+            if (state !is AsyncImagePainter.State.Success || model == null) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()

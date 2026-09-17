@@ -19,7 +19,7 @@ import com.example.garden.ui.theme.windowInfo
 
 @Composable
 fun FullScreenBlobs(
-    translationY: () -> Float
+    translationY: Float
 ) {
     Box(
         modifier = Modifier
@@ -32,21 +32,21 @@ fun FullScreenBlobs(
                 .blur(80.dp)
                 .graphicsLayer {
                     alpha = 0.85f
-                    this.translationY = translationY()
+                    this.translationY = translationY
                 }
         ) {
             val width = size.width
             val height = size.height
 
-            val purpleColor = Color(0xFFA855F7) // Left blob color
-            val pinkColor = Color(0xFFEC4899)   // Center blob color
-            val orangeColor = Color(0xFFF97316) // Right blob color
+            val leftBlobColor = Color(0xFFA855F7)
+            val centerBlobColor = Color(0xFFEC4899)
+            val rightBlobColor = Color(0xFFF97316)
 
             val radius = width * 0.35f
 
             drawCircle(
                 brush = Brush.radialGradient(
-                    colors = listOf(purpleColor, purpleColor.copy(alpha = 0.8f), Color.Transparent),
+                    colors = listOf(leftBlobColor, leftBlobColor.copy(alpha = 0.8f), Color.Transparent),
                     center = Offset(width * 0.25f, height * 0.12f),
                     radius = radius
                 ),
@@ -56,7 +56,7 @@ fun FullScreenBlobs(
 
             drawCircle(
                 brush = Brush.radialGradient(
-                    colors = listOf(pinkColor, pinkColor.copy(alpha = 0.8f), Color.Transparent),
+                    colors = listOf(centerBlobColor, centerBlobColor.copy(alpha = 0.8f), Color.Transparent),
                     center = Offset(width * 0.75f, height * 0.13f),
                     radius = radius
                 ),
@@ -67,7 +67,7 @@ fun FullScreenBlobs(
 
             drawCircle(
                 brush = Brush.radialGradient(
-                    colors = listOf(orangeColor, orangeColor.copy(alpha = 0.4f), Color.Transparent),
+                    colors = listOf(rightBlobColor, rightBlobColor.copy(alpha = 0.4f), Color.Transparent),
                     center = Offset(width * 0.5f, height * 0.08f),
                     radius = radius * 1.1f
                 ),

@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
@@ -155,13 +156,10 @@ fun CreateCarouselPage(
     val topInsetPx = WindowInsets.safeDrawing.getTop(density)
     val rightInsetPx = WindowInsets.safeDrawing.getRight(density, LocalLayoutDirection.current)
     val leftInsetPx = WindowInsets.safeDrawing.getLeft(density, LocalLayoutDirection.current)
-    val bottomInsetPx = WindowInsets.safeDrawing.getBottom(density)
 
     val topInset = with(density) { topInsetPx.toDp() }
     val rightInset = with(density) { rightInsetPx.toDp() }
     val leftInset = with(density) { leftInsetPx.toDp() }
-    val bottomInset = with(density) { bottomInsetPx.toDp() }
-    val spacing = MaterialTheme.spacing.medium
 
     val openIcoImagePicker = rememberFilePicker(
         mimeTypes = arrayOf("image/*")
@@ -178,8 +176,7 @@ fun CreateCarouselPage(
     LaunchedEffect(
         stateViewModel.state.layoutType,
         stateViewModel.state.dovodchik,
-        stateViewModel.state.showDovodchikDots,
-        stateViewModel.state.carouselCollectionType
+        stateViewModel.state.showDovodchikDots
     ) {
         if (stateViewModel.state.layoutType == LayoutType.CAROUSEL_FROM_GRID && !stateViewModel.state.dovodchik) {
             stateViewModel.update {
@@ -209,10 +206,10 @@ fun CreateCarouselPage(
             }
         }
 
-        if (stateViewModel.state.carouselCollectionType == null) {
+        if (stateViewModel.state.layoutType != LayoutType.CAROUSEL_FROM_GRID && stateViewModel.state.showDovodchikDots) {
             stateViewModel.update {
                 copy(
-                    carouselCollectionType = CollectionType.None
+                    showDovodchikDots = false
                 )
             }
         }
@@ -238,152 +235,159 @@ fun CreateCarouselPage(
         hazeState = LocalHazeLayers.current.mainScreen,
     )
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
             .blockGestures()
             .clearFocus(focusManager)
             .padding(
-                top = MaterialTheme.spacing.screenHorizontal + topInset,
+                top = 0.dp,
                 bottom = 0.dp,
                 start = MaterialTheme.spacing.screenHorizontal + leftInset,
                 end = MaterialTheme.spacing.screenHorizontal + rightInset
-            ),
-        verticalArrangement = Arrangement.spacedBy(spacing)
+            )
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            FilledIconButton(
-                onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
-                    focusManager.clearFocus()
-                    onClose()
-                }, colors = IconButtonDefaults.filledIconButtonColors(
-                    containerColor = LocalCustomColors.current.closeButton,
-                    contentColor = LocalCustomColors.current.onCloseButton
-                ), shape = MaterialTheme.shapes.small
-            ) {
-                Icon(
-                    imageVector = CloseIco,
-                    contentDescription = null,
-                    modifier = Modifier.size(MaterialTheme.dimens.iconLarge)
-                )
-            }
-
-            val isCarouselTypeSelectMenuOpened = remember { mutableStateOf(false) }
-            Box(
-                modifier = Modifier.weight(1f, fill = false)
-            ) {
-                Row(
-                    modifier = Modifier
-                        .clickable(
-                            onClick = {
-                                focusManager.clearFocus()
-                                haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
-                                isCarouselTypeSelectMenuOpened.value = true
-                            }
-                        ),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = stringResource(R.string.creatingCarousel),
-                        style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.onBackground,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        softWrap = false
-                    )
-                    Icon(
-                        imageVector = ChevronForward,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier
-                            .size(MaterialTheme.dimens.iconLarge)
-                            .rotate(90f)
-                    )
-                }
-
-                val availableCarouselTypes = remember(stateViewModel.state.carouselType) {
-                    mutableStateOf(CarouselType.entries.toList())
-                }
-
-                val selectedIndex =
-                    remember(stateViewModel.state.carouselType, availableCarouselTypes) {
-                        {
-                            if (availableCarouselTypes.value.indexOf(stateViewModel.state.carouselType) != -1) {
-                                availableCarouselTypes.value.indexOf(stateViewModel.state.carouselType)
-                            } else {
-                                0
-                            }
-                        }
-                    }
-
-                SelectableDropDownMenuWithBlur(
-                    expanded = { isCarouselTypeSelectMenuOpened.value },
-                    onDismissRequest = { isCarouselTypeSelectMenuOpened.value = false },
-                    hazeState = LocalHazeLayers.current.mainScreen,
-                    selectedIndex = selectedIndex(),
-                    onSelect = {
-                        haptic.performHapticFeedback(HapticFeedbackType.VirtualKey)
-                        stateViewModel.update {
-                            copy(carouselType = availableCarouselTypes.value[it])
-                        }
-                    },
-                    items = availableCarouselTypes.value.map { stringResource(it.displayNameId) }
-                )
-            }
-
-            IconButton(
-                onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
-                    focusManager.clearFocus()
-                }
-            ) {
-                Icon(
-                    imageVector = HelpIco,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier.size(MaterialTheme.dimens.iconMedium)
-                )
-            }
-        }
-
         val pagerState = rememberPagerState(pageCount = { 2 })
 
         Box(
             modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
+                .fillMaxSize()
         ) {
             VerticalPager(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(end = MaterialTheme.spacing.screenHorizontal + MaterialTheme.dimens.dotSize),
                 state = pagerState,
                 flingBehavior = PagerDefaults.flingBehavior(
                     state = pagerState,
-                    snapPositionalThreshold = 0.1f
+                    snapPositionalThreshold = 0.101f
                 ),
-                modifier = Modifier.fillMaxSize()
             ) { page ->
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .clip(MaterialTheme.shapes.large)
+                        .clip(MaterialTheme.shapes.extraLarge)
                         .background(MaterialTheme.colorScheme.surface)
-                        .padding(end = MaterialTheme.spacing.medium)
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .fillMaxHeight(0.9f)
-                    ) {
-                        when (page) {
-                            0 -> {
+                    when (page) {
+                        0 -> {
+                            Column(
+                                verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(
+                                            top = MaterialTheme.spacing.screenHorizontal + topInset,
+                                            end = MaterialTheme.dimens.minButtonHeight - MaterialTheme.spacing.screenHorizontal - MaterialTheme.dimens.dotSize
+                                        ),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Spacer(
+                                        modifier = Modifier.size(MaterialTheme.dimens.minButtonHeight)
+                                    )
+
+                                    val isCarouselTypeSelectMenuOpened =
+                                        remember { mutableStateOf(false) }
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f, fill = true)
+                                            .fillMaxWidth(),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .clickable(
+                                                    onClick = {
+                                                        focusManager.clearFocus()
+                                                        haptic.performHapticFeedback(
+                                                            HapticFeedbackType.ContextClick
+                                                        )
+                                                        isCarouselTypeSelectMenuOpened.value = true
+                                                    }
+                                                ),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                modifier = Modifier.weight(1f, fill = false),
+                                                text = stringResource(R.string.creatingCarousel),
+                                                style = MaterialTheme.typography.titleLarge,
+                                                color = MaterialTheme.colorScheme.onBackground,
+                                                maxLines = 2,
+                                                overflow = TextOverflow.Ellipsis,
+                                                softWrap = false
+                                            )
+                                            Icon(
+                                                imageVector = ChevronForward,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier
+                                                    .size(MaterialTheme.dimens.iconLarge)
+                                                    .rotate(90f)
+                                            )
+                                        }
+
+                                        val availableCarouselTypes =
+                                            remember(stateViewModel.state.carouselType) {
+                                                mutableStateOf(
+                                                    if(stateViewModel.state.carouselId != null) {
+                                                        listOf(stateViewModel.state.carouselType)
+                                                    } else {
+                                                        CarouselType.entries.toList()
+                                                    }
+                                                )
+                                            }
+
+                                        val selectedIndex =
+                                            remember(
+                                                stateViewModel.state.carouselType,
+                                                availableCarouselTypes
+                                            ) {
+                                                {
+                                                    if (availableCarouselTypes.value.indexOf(
+                                                            stateViewModel.state.carouselType
+                                                        ) != -1
+                                                    ) {
+                                                        availableCarouselTypes.value.indexOf(
+                                                            stateViewModel.state.carouselType
+                                                        )
+                                                    } else {
+                                                        0
+                                                    }
+                                                }
+                                            }
+
+                                        SelectableDropDownMenuWithBlur(
+                                            modifier = Modifier.align(Alignment.Center),
+                                            expanded = { isCarouselTypeSelectMenuOpened.value },
+                                            onDismissRequest = {
+                                                isCarouselTypeSelectMenuOpened.value = false
+                                            },
+                                            hazeState = LocalHazeLayers.current.mainScreen,
+                                            selectedIndex = selectedIndex(),
+                                            onSelect = {
+                                                haptic.performHapticFeedback(HapticFeedbackType.VirtualKey)
+                                                stateViewModel.update {
+                                                    copy(carouselType = availableCarouselTypes.value[it])
+                                                }
+                                            },
+                                            items = availableCarouselTypes.value.map {
+                                                stringResource(
+                                                    it.displayNameId
+                                                )
+                                            }
+                                        )
+                                    }
+                                }
+
                                 Box(
                                     modifier = Modifier
-                                        .fillMaxSize()
+                                        .weight(1f, fill = true)
+                                        .fillMaxWidth()
+                                        .fillMaxHeight()
                                         .background(MaterialTheme.colorScheme.surface)
                                         .clip(MaterialTheme.shapes.extraLarge)
                                         .border(
@@ -398,10 +402,11 @@ fun CreateCarouselPage(
                                         && !stateViewModel.objectsInOneLineZeroError && !stateViewModel.maxLinesZeroError
                                         && !stateViewModel.maxObjectsInOneLineForAdaptiveGridSizeZeroError &&
                                         !stateViewModel.maxLinesForAdaptiveGridSizeZeroError &&
-                                        !stateViewModel.layoutTypeError
+                                        !stateViewModel.layoutTypeError && !stateViewModel.gridSizesError &&
+                                        !stateViewModel.maxGridSizesError
                                     ) {
                                         CarouselPreview(
-                                            lineWidth = MaterialTheme.windowInfo.widthDp - MaterialTheme.spacing.screenHorizontal*2 - leftInset - rightInset - MaterialTheme.spacing.medium,
+                                            lineWidth = MaterialTheme.windowInfo.widthDp - MaterialTheme.spacing.screenHorizontal * 2 - leftInset - rightInset - MaterialTheme.spacing.medium,
                                             info = stateViewModel.state
                                         )
                                     } else {
@@ -411,221 +416,350 @@ fun CreateCarouselPage(
                                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                                         )
                                     }
-
                                 }
                             }
+                        }
 
-                            1 -> {
+                        1 -> {
+                            Column(
+                                verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
                                 Box(
                                     modifier = Modifier
-                                        .fillMaxSize()
-                                        .background(MaterialTheme.colorScheme.surface)
-                                        .clip(MaterialTheme.shapes.extraLarge)
-                                        .border(
-                                            width = MaterialTheme.dimens.strokeThick,
-                                            color = MaterialTheme.colorScheme.primary,
-                                            shape = MaterialTheme.shapes.extraLarge
-                                        )
+                                        .fillMaxWidth()
+                                        .fillMaxHeight()
                                 ) {
                                     Box(
                                         modifier = Modifier
                                             .fillMaxSize()
-                                            .background(MaterialTheme.colorScheme.surfaceContainer)
-                                            .padding(horizontal = MaterialTheme.spacing.screenHorizontal)
                                     ) {
                                         val listState = rememberLazyListState()
                                         LazyColumn(
-                                            modifier = Modifier.padding(
-                                                bottom = (bottomInset - MaterialTheme.spacing.large - MaterialTheme.dimens.minButtonHeight).coerceAtLeast(
-                                                    0.dp
-                                                )
-                                            ),
+                                            modifier = Modifier
+                                                .clip(MaterialTheme.shapes.extraLarge)
+                                                .imePadding(),
                                             state = listState,
                                             verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
-                                            contentPadding = PaddingValues(
-                                                vertical = MaterialTheme.spacing.screenHorizontal
-                                            )
+                                            horizontalAlignment = Alignment.CenterHorizontally
                                         ) {
-                                            item("name") {
-                                                var name by rememberSaveable(stateViewModel.state.name) {
-                                                    mutableStateOf(
-                                                        stateViewModel.state.name
-                                                    )
-                                                }
-
-                                                OutlinedTextField(
-                                                    value = name,
-                                                    onValueChange = {
-                                                        name = it
-                                                        stateViewModel.update {
-                                                            copy(
-                                                                name = name
-                                                            )
-                                                        }
-                                                    },
-                                                    shape = MaterialTheme.shapes.medium,
-                                                    colors = OutlinedTextFieldDefaults.colors(
-                                                        unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                                                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                                                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-                                                    ),
-                                                    placeholder = {
-                                                        Text(
-                                                            text = stringResource(R.string.title),
-                                                            style = MaterialTheme.typography.bodyMedium
-                                                        )
-                                                    },
-                                                    singleLine = true,
-                                                    modifier = Modifier.fillMaxWidth()
-                                                )
-                                            }
-
-                                            item("ico") {
-                                                val expanded = stateViewModel.state.showIco
-
-                                                Box(
+                                            item("topSpacer") {
+                                                Row(
                                                     modifier = Modifier
                                                         .fillMaxWidth()
-                                                        .clip(MaterialTheme.shapes.medium)
-                                                        .clipToBounds()
-                                                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                                                        .padding(
+                                                            top = MaterialTheme.spacing.screenHorizontal + topInset,
+                                                            end = MaterialTheme.dimens.minButtonHeight - MaterialTheme.spacing.screenHorizontal - MaterialTheme.dimens.dotSize
+                                                        ),
+                                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                                    verticalAlignment = Alignment.CenterVertically
                                                 ) {
-                                                    Column(
-                                                        modifier = Modifier.fillMaxWidth()
+                                                    Spacer(
+                                                        modifier = Modifier.size(MaterialTheme.dimens.minButtonHeight)
+                                                    )
+
+                                                    val isCarouselTypeSelectMenuOpened =
+                                                        remember { mutableStateOf(false) }
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .weight(1f, fill = true)
+                                                            .fillMaxWidth(),
+                                                        contentAlignment = Alignment.Center
                                                     ) {
                                                         Row(
                                                             modifier = Modifier
-                                                                .fillMaxWidth()
-                                                                .clickable {
-                                                                    if (stateViewModel.state.showIco) {
+                                                                .clickable(
+                                                                    onClick = {
+                                                                        focusManager.clearFocus()
                                                                         haptic.performHapticFeedback(
-                                                                            HapticFeedbackType.ToggleOff
+                                                                            HapticFeedbackType.ContextClick
                                                                         )
-                                                                    } else {
-                                                                        haptic.performHapticFeedback(
-                                                                            HapticFeedbackType.ToggleOn
-                                                                        )
+                                                                        isCarouselTypeSelectMenuOpened.value =
+                                                                            true
                                                                     }
-                                                                    stateViewModel.update {
-                                                                        copy(
-                                                                            showIco = !showIco
-                                                                        )
-                                                                    }
-                                                                }
-                                                                .padding(MaterialTheme.spacing.medium),
-                                                            verticalAlignment = Alignment.CenterVertically,
-                                                            horizontalArrangement = Arrangement.Absolute.SpaceBetween
+                                                                ),
+                                                            verticalAlignment = Alignment.CenterVertically
                                                         ) {
                                                             Text(
                                                                 modifier = Modifier.weight(
                                                                     1f,
                                                                     fill = false
                                                                 ),
-                                                                text = stringResource(R.string.showingIco),
-                                                                style = MaterialTheme.typography.titleMedium,
-                                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                                overflow = TextOverflow.Ellipsis
+                                                                text = stringResource(R.string.creatingCarousel),
+                                                                style = MaterialTheme.typography.titleLarge,
+                                                                color = MaterialTheme.colorScheme.onBackground,
+                                                                maxLines = 2,
+                                                                overflow = TextOverflow.Ellipsis,
+                                                                softWrap = false
                                                             )
-
-                                                            Switch(
-                                                                checked = expanded,
-                                                                onCheckedChange = {
-                                                                    if (it) {
-                                                                        haptic.performHapticFeedback(
-                                                                            HapticFeedbackType.ToggleOn
-                                                                        )
-                                                                    } else {
-                                                                        haptic.performHapticFeedback(
-                                                                            HapticFeedbackType.ToggleOff
-                                                                        )
-                                                                    }
-                                                                    stateViewModel.update {
-                                                                        copy(
-                                                                            showIco = it
-                                                                        )
-                                                                    }
-                                                                }
+                                                            Icon(
+                                                                imageVector = ChevronForward,
+                                                                contentDescription = null,
+                                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                                modifier = Modifier
+                                                                    .size(MaterialTheme.dimens.iconLarge)
+                                                                    .rotate(90f)
                                                             )
                                                         }
 
-                                                        AnimatedVisibility(
-                                                            visible = expanded,
-                                                            enter = expandVertically(expandFrom = Alignment.Top) + fadeIn(),
-                                                            exit = shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut()
+                                                        val availableCarouselTypes =
+                                                            remember(stateViewModel.state.carouselType) {
+                                                                mutableStateOf(CarouselType.entries.toList())
+                                                            }
+
+                                                        val selectedIndex =
+                                                            remember(
+                                                                stateViewModel.state.carouselType,
+                                                                availableCarouselTypes
+                                                            ) {
+                                                                {
+                                                                    if (availableCarouselTypes.value.indexOf(
+                                                                            stateViewModel.state.carouselType
+                                                                        ) != -1
+                                                                    ) {
+                                                                        availableCarouselTypes.value.indexOf(
+                                                                            stateViewModel.state.carouselType
+                                                                        )
+                                                                    } else {
+                                                                        0
+                                                                    }
+                                                                }
+                                                            }
+
+                                                        SelectableDropDownMenuWithBlur(
+                                                            modifier = Modifier.align(Alignment.Center),
+                                                            expanded = { isCarouselTypeSelectMenuOpened.value },
+                                                            onDismissRequest = {
+                                                                isCarouselTypeSelectMenuOpened.value =
+                                                                    false
+                                                            },
+                                                            hazeState = LocalHazeLayers.current.mainScreen,
+                                                            selectedIndex = selectedIndex(),
+                                                            onSelect = {
+                                                                haptic.performHapticFeedback(
+                                                                    HapticFeedbackType.VirtualKey
+                                                                )
+                                                                stateViewModel.update {
+                                                                    copy(carouselType = availableCarouselTypes.value[it])
+                                                                }
+                                                            },
+                                                            items = availableCarouselTypes.value.map {
+                                                                stringResource(
+                                                                    it.displayNameId
+                                                                )
+                                                            }
+                                                        )
+                                                    }
+                                                }
+                                            }
+
+                                            item("spacer2") {
+                                                Spacer(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .height(
+                                                            MaterialTheme.spacing.medium
+                                                        )
+                                                )
+                                            }
+
+                                            item("all") {
+                                                Column(
+                                                    modifier = Modifier
+                                                        .clip(MaterialTheme.shapes.extraLarge)
+                                                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                                                        .border(
+                                                            width = MaterialTheme.dimens.strokeThick,
+                                                            color = MaterialTheme.colorScheme.primary,
+                                                            shape = MaterialTheme.shapes.extraLarge
+                                                        )
+                                                        .padding(MaterialTheme.spacing.medium)
+                                                        .padding(bottom = MaterialTheme.spacing.medium + MaterialTheme.spacing.extraLarge),
+                                                    verticalArrangement = Arrangement.spacedBy(
+                                                        MaterialTheme.spacing.small
+                                                    ),
+                                                    horizontalAlignment = Alignment.CenterHorizontally
+                                                ) {
+                                                    var name by rememberSaveable(stateViewModel.state.name) {
+                                                        mutableStateOf(
+                                                            stateViewModel.state.name
+                                                        )
+                                                    }
+
+                                                    OutlinedTextField(
+                                                        value = name,
+                                                        onValueChange = {
+                                                            name = it
+                                                            stateViewModel.update {
+                                                                copy(
+                                                                    name = name
+                                                                )
+                                                            }
+                                                        },
+                                                        shape = MaterialTheme.shapes.medium,
+                                                        colors = OutlinedTextFieldDefaults.colors(
+                                                            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                                                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                                                        ),
+                                                        placeholder = {
+                                                            Text(
+                                                                text = stringResource(R.string.title),
+                                                                style = MaterialTheme.typography.bodyMedium
+                                                            )
+                                                        },
+                                                        singleLine = true,
+                                                        modifier = Modifier.fillMaxWidth()
+                                                    )
+
+                                                    val expandedFs = stateViewModel.state.showIco
+
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .fillMaxWidth()
+                                                            .clip(MaterialTheme.shapes.medium)
+                                                            .clipToBounds()
+                                                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                                                    ) {
+                                                        Column(
+                                                            modifier = Modifier.fillMaxWidth()
                                                         ) {
                                                             Row(
                                                                 modifier = Modifier
                                                                     .fillMaxWidth()
-                                                                    .padding(
-                                                                        start = 16.dp,
-                                                                        end = 16.dp,
-                                                                        bottom = 16.dp
-                                                                    ),
+                                                                    .clickable {
+                                                                        if (stateViewModel.state.showIco) {
+                                                                            haptic.performHapticFeedback(
+                                                                                HapticFeedbackType.ToggleOff
+                                                                            )
+                                                                        } else {
+                                                                            haptic.performHapticFeedback(
+                                                                                HapticFeedbackType.ToggleOn
+                                                                            )
+                                                                        }
+                                                                        stateViewModel.update {
+                                                                            copy(
+                                                                                showIco = !showIco
+                                                                            )
+                                                                        }
+                                                                    }
+                                                                    .padding(MaterialTheme.spacing.medium),
                                                                 verticalAlignment = Alignment.CenterVertically,
-                                                                horizontalArrangement = Arrangement.SpaceBetween
+                                                                horizontalArrangement = Arrangement.Absolute.SpaceBetween
                                                             ) {
                                                                 Text(
                                                                     modifier = Modifier.weight(
                                                                         1f,
                                                                         fill = false
                                                                     ),
-                                                                    text = stringResource(R.string.ico),
+                                                                    text = stringResource(R.string.showingIco),
                                                                     style = MaterialTheme.typography.titleMedium,
                                                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                                                     overflow = TextOverflow.Ellipsis
                                                                 )
 
-                                                                val shape =
-                                                                    MaterialTheme.shapes.medium
-                                                                AsyncImageWithAddPlaceholder(
-                                                                    modifier = Modifier
-                                                                        .size(
-                                                                            MaterialTheme.dimens.minButtonHeight
-                                                                        )
-                                                                        .clip(shape)
-                                                                        .clickable(
-                                                                            onClick = {
-                                                                                haptic.performHapticFeedback(
-                                                                                    HapticFeedbackType.ContextClick
-                                                                                )
-                                                                                isIcoChangeDialogExpanded.value =
-                                                                                    true
-                                                                            }
-                                                                        )
-                                                                        .hazeSource(LocalHazeLayers.current.mainScreen)
-                                                                        .hazeSourcesForUpperLayers(
-                                                                            LocalHazeStates.current.hazeStates,
-                                                                            LocalLayerIndex.current
-                                                                        ),
-                                                                    shape = shape,
-                                                                    model = stateViewModel.state.ico?.dataForModel()
+                                                                Switch(
+                                                                    checked = expandedFs,
+                                                                    onCheckedChange = {
+                                                                        if (it) {
+                                                                            haptic.performHapticFeedback(
+                                                                                HapticFeedbackType.ToggleOn
+                                                                            )
+                                                                        } else {
+                                                                            haptic.performHapticFeedback(
+                                                                                HapticFeedbackType.ToggleOff
+                                                                            )
+                                                                        }
+                                                                        stateViewModel.update {
+                                                                            copy(
+                                                                                showIco = it
+                                                                            )
+                                                                        }
+                                                                    }
                                                                 )
+                                                            }
+
+                                                            AnimatedVisibility(
+                                                                visible = expandedFs,
+                                                                enter = expandVertically(expandFrom = Alignment.Top) + fadeIn(),
+                                                                exit = shrinkVertically(
+                                                                    shrinkTowards = Alignment.Top
+                                                                ) + fadeOut()
+                                                            ) {
+                                                                Row(
+                                                                    modifier = Modifier
+                                                                        .fillMaxWidth()
+                                                                        .padding(
+                                                                            start = 16.dp,
+                                                                            end = 16.dp,
+                                                                            bottom = 16.dp
+                                                                        ),
+                                                                    verticalAlignment = Alignment.CenterVertically,
+                                                                    horizontalArrangement = Arrangement.SpaceBetween
+                                                                ) {
+                                                                    Text(
+                                                                        modifier = Modifier.weight(
+                                                                            1f,
+                                                                            fill = false
+                                                                        ),
+                                                                        text = stringResource(R.string.ico),
+                                                                        style = MaterialTheme.typography.titleMedium,
+                                                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                                        overflow = TextOverflow.Ellipsis
+                                                                    )
+
+                                                                    val shape =
+                                                                        MaterialTheme.shapes.medium
+                                                                    AsyncImageWithAddPlaceholder(
+                                                                        modifier = Modifier
+                                                                            .size(
+                                                                                MaterialTheme.dimens.minButtonHeight
+                                                                            )
+                                                                            .clip(shape)
+                                                                            .clickable(
+                                                                                onClick = {
+                                                                                    haptic.performHapticFeedback(
+                                                                                        HapticFeedbackType.ContextClick
+                                                                                    )
+                                                                                    isIcoChangeDialogExpanded.value =
+                                                                                        true
+                                                                                }
+                                                                            )
+                                                                            .hazeSource(
+                                                                                LocalHazeLayers.current.mainScreen
+                                                                            )
+                                                                            .hazeSourcesForUpperLayers(
+                                                                                LocalHazeStates.current.hazeStates,
+                                                                                LocalLayerIndex.current
+                                                                            ),
+                                                                        shape = shape,
+                                                                        model = stateViewModel.state.ico?.dataForModel()
+                                                                    )
+                                                                }
                                                             }
                                                         }
                                                     }
-                                                }
-                                            }
 
-                                            item("preset") {
-                                                var isBottomSheetOpen by rememberSaveable {
-                                                    mutableStateOf(
-                                                        false
-                                                    )
-                                                }
+                                                    var isBottomSheetOpen by rememberSaveable {
+                                                        mutableStateOf(
+                                                            false
+                                                        )
+                                                    }
 
-                                                if (isBottomSheetOpen) {
-                                                    CarouselCollectionPicker(
-                                                        onDismiss = { isBottomSheetOpen = false },
-                                                        carouselType = stateViewModel.state.carouselType,
-                                                        initCollectionType = stateViewModel.state.carouselCollectionType,
-                                                        onApply = { namee, collection ->
-                                                            stateViewModel.update {
-                                                                copy(
-                                                                    carouselCollectionType = collection
-                                                                )
-                                                            }
-                                                            if (collection != null) {
+                                                    if (isBottomSheetOpen) {
+                                                        CarouselCollectionPicker(
+                                                            onDismiss = {
+                                                                isBottomSheetOpen = false
+                                                            },
+                                                            carouselType = stateViewModel.state.carouselType,
+                                                            initCollectionType = stateViewModel.state.carouselCollectionType,
+                                                            onApply = { namee, collection ->
+                                                                stateViewModel.update {
+                                                                    copy(
+                                                                        carouselCollectionType = collection
+                                                                    )
+                                                                }
                                                                 if (collection.overrideEnabled) {
                                                                     stateViewModel.update {
                                                                         copy(
@@ -650,693 +784,77 @@ fun CreateCarouselPage(
                                                                     }
                                                                 }
                                                             }
-                                                        }
-                                                    )
-                                                }
-
-                                                Row(
-                                                    modifier = Modifier
-                                                        .clip(MaterialTheme.shapes.medium)
-                                                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                                                        .clickable(
-                                                            onClick = {
-                                                                isBottomSheetOpen = true
-                                                                haptic.performHapticFeedback(
-                                                                    HapticFeedbackType.ContextClick
-                                                                )
-                                                            }
                                                         )
-                                                        .padding(MaterialTheme.spacing.medium)
-                                                        .fillMaxWidth(),
-                                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                                    verticalAlignment = Alignment.CenterVertically
-                                                ) {
-                                                    Text(
-                                                        modifier = Modifier.weight(
-                                                            1f,
-                                                            fill = false
-                                                        ),
-                                                        text = stringResource(R.string.presets),
-                                                        style = MaterialTheme.typography.titleMedium,
-                                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                        overflow = TextOverflow.Ellipsis
-                                                    )
-
-                                                    Icon(
-                                                        imageVector = ChevronForward,
-                                                        contentDescription = null,
-                                                        modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
-                                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                                    )
-                                                }
-                                            }
-
-                                            item("layoutType") {
-                                                val options = listOf(
-                                                    stringResource(R.string.default_),
-                                                    stringResource(R.string.grid),
-                                                    stringResource(R.string.fromGrids)
-                                                )
-
-                                                val selectedIndex =
-                                                    when (stateViewModel.state.layoutType) {
-                                                        LayoutType.DEFAULT -> 0
-                                                        LayoutType.CAROUSEL_GRID -> 1
-                                                        LayoutType.CAROUSEL_FROM_GRID, LayoutType.CAROUSEL_FROM_FLAT_GRID -> 2
-                                                        else -> 0
                                                     }
 
-                                                val expanded =
-                                                    selectedIndex == 1 || selectedIndex == 2
-
-                                                Box(
-                                                    modifier = Modifier
-                                                        .fillMaxWidth()
-                                                        .clip(MaterialTheme.shapes.medium)
-                                                        .clipToBounds()
-                                                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                                                ) {
-                                                    Column(
-                                                        modifier = Modifier.fillMaxWidth()
+                                                    Row(
+                                                        modifier = Modifier
+                                                            .clip(MaterialTheme.shapes.medium)
+                                                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                                                            .clickable(
+                                                                onClick = {
+                                                                    isBottomSheetOpen = true
+                                                                    haptic.performHapticFeedback(
+                                                                        HapticFeedbackType.ContextClick
+                                                                    )
+                                                                }
+                                                            )
+                                                            .padding(MaterialTheme.spacing.medium)
+                                                            .fillMaxWidth(),
+                                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                                        verticalAlignment = Alignment.CenterVertically
                                                     ) {
-                                                        val disabledAlpha = 0.6f
-                                                        SingleChoiceSegmentedButtonRow(
-                                                            modifier = Modifier
-                                                                .fillMaxWidth()
-                                                                .padding(MaterialTheme.spacing.medium)
-                                                        ) {
-                                                            options.forEachIndexed { index, label ->
-                                                                SegmentedButton(
-                                                                    shape = SegmentedButtonDefaults.itemShape(
-                                                                        index = index,
-                                                                        count = options.size
-                                                                    ),
-                                                                    colors = SegmentedButtonDefaults.colors()
-                                                                        .copy(
-                                                                            activeContainerColor = MaterialTheme.colorScheme.primary,
-                                                                            activeContentColor = MaterialTheme.colorScheme.onPrimary,
-                                                                            inactiveContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                                                                            inactiveContentColor = MaterialTheme.colorScheme.onSurface,
-                                                                            inactiveBorderColor = MaterialTheme.colorScheme.outline,
-                                                                            activeBorderColor = MaterialTheme.colorScheme.primary,
-                                                                            disabledInactiveBorderColor = MaterialTheme.colorScheme.outline.copy(
-                                                                                alpha = disabledAlpha
-                                                                            ),
-                                                                            disabledInactiveContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(
-                                                                                alpha = disabledAlpha
-                                                                            ),
-                                                                            disabledInactiveContentColor = MaterialTheme.colorScheme.onSurface.copy(
-                                                                                alpha = disabledAlpha
-                                                                            ),
-                                                                            disabledActiveContainerColor = MaterialTheme.colorScheme.primary.copy(
-                                                                                alpha = disabledAlpha
-                                                                            ),
-                                                                            disabledActiveContentColor = MaterialTheme.colorScheme.onPrimary.copy(
-                                                                                alpha = disabledAlpha
-                                                                            ),
-                                                                            disabledActiveBorderColor = MaterialTheme.colorScheme.primary.copy(
-                                                                                alpha = disabledAlpha
-                                                                            )
-                                                                        ),
-                                                                    onClick = {
-                                                                        haptic.performHapticFeedback(
-                                                                            HapticFeedbackType.VirtualKey
-                                                                        )
-                                                                        stateViewModel.update {
-                                                                            copy(
-                                                                                layoutType = when (index) {
-                                                                                    0 -> LayoutType.DEFAULT
-                                                                                    1 -> LayoutType.CAROUSEL_GRID
-                                                                                    2 -> if (layoutType == LayoutType.CAROUSEL_FROM_FLAT_GRID) LayoutType.CAROUSEL_FROM_FLAT_GRID else LayoutType.CAROUSEL_FROM_GRID
-                                                                                    else -> LayoutType.DEFAULT
-                                                                                }
-                                                                            )
-                                                                        }
-                                                                    },
-                                                                    selected = index == selectedIndex
-                                                                ) {
-                                                                    Text(
-                                                                        text = label,
-                                                                        style = MaterialTheme.typography.bodyMedium,
-                                                                        maxLines = 1,
-                                                                        overflow = TextOverflow.Ellipsis
-                                                                    )
-                                                                }
-                                                            }
-                                                        }
+                                                        Text(
+                                                            modifier = Modifier.weight(
+                                                                1f,
+                                                                fill = false
+                                                            ),
+                                                            text = stringResource(R.string.presets),
+                                                            style = MaterialTheme.typography.titleMedium,
+                                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                            overflow = TextOverflow.Ellipsis
+                                                        )
 
-                                                        AnimatedVisibility(
-                                                            visible = stateViewModel.state.layoutType == LayoutType.CAROUSEL_FROM_FLAT_GRID || stateViewModel.state.layoutType == LayoutType.CAROUSEL_FROM_GRID,
-                                                            enter = expandVertically(expandFrom = Alignment.Top) + fadeIn(),
-                                                            exit = shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut()
-                                                        ) {
-                                                            Row(
-                                                                modifier = Modifier
-                                                                    .fillMaxWidth()
-                                                                    .clickable {
-                                                                        if (stateViewModel.state.layoutType == LayoutType.CAROUSEL_FROM_FLAT_GRID) {
-                                                                            haptic.performHapticFeedback(
-                                                                                HapticFeedbackType.ToggleOff
-                                                                            )
-                                                                        } else {
-                                                                            haptic.performHapticFeedback(
-                                                                                HapticFeedbackType.ToggleOn
-                                                                            )
-                                                                        }
-                                                                        stateViewModel.update {
-                                                                            copy(
-                                                                                layoutType = if (stateViewModel.state.layoutType == LayoutType.CAROUSEL_FROM_FLAT_GRID)
-                                                                                    LayoutType.CAROUSEL_FROM_GRID else
-                                                                                    LayoutType.CAROUSEL_FROM_FLAT_GRID
-                                                                            )
-                                                                        }
-                                                                    }
-                                                                    .padding(MaterialTheme.spacing.medium),
-                                                                verticalAlignment = Alignment.CenterVertically,
-                                                                horizontalArrangement = Arrangement.Absolute.SpaceBetween
-                                                            ) {
-                                                                Text(
-                                                                    modifier = Modifier.weight(
-                                                                        1f,
-                                                                        fill = false
-                                                                    ),
-                                                                    text = stringResource(R.string.flatGrid),
-                                                                    style = MaterialTheme.typography.titleMedium,
-                                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                                    overflow = TextOverflow.Ellipsis
-                                                                )
-
-                                                                Switch(
-                                                                    checked = stateViewModel.state.layoutType == LayoutType.CAROUSEL_FROM_FLAT_GRID,
-                                                                    onCheckedChange = {
-                                                                        if (it) {
-                                                                            haptic.performHapticFeedback(
-                                                                                HapticFeedbackType.ToggleOn
-                                                                            )
-                                                                        } else {
-                                                                            haptic.performHapticFeedback(
-                                                                                HapticFeedbackType.ToggleOff
-                                                                            )
-                                                                        }
-                                                                        stateViewModel.update {
-                                                                            copy(
-                                                                                layoutType = if (it) LayoutType.CAROUSEL_FROM_FLAT_GRID
-                                                                                else LayoutType.CAROUSEL_FROM_GRID
-                                                                            )
-                                                                        }
-                                                                    }
-                                                                )
-                                                            }
-                                                        }
-
-                                                        AnimatedVisibility(
-                                                            visible = expanded,
-                                                            enter = expandVertically(expandFrom = Alignment.Top) + fadeIn(),
-                                                            exit = shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut()
-                                                        ) {
-                                                            Column(
-                                                                modifier = Modifier.fillMaxWidth()
-                                                            ) {
-                                                                Row(
-                                                                    modifier = Modifier
-                                                                        .fillMaxWidth()
-                                                                        .padding(MaterialTheme.spacing.medium),
-                                                                    verticalAlignment = Alignment.CenterVertically,
-                                                                    horizontalArrangement = Arrangement.SpaceAround
-                                                                ) {
-                                                                    var maxLines by rememberSaveable(
-                                                                        stateViewModel.state.maxLines
-                                                                    ) {
-                                                                        mutableStateOf(
-                                                                            stateViewModel.state.maxLines?.toString()
-                                                                                ?: ""
-                                                                        )
-                                                                    }
-                                                                    var objectsInOneLine by rememberSaveable(
-                                                                        stateViewModel.state.objectsInOneLine
-                                                                    ) {
-                                                                        mutableStateOf(
-                                                                            stateViewModel.state.objectsInOneLine?.toString()
-                                                                                ?: ""
-                                                                        )
-                                                                    }
-
-                                                                    OutlinedTextField(
-                                                                        value = maxLines,
-                                                                        onValueChange = {
-                                                                            maxLines = it
-                                                                            stateViewModel.update {
-                                                                                copy(
-                                                                                    maxLines = if (maxLines.isEmpty()) null else maxLines.toInt()
-                                                                                )
-                                                                            }
-                                                                        },
-                                                                        shape = MaterialTheme.shapes.medium,
-                                                                        colors = OutlinedTextFieldDefaults.colors(
-                                                                            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                                                                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                                                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                                                                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-                                                                        ),
-                                                                        placeholder = {
-                                                                            Text(
-                                                                                text = stringResource(
-                                                                                    R.string.rows
-                                                                                ),
-                                                                                style = MaterialTheme.typography.bodyMedium
-                                                                            )
-                                                                        },
-                                                                        isError = stateViewModel.maxLinesZeroError,
-                                                                        supportingText = {
-                                                                            if (stateViewModel.maxLinesZeroError) {
-                                                                                Text(
-                                                                                    text = stringResource(
-                                                                                        R.string.mustBeUpperThenZero
-                                                                                    ),
-                                                                                    style = MaterialTheme.typography.bodySmall,
-                                                                                    color = MaterialTheme.colorScheme.error
-                                                                                )
-                                                                            }
-                                                                        },
-                                                                        keyboardOptions = KeyboardOptions(
-                                                                            keyboardType = KeyboardType.Number
-                                                                        ),
-                                                                        singleLine = true,
-                                                                        modifier = Modifier.weight(
-                                                                            1f,
-                                                                            fill = false
-                                                                        )
-                                                                    )
-
-                                                                    Spacer(
-                                                                        modifier = Modifier.size(
-                                                                            MaterialTheme.spacing.extraSmall
-                                                                        )
-                                                                    )
-
-                                                                    OutlinedTextField(
-                                                                        enabled = stateViewModel.state.layoutType != LayoutType.CAROUSEL_FROM_FLAT_GRID,
-                                                                        value = objectsInOneLine,
-                                                                        onValueChange = {
-                                                                            objectsInOneLine = it
-                                                                            stateViewModel.update {
-                                                                                copy(
-                                                                                    objectsInOneLine = if (objectsInOneLine.isEmpty()) null else objectsInOneLine.toInt()
-                                                                                )
-                                                                            }
-                                                                        },
-                                                                        shape = MaterialTheme.shapes.medium,
-                                                                        colors = OutlinedTextFieldDefaults.colors(
-                                                                            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                                                                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                                                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                                                                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-                                                                        ),
-                                                                        placeholder = {
-                                                                            Text(
-                                                                                text = stringResource(
-                                                                                    R.string.columns
-                                                                                ),
-                                                                                style = MaterialTheme.typography.bodyMedium
-                                                                            )
-                                                                        },
-                                                                        isError = stateViewModel.objectsInOneLineZeroError,
-                                                                        supportingText = {
-                                                                            if (stateViewModel.objectsInOneLineZeroError) {
-                                                                                Text(
-                                                                                    text = stringResource(
-                                                                                        R.string.mustBeUpperThenZero
-                                                                                    ),
-                                                                                    style = MaterialTheme.typography.bodySmall,
-                                                                                    color = MaterialTheme.colorScheme.error
-                                                                                )
-                                                                            }
-                                                                        },
-                                                                        keyboardOptions = KeyboardOptions(
-                                                                            keyboardType = KeyboardType.Number
-                                                                        ),
-                                                                        singleLine = true,
-                                                                        modifier = Modifier.weight(
-                                                                            1f,
-                                                                            fill = false
-                                                                        )
-                                                                    )
-                                                                }
-
-                                                                Row(
-                                                                    modifier = Modifier
-                                                                        .fillMaxWidth()
-                                                                        .clickable {
-                                                                            if (stateViewModel.state.layoutType != LayoutType.CAROUSEL_FROM_FLAT_GRID) {
-                                                                                if (stateViewModel.state.adaptiveGridSize) {
-                                                                                    haptic.performHapticFeedback(
-                                                                                        HapticFeedbackType.ToggleOff
-                                                                                    )
-                                                                                } else {
-                                                                                    haptic.performHapticFeedback(
-                                                                                        HapticFeedbackType.ToggleOn
-                                                                                    )
-                                                                                }
-                                                                                stateViewModel.update {
-                                                                                    copy(
-                                                                                        adaptiveGridSize = !adaptiveGridSize
-                                                                                    )
-                                                                                }
-                                                                            }
-                                                                        }
-                                                                        .padding(MaterialTheme.spacing.medium)
-                                                                        .padding(top = 0.dp),
-                                                                    verticalAlignment = Alignment.CenterVertically,
-                                                                    horizontalArrangement = Arrangement.Absolute.SpaceBetween
-                                                                ) {
-                                                                    Text(
-                                                                        text = stringResource(R.string.adaptiveSize),
-                                                                        style = MaterialTheme.typography.titleMedium,
-                                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                                    )
-
-                                                                    Switch(
-                                                                        enabled = stateViewModel.state.layoutType != LayoutType.CAROUSEL_FROM_FLAT_GRID,
-                                                                        checked = stateViewModel.state.adaptiveGridSize,
-                                                                        onCheckedChange = {
-                                                                            if (it) {
-                                                                                haptic.performHapticFeedback(
-                                                                                    HapticFeedbackType.ToggleOn
-                                                                                )
-                                                                            } else {
-                                                                                haptic.performHapticFeedback(
-                                                                                    HapticFeedbackType.ToggleOff
-                                                                                )
-                                                                            }
-                                                                            stateViewModel.update {
-                                                                                copy(
-                                                                                    adaptiveGridSize = it
-                                                                                )
-                                                                            }
-                                                                        }
-                                                                    )
-                                                                }
-
-                                                                val adaptiveGridSizeExpanded =
-                                                                    stateViewModel.state.adaptiveGridSize
-
-                                                                AnimatedVisibility(
-                                                                    visible = adaptiveGridSizeExpanded,
-                                                                    enter = expandVertically(
-                                                                        expandFrom = Alignment.Top
-                                                                    ) + fadeIn(),
-                                                                    exit = shrinkVertically(
-                                                                        shrinkTowards = Alignment.Top
-                                                                    ) + fadeOut()
-                                                                ) {
-                                                                    Row(
-                                                                        modifier = Modifier
-                                                                            .fillMaxWidth()
-                                                                            .padding(MaterialTheme.spacing.medium)
-                                                                            .padding(top = 0.dp),
-                                                                        verticalAlignment = Alignment.CenterVertically,
-                                                                        horizontalArrangement = Arrangement.SpaceAround
-                                                                    ) {
-                                                                        var maxLinesForAdaptiveGridSize by rememberSaveable(
-                                                                            stateViewModel.state.maxLinesForAdaptiveSize
-                                                                        ) {
-                                                                            mutableStateOf(
-                                                                                stateViewModel.state.maxLinesForAdaptiveSize?.toString()
-                                                                                    ?: ""
-                                                                            )
-                                                                        }
-                                                                        var maxObjectsInOneLineForAdaptiveSize by rememberSaveable(
-                                                                            stateViewModel.state.maxObjectsInOneLineForAdaptiveSize
-                                                                        ) {
-                                                                            mutableStateOf(
-                                                                                stateViewModel.state.maxObjectsInOneLineForAdaptiveSize?.toString()
-                                                                                    ?: ""
-                                                                            )
-                                                                        }
-
-                                                                        OutlinedTextField(
-                                                                            enabled = stateViewModel.state.layoutType != LayoutType.CAROUSEL_FROM_FLAT_GRID,
-                                                                            value = maxLinesForAdaptiveGridSize,
-                                                                            onValueChange = {
-                                                                                maxLinesForAdaptiveGridSize =
-                                                                                    it
-                                                                                stateViewModel.update {
-                                                                                    copy(
-                                                                                        maxLinesForAdaptiveSize = if (maxLinesForAdaptiveGridSize.isEmpty()) null else maxLinesForAdaptiveGridSize.toInt()
-                                                                                    )
-                                                                                }
-                                                                            },
-                                                                            shape = MaterialTheme.shapes.medium,
-                                                                            colors = OutlinedTextFieldDefaults.colors(
-                                                                                unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                                                                                focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                                                                focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                                                                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-                                                                            ),
-                                                                            placeholder = {
-                                                                                Text(
-                                                                                    text = stringResource(
-                                                                                        R.string.maxRows
-                                                                                    ),
-                                                                                    style = MaterialTheme.typography.bodyMedium
-                                                                                )
-                                                                            },
-                                                                            isError = stateViewModel.maxLinesForAdaptiveGridSizeZeroError,
-                                                                            supportingText = {
-                                                                                if (stateViewModel.maxLinesForAdaptiveGridSizeZeroError) {
-                                                                                    Text(
-                                                                                        text = stringResource(
-                                                                                            R.string.mustBeUpperThenZero
-                                                                                        ),
-                                                                                        style = MaterialTheme.typography.bodySmall,
-                                                                                        color = MaterialTheme.colorScheme.error
-                                                                                    )
-                                                                                }
-                                                                            },
-                                                                            keyboardOptions = KeyboardOptions(
-                                                                                keyboardType = KeyboardType.Number
-                                                                            ),
-                                                                            singleLine = true,
-                                                                            modifier = Modifier.weight(
-                                                                                1f,
-                                                                                fill = false
-                                                                            )
-                                                                        )
-
-                                                                        Spacer(
-                                                                            modifier = Modifier.size(
-                                                                                MaterialTheme.spacing.extraSmall
-                                                                            )
-                                                                        )
-
-                                                                        OutlinedTextField(
-                                                                            enabled = stateViewModel.state.layoutType != LayoutType.CAROUSEL_FROM_FLAT_GRID,
-                                                                            value = maxObjectsInOneLineForAdaptiveSize,
-                                                                            onValueChange = {
-                                                                                maxObjectsInOneLineForAdaptiveSize =
-                                                                                    it
-                                                                                stateViewModel.update {
-                                                                                    copy(
-                                                                                        maxObjectsInOneLineForAdaptiveSize = if (maxObjectsInOneLineForAdaptiveSize.isEmpty()) null else maxObjectsInOneLineForAdaptiveSize.toInt()
-                                                                                    )
-                                                                                }
-                                                                            },
-                                                                            shape = MaterialTheme.shapes.medium,
-                                                                            colors = OutlinedTextFieldDefaults.colors(
-                                                                                unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                                                                                focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                                                                focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                                                                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-                                                                            ),
-                                                                            placeholder = {
-                                                                                Text(
-                                                                                    text = stringResource(
-                                                                                        R.string.maxColumns
-                                                                                    ),
-                                                                                    style = MaterialTheme.typography.bodyMedium
-                                                                                )
-                                                                            },
-                                                                            keyboardOptions = KeyboardOptions(
-                                                                                keyboardType = KeyboardType.Number
-                                                                            ),
-                                                                            isError = stateViewModel.objectsInOneLineError || stateViewModel.maxObjectsInOneLineForAdaptiveGridSizeZeroError,
-                                                                            supportingText = {
-                                                                                if (stateViewModel.objectsInOneLineError) {
-                                                                                    Text(
-                                                                                        text = stringResource(
-                                                                                            R.string.lowerThenLimit
-                                                                                        ),
-                                                                                        style = MaterialTheme.typography.bodySmall,
-                                                                                        color = MaterialTheme.colorScheme.error
-                                                                                    )
-                                                                                } else if (stateViewModel.maxObjectsInOneLineForAdaptiveGridSizeZeroError) {
-                                                                                    Text(
-                                                                                        text = stringResource(
-                                                                                            R.string.mustBeUpperThenZero
-                                                                                        ),
-                                                                                        style = MaterialTheme.typography.bodySmall,
-                                                                                        color = MaterialTheme.colorScheme.error
-                                                                                    )
-                                                                                }
-                                                                            },
-                                                                            singleLine = true,
-                                                                            modifier = Modifier.weight(
-                                                                                1f,
-                                                                                fill = false
-                                                                            )
-                                                                        )
-                                                                    }
-                                                                }
-                                                            }
-                                                        }
+                                                        Icon(
+                                                            imageVector = ChevronForward,
+                                                            contentDescription = null,
+                                                            modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
+                                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                                        )
                                                     }
-                                                }
-                                            }
-
-                                            item("cardSize") {
-                                                Column(
-                                                    modifier = Modifier
-                                                        .fillMaxWidth()
-                                                        .clip(MaterialTheme.shapes.medium)
-                                                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                                                        .padding(MaterialTheme.spacing.medium)
-                                                ) {
-                                                    Text(
-                                                        text = stringResource(R.string.cardSize),
-                                                        style = MaterialTheme.typography.titleMedium,
-                                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                        maxLines = 1,
-                                                        overflow = TextOverflow.Ellipsis
-                                                    )
 
                                                     val options = listOf(
-                                                        CardSize.SMALL,
-                                                        CardSize.MEDIUM,
-                                                        CardSize.LARGE
+                                                        stringResource(R.string.default_),
+                                                        stringResource(R.string.grid),
+                                                        stringResource(R.string.fromGrids)
                                                     )
 
-                                                    val steps = options.size - 1
-
-                                                    var sliderValue by rememberSaveable(
-                                                        stateViewModel.state.childsSize
-                                                    ) {
-                                                        mutableIntStateOf(
-                                                            options.indexOf(stateViewModel.state.childsSize)
-                                                        )
-                                                    }
-
-                                                    Slider(
-                                                        value = sliderValue.toFloat(),
-                                                        onValueChange = {
-                                                            haptic.performHapticFeedback(
-                                                                HapticFeedbackType.SegmentTick
-                                                            )
-                                                            sliderValue = it.toInt()
-                                                            stateViewModel.update {
-                                                                copy(
-                                                                    childsSize = options[it.toInt()]
-                                                                )
-                                                            }
-                                                        },
-                                                        valueRange = 0f..steps.toFloat(),
-                                                        steps = steps - 1,
-                                                        modifier = Modifier.fillMaxWidth()
-                                                    )
-                                                }
-                                            }
-
-                                            item("cardsShowName") {
-                                                val expanded = stateViewModel.state.childsShowName
-
-                                                Box(
-                                                    modifier = Modifier
-                                                        .fillMaxWidth()
-                                                        .clip(MaterialTheme.shapes.medium)
-                                                        .clipToBounds()
-                                                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                                                ) {
-                                                    Column(
-                                                        modifier = Modifier.fillMaxWidth()
-                                                    ) {
-                                                        Row(
-                                                            modifier = Modifier
-                                                                .fillMaxWidth()
-                                                                .clickable {
-                                                                    if (stateViewModel.state.childsShowName) {
-                                                                        haptic.performHapticFeedback(
-                                                                            HapticFeedbackType.ToggleOff
-                                                                        )
-                                                                    } else {
-                                                                        haptic.performHapticFeedback(
-                                                                            HapticFeedbackType.ToggleOn
-                                                                        )
-                                                                    }
-                                                                    stateViewModel.update {
-                                                                        copy(
-                                                                            childsShowName = !childsShowName
-                                                                        )
-                                                                    }
-                                                                }
-                                                                .padding(MaterialTheme.spacing.medium),
-                                                            verticalAlignment = Alignment.CenterVertically,
-                                                            horizontalArrangement = Arrangement.Absolute.SpaceBetween
-                                                        ) {
-                                                            Text(
-                                                                modifier = Modifier.weight(
-                                                                    1f,
-                                                                    fill = false
-                                                                ),
-                                                                text = stringResource(R.string.showingName),
-                                                                style = MaterialTheme.typography.titleMedium,
-                                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                                maxLines = 1,
-                                                                overflow = TextOverflow.Ellipsis
-                                                            )
-
-                                                            Switch(
-                                                                checked = expanded,
-                                                                onCheckedChange = {
-                                                                    if (it) {
-                                                                        haptic.performHapticFeedback(
-                                                                            HapticFeedbackType.ToggleOn
-                                                                        )
-                                                                    } else {
-                                                                        haptic.performHapticFeedback(
-                                                                            HapticFeedbackType.ToggleOff
-                                                                        )
-                                                                    }
-                                                                    stateViewModel.update {
-                                                                        copy(
-                                                                            childsShowName = it
-                                                                        )
-                                                                    }
-                                                                }
-                                                            )
+                                                    val selectedIndex =
+                                                        when (stateViewModel.state.layoutType) {
+                                                            LayoutType.DEFAULT -> 0
+                                                            LayoutType.CAROUSEL_GRID -> 1
+                                                            LayoutType.CAROUSEL_FROM_GRID, LayoutType.CAROUSEL_FROM_FLAT_GRID -> 2
+                                                            else -> 0
                                                         }
 
-                                                        AnimatedVisibility(
-                                                            visible = expanded,
-                                                            enter = expandVertically(expandFrom = Alignment.Top) + fadeIn(),
-                                                            exit = shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut()
+                                                    val expandedSd =
+                                                        selectedIndex == 1 || selectedIndex == 2
+
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .fillMaxWidth()
+                                                            .clip(MaterialTheme.shapes.medium)
+                                                            .clipToBounds()
+                                                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                                                    ) {
+                                                        Column(
+                                                            modifier = Modifier.fillMaxWidth()
                                                         ) {
-                                                            val options = listOf(
-                                                                stringResource(R.string.outside),
-                                                                stringResource(R.string.inside)
-                                                            )
-
-                                                            val selectedIndex =
-                                                                when (stateViewModel.state.childsNamePosition) {
-                                                                    0 -> 0
-                                                                    null, 1 -> 1
-                                                                    else -> 1
-                                                                }
-
                                                             val disabledAlpha = 0.6f
                                                             SingleChoiceSegmentedButtonRow(
                                                                 modifier = Modifier
                                                                     .fillMaxWidth()
                                                                     .padding(MaterialTheme.spacing.medium)
-                                                                    .padding(top = 0.dp)
                                                             ) {
                                                                 options.forEachIndexed { index, label ->
                                                                     SegmentedButton(
@@ -1377,7 +895,12 @@ fun CreateCarouselPage(
                                                                             )
                                                                             stateViewModel.update {
                                                                                 copy(
-                                                                                    childsNamePosition = index
+                                                                                    layoutType = when (index) {
+                                                                                        0 -> LayoutType.DEFAULT
+                                                                                        1 -> LayoutType.CAROUSEL_GRID
+                                                                                        2 -> if (layoutType == LayoutType.CAROUSEL_FROM_FLAT_GRID) LayoutType.CAROUSEL_FROM_FLAT_GRID else LayoutType.CAROUSEL_FROM_GRID
+                                                                                        else -> LayoutType.DEFAULT
+                                                                                    }
                                                                                 )
                                                                             }
                                                                         },
@@ -1392,218 +915,548 @@ fun CreateCarouselPage(
                                                                     }
                                                                 }
                                                             }
+
+                                                            AnimatedVisibility(
+                                                                visible = stateViewModel.state.layoutType == LayoutType.CAROUSEL_FROM_FLAT_GRID || stateViewModel.state.layoutType == LayoutType.CAROUSEL_FROM_GRID,
+                                                                enter = expandVertically(expandFrom = Alignment.Top) + fadeIn(),
+                                                                exit = shrinkVertically(
+                                                                    shrinkTowards = Alignment.Top
+                                                                ) + fadeOut()
+                                                            ) {
+                                                                Row(
+                                                                    modifier = Modifier
+                                                                        .fillMaxWidth()
+                                                                        .clickable {
+                                                                            if (stateViewModel.state.layoutType == LayoutType.CAROUSEL_FROM_FLAT_GRID) {
+                                                                                haptic.performHapticFeedback(
+                                                                                    HapticFeedbackType.ToggleOff
+                                                                                )
+                                                                            } else {
+                                                                                haptic.performHapticFeedback(
+                                                                                    HapticFeedbackType.ToggleOn
+                                                                                )
+                                                                            }
+                                                                            stateViewModel.update {
+                                                                                copy(
+                                                                                    layoutType = if (stateViewModel.state.layoutType == LayoutType.CAROUSEL_FROM_FLAT_GRID)
+                                                                                        LayoutType.CAROUSEL_FROM_GRID else
+                                                                                        LayoutType.CAROUSEL_FROM_FLAT_GRID
+                                                                                )
+                                                                            }
+                                                                        }
+                                                                        .padding(MaterialTheme.spacing.medium),
+                                                                    verticalAlignment = Alignment.CenterVertically,
+                                                                    horizontalArrangement = Arrangement.Absolute.SpaceBetween
+                                                                ) {
+                                                                    Text(
+                                                                        modifier = Modifier.weight(
+                                                                            1f,
+                                                                            fill = false
+                                                                        ),
+                                                                        text = stringResource(R.string.flatGrid),
+                                                                        style = MaterialTheme.typography.titleMedium,
+                                                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                                        overflow = TextOverflow.Ellipsis
+                                                                    )
+
+                                                                    Switch(
+                                                                        checked = stateViewModel.state.layoutType == LayoutType.CAROUSEL_FROM_FLAT_GRID,
+                                                                        onCheckedChange = {
+                                                                            if (it) {
+                                                                                haptic.performHapticFeedback(
+                                                                                    HapticFeedbackType.ToggleOn
+                                                                                )
+                                                                            } else {
+                                                                                haptic.performHapticFeedback(
+                                                                                    HapticFeedbackType.ToggleOff
+                                                                                )
+                                                                            }
+                                                                            stateViewModel.update {
+                                                                                copy(
+                                                                                    layoutType = if (it) LayoutType.CAROUSEL_FROM_FLAT_GRID
+                                                                                    else LayoutType.CAROUSEL_FROM_GRID
+                                                                                )
+                                                                            }
+                                                                        }
+                                                                    )
+                                                                }
+                                                            }
+
+                                                            AnimatedVisibility(
+                                                                visible = expandedSd,
+                                                                enter = expandVertically(expandFrom = Alignment.Top) + fadeIn(),
+                                                                exit = shrinkVertically(
+                                                                    shrinkTowards = Alignment.Top
+                                                                ) + fadeOut()
+                                                            ) {
+                                                                Column(
+                                                                    modifier = Modifier.fillMaxWidth()
+                                                                ) {
+                                                                    Column(
+                                                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                                                    ) {
+                                                                        Row(
+                                                                            modifier = Modifier
+                                                                                .fillMaxWidth()
+                                                                                .padding(
+                                                                                    MaterialTheme.spacing.medium
+                                                                                ),
+                                                                            verticalAlignment = Alignment.CenterVertically,
+                                                                            horizontalArrangement = Arrangement.SpaceAround
+                                                                        ) {
+                                                                            var maxLines by rememberSaveable(
+                                                                                stateViewModel.state.maxLines
+                                                                            ) {
+                                                                                mutableStateOf(
+                                                                                    stateViewModel.state.maxLines?.toString()
+                                                                                        ?: ""
+                                                                                )
+                                                                            }
+                                                                            var objectsInOneLine by rememberSaveable(
+                                                                                stateViewModel.state.objectsInOneLine
+                                                                            ) {
+                                                                                mutableStateOf(
+                                                                                    stateViewModel.state.objectsInOneLine?.toString()
+                                                                                        ?: ""
+                                                                                )
+                                                                            }
+
+                                                                            OutlinedTextField(
+                                                                                value = maxLines,
+                                                                                onValueChange = {
+                                                                                    maxLines = it
+                                                                                    stateViewModel.update {
+                                                                                        copy(
+                                                                                            maxLines = if (maxLines.isEmpty()) null else maxLines.toInt()
+                                                                                        )
+                                                                                    }
+                                                                                },
+                                                                                shape = MaterialTheme.shapes.medium,
+                                                                                colors = OutlinedTextFieldDefaults.colors(
+                                                                                    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                                                                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                                                                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                                                                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                                                                                ),
+                                                                                placeholder = {
+                                                                                    Text(
+                                                                                        text = stringResource(
+                                                                                            R.string.rows
+                                                                                        ),
+                                                                                        style = MaterialTheme.typography.bodyMedium,
+                                                                                        maxLines = 1,
+                                                                                        overflow = TextOverflow.Ellipsis
+                                                                                    )
+                                                                                },
+                                                                                isError = stateViewModel.maxLinesZeroError,
+                                                                                supportingText = {
+                                                                                    if (stateViewModel.maxLinesZeroError) {
+                                                                                        Text(
+                                                                                            text = stringResource(
+                                                                                                R.string.mustBeUpperThenZero
+                                                                                            ),
+                                                                                            style = MaterialTheme.typography.bodySmall,
+                                                                                            color = MaterialTheme.colorScheme.error,
+                                                                                            maxLines = 1,
+                                                                                            overflow = TextOverflow.Ellipsis
+                                                                                        )
+                                                                                    }
+                                                                                },
+                                                                                keyboardOptions = KeyboardOptions(
+                                                                                    keyboardType = KeyboardType.Number
+                                                                                ),
+                                                                                singleLine = true,
+                                                                                modifier = Modifier.weight(
+                                                                                    1f,
+                                                                                    fill = false
+                                                                                )
+                                                                            )
+
+                                                                            Spacer(
+                                                                                modifier = Modifier.size(
+                                                                                    MaterialTheme.spacing.extraSmall
+                                                                                )
+                                                                            )
+
+                                                                            OutlinedTextField(
+                                                                                enabled = stateViewModel.state.layoutType != LayoutType.CAROUSEL_FROM_FLAT_GRID,
+                                                                                value = objectsInOneLine,
+                                                                                onValueChange = {
+                                                                                    objectsInOneLine =
+                                                                                        it
+                                                                                    stateViewModel.update {
+                                                                                        copy(
+                                                                                            objectsInOneLine = if (objectsInOneLine.isEmpty()) null else objectsInOneLine.toInt()
+                                                                                        )
+                                                                                    }
+                                                                                },
+                                                                                shape = MaterialTheme.shapes.medium,
+                                                                                colors = OutlinedTextFieldDefaults.colors(
+                                                                                    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                                                                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                                                                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                                                                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                                                                                ),
+                                                                                placeholder = {
+                                                                                    Text(
+                                                                                        text = stringResource(
+                                                                                            R.string.columns
+                                                                                        ),
+                                                                                        style = MaterialTheme.typography.bodyMedium,
+                                                                                        maxLines = 1,
+                                                                                        overflow = TextOverflow.Ellipsis
+                                                                                    )
+                                                                                },
+                                                                                isError = stateViewModel.objectsInOneLineZeroError,
+                                                                                supportingText = {
+                                                                                    if (stateViewModel.objectsInOneLineZeroError) {
+                                                                                        Text(
+                                                                                            text = stringResource(
+                                                                                                R.string.mustBeUpperThenZero
+                                                                                            ),
+                                                                                            style = MaterialTheme.typography.bodySmall,
+                                                                                            color = MaterialTheme.colorScheme.error,
+                                                                                            maxLines = 1,
+                                                                                            overflow = TextOverflow.Ellipsis
+                                                                                        )
+                                                                                    }
+                                                                                },
+                                                                                keyboardOptions = KeyboardOptions(
+                                                                                    keyboardType = KeyboardType.Number
+                                                                                ),
+                                                                                singleLine = true,
+                                                                                modifier = Modifier.weight(
+                                                                                    1f,
+                                                                                    fill = false
+                                                                                )
+                                                                            )
+                                                                        }
+
+                                                                        if (stateViewModel.gridSizesError) {
+                                                                            Text(
+                                                                                modifier = Modifier.padding(
+                                                                                    MaterialTheme.spacing.medium
+                                                                                ),
+                                                                                text = stringResource(
+                                                                                    R.string.TheProductOfColumnsAndRowsCannotExceedThirty
+                                                                                ),
+                                                                                style = MaterialTheme.typography.bodySmall,
+                                                                                color = MaterialTheme.colorScheme.error,
+                                                                                maxLines = 2,
+                                                                                overflow = TextOverflow.Ellipsis
+                                                                            )
+                                                                        }
+                                                                    }
+
+
+                                                                    Row(
+                                                                        modifier = Modifier
+                                                                            .fillMaxWidth()
+                                                                            .clickable {
+                                                                                if (stateViewModel.state.layoutType != LayoutType.CAROUSEL_FROM_FLAT_GRID) {
+                                                                                    if (stateViewModel.state.adaptiveGridSize) {
+                                                                                        haptic.performHapticFeedback(
+                                                                                            HapticFeedbackType.ToggleOff
+                                                                                        )
+                                                                                    } else {
+                                                                                        haptic.performHapticFeedback(
+                                                                                            HapticFeedbackType.ToggleOn
+                                                                                        )
+                                                                                    }
+                                                                                    stateViewModel.update {
+                                                                                        copy(
+                                                                                            adaptiveGridSize = !adaptiveGridSize
+                                                                                        )
+                                                                                    }
+                                                                                }
+                                                                            }
+                                                                            .padding(MaterialTheme.spacing.medium)
+                                                                            .padding(top = 0.dp),
+                                                                        verticalAlignment = Alignment.CenterVertically,
+                                                                        horizontalArrangement = Arrangement.Absolute.SpaceBetween
+                                                                    ) {
+                                                                        Text(
+                                                                            text = stringResource(R.string.adaptiveSize),
+                                                                            style = MaterialTheme.typography.titleMedium,
+                                                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                                        )
+
+                                                                        Switch(
+                                                                            enabled = stateViewModel.state.layoutType != LayoutType.CAROUSEL_FROM_FLAT_GRID,
+                                                                            checked = stateViewModel.state.adaptiveGridSize,
+                                                                            onCheckedChange = {
+                                                                                if (it) {
+                                                                                    haptic.performHapticFeedback(
+                                                                                        HapticFeedbackType.ToggleOn
+                                                                                    )
+                                                                                } else {
+                                                                                    haptic.performHapticFeedback(
+                                                                                        HapticFeedbackType.ToggleOff
+                                                                                    )
+                                                                                }
+                                                                                stateViewModel.update {
+                                                                                    copy(
+                                                                                        adaptiveGridSize = it
+                                                                                    )
+                                                                                }
+                                                                            }
+                                                                        )
+                                                                    }
+
+                                                                    val adaptiveGridSizeExpanded =
+                                                                        stateViewModel.state.adaptiveGridSize
+
+                                                                    AnimatedVisibility(
+                                                                        visible = adaptiveGridSizeExpanded,
+                                                                        enter = expandVertically(
+                                                                            expandFrom = Alignment.Top
+                                                                        ) + fadeIn(),
+                                                                        exit = shrinkVertically(
+                                                                            shrinkTowards = Alignment.Top
+                                                                        ) + fadeOut()
+                                                                    ) {
+                                                                        Column(
+                                                                            horizontalAlignment = Alignment.CenterHorizontally
+                                                                        ) {
+                                                                            Row(
+                                                                                modifier = Modifier
+                                                                                    .fillMaxWidth()
+                                                                                    .padding(
+                                                                                        MaterialTheme.spacing.medium
+                                                                                    )
+                                                                                    .padding(top = 0.dp),
+                                                                                verticalAlignment = Alignment.CenterVertically,
+                                                                                horizontalArrangement = Arrangement.SpaceAround
+                                                                            ) {
+                                                                                var maxLinesForAdaptiveGridSize by rememberSaveable(
+                                                                                    stateViewModel.state.maxLinesForAdaptiveSize
+                                                                                ) {
+                                                                                    mutableStateOf(
+                                                                                        stateViewModel.state.maxLinesForAdaptiveSize?.toString()
+                                                                                            ?: ""
+                                                                                    )
+                                                                                }
+                                                                                var maxObjectsInOneLineForAdaptiveSize by rememberSaveable(
+                                                                                    stateViewModel.state.maxObjectsInOneLineForAdaptiveSize
+                                                                                ) {
+                                                                                    mutableStateOf(
+                                                                                        stateViewModel.state.maxObjectsInOneLineForAdaptiveSize?.toString()
+                                                                                            ?: ""
+                                                                                    )
+                                                                                }
+
+                                                                                OutlinedTextField(
+                                                                                    enabled = stateViewModel.state.layoutType != LayoutType.CAROUSEL_FROM_FLAT_GRID,
+                                                                                    value = maxLinesForAdaptiveGridSize,
+                                                                                    onValueChange = {
+                                                                                        maxLinesForAdaptiveGridSize =
+                                                                                            it
+                                                                                        stateViewModel.update {
+                                                                                            copy(
+                                                                                                maxLinesForAdaptiveSize = if (maxLinesForAdaptiveGridSize.isEmpty()) null else maxLinesForAdaptiveGridSize.toInt()
+                                                                                            )
+                                                                                        }
+                                                                                    },
+                                                                                    shape = MaterialTheme.shapes.medium,
+                                                                                    colors = OutlinedTextFieldDefaults.colors(
+                                                                                        unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                                                                                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                                                                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                                                                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                                                                                    ),
+                                                                                    placeholder = {
+                                                                                        Text(
+                                                                                            text = stringResource(
+                                                                                                R.string.maxRows
+                                                                                            ),
+                                                                                            style = MaterialTheme.typography.bodyMedium,
+                                                                                            maxLines = 1,
+                                                                                            overflow = TextOverflow.Ellipsis
+                                                                                        )
+                                                                                    },
+                                                                                    isError = stateViewModel.maxLinesForAdaptiveGridSizeZeroError,
+                                                                                    supportingText = {
+                                                                                        if (stateViewModel.maxLinesForAdaptiveGridSizeZeroError) {
+                                                                                            Text(
+                                                                                                text = stringResource(
+                                                                                                    R.string.mustBeUpperThenZero
+                                                                                                ),
+                                                                                                style = MaterialTheme.typography.bodySmall,
+                                                                                                color = MaterialTheme.colorScheme.error,
+                                                                                                maxLines = 1,
+                                                                                                overflow = TextOverflow.Ellipsis
+                                                                                            )
+                                                                                        }
+                                                                                    },
+                                                                                    keyboardOptions = KeyboardOptions(
+                                                                                        keyboardType = KeyboardType.Number
+                                                                                    ),
+                                                                                    singleLine = true,
+                                                                                    modifier = Modifier.weight(
+                                                                                        1f,
+                                                                                        fill = false
+                                                                                    )
+                                                                                )
+
+                                                                                Spacer(
+                                                                                    modifier = Modifier.size(
+                                                                                        MaterialTheme.spacing.extraSmall
+                                                                                    )
+                                                                                )
+
+                                                                                OutlinedTextField(
+                                                                                    enabled = stateViewModel.state.layoutType != LayoutType.CAROUSEL_FROM_FLAT_GRID,
+                                                                                    value = maxObjectsInOneLineForAdaptiveSize,
+                                                                                    onValueChange = {
+                                                                                        maxObjectsInOneLineForAdaptiveSize =
+                                                                                            it
+                                                                                        stateViewModel.update {
+                                                                                            copy(
+                                                                                                maxObjectsInOneLineForAdaptiveSize = if (maxObjectsInOneLineForAdaptiveSize.isEmpty()) null else maxObjectsInOneLineForAdaptiveSize.toInt()
+                                                                                            )
+                                                                                        }
+                                                                                    },
+                                                                                    shape = MaterialTheme.shapes.medium,
+                                                                                    colors = OutlinedTextFieldDefaults.colors(
+                                                                                        unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                                                                                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                                                                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                                                                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                                                                                    ),
+                                                                                    placeholder = {
+                                                                                        Text(
+                                                                                            text = stringResource(
+                                                                                                R.string.maxColumns
+                                                                                            ),
+                                                                                            style = MaterialTheme.typography.bodyMedium,
+                                                                                            maxLines = 1,
+                                                                                            overflow = TextOverflow.Ellipsis
+                                                                                        )
+                                                                                    },
+                                                                                    keyboardOptions = KeyboardOptions(
+                                                                                        keyboardType = KeyboardType.Number
+                                                                                    ),
+                                                                                    isError = stateViewModel.objectsInOneLineError || stateViewModel.maxObjectsInOneLineForAdaptiveGridSizeZeroError,
+                                                                                    supportingText = {
+                                                                                        if (stateViewModel.objectsInOneLineError) {
+                                                                                            Text(
+                                                                                                text = stringResource(
+                                                                                                    R.string.lowerThenLimit
+                                                                                                ),
+                                                                                                style = MaterialTheme.typography.bodySmall,
+                                                                                                color = MaterialTheme.colorScheme.error,
+                                                                                                maxLines = 1,
+                                                                                                overflow = TextOverflow.Ellipsis
+                                                                                            )
+                                                                                        } else if (stateViewModel.maxObjectsInOneLineForAdaptiveGridSizeZeroError) {
+                                                                                            Text(
+                                                                                                text = stringResource(
+                                                                                                    R.string.mustBeUpperThenZero
+                                                                                                ),
+                                                                                                style = MaterialTheme.typography.bodySmall,
+                                                                                                color = MaterialTheme.colorScheme.error,
+                                                                                                maxLines = 1,
+                                                                                                overflow = TextOverflow.Ellipsis
+                                                                                            )
+                                                                                        }
+                                                                                    },
+                                                                                    singleLine = true,
+                                                                                    modifier = Modifier.weight(
+                                                                                        1f,
+                                                                                        fill = false
+                                                                                    )
+                                                                                )
+                                                                            }
+
+                                                                            if (stateViewModel.maxGridSizesError) {
+                                                                                Text(
+                                                                                    modifier = Modifier.padding(
+                                                                                        start = MaterialTheme.spacing.medium
+                                                                                    ),
+                                                                                    text = stringResource(
+                                                                                        R.string.TheProductOfColumnsAndRowsCannotExceedThirty
+                                                                                    ),
+                                                                                    style = MaterialTheme.typography.bodySmall,
+                                                                                    color = MaterialTheme.colorScheme.error,
+                                                                                    maxLines = 2,
+                                                                                    overflow = TextOverflow.Ellipsis
+                                                                                )
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
                                                         }
                                                     }
-                                                }
-                                            }
 
-                                            item("cardCornerRadius") {
-                                                Column(
-                                                    modifier = Modifier
-                                                        .fillMaxWidth()
-                                                        .clip(MaterialTheme.shapes.medium)
-                                                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                                                        .padding(MaterialTheme.spacing.medium)
-                                                ) {
-                                                    Text(
-                                                        text = stringResource(R.string.cardCornerRadius),
-                                                        style = MaterialTheme.typography.titleMedium,
-                                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                        maxLines = 1,
-                                                        overflow = TextOverflow.Ellipsis
-                                                    )
-
-                                                    val options = listOf(
-                                                        null,
-                                                        SizeType.SMALL,
-                                                        SizeType.MEDIUM,
-                                                        SizeType.LARGE,
-                                                        SizeType.XLARGE
-                                                    )
-
-                                                    val steps = options.size - 1
-
-                                                    var sliderValue by rememberSaveable(
-                                                        stateViewModel.state.childsCornerRadius
-                                                    ) {
-                                                        mutableIntStateOf(
-                                                            options.indexOf(stateViewModel.state.childsCornerRadius)
-                                                        )
-                                                    }
-
-                                                    Slider(
-                                                        value = sliderValue.toFloat(),
-                                                        onValueChange = {
-                                                            haptic.performHapticFeedback(
-                                                                HapticFeedbackType.SegmentTick
-                                                            )
-                                                            sliderValue = it.toInt()
-                                                            stateViewModel.update {
-                                                                copy(
-                                                                    childsCornerRadius = options[it.toInt()]
-                                                                )
-                                                            }
-                                                        },
-                                                        valueRange = 0f..steps.toFloat(),
-                                                        steps = steps - 1,
-                                                        modifier = Modifier.fillMaxWidth()
-                                                    )
-                                                }
-                                            }
-
-                                            item("cardsShowAlreadyWatchedLine") {
-                                                val expanded =
-                                                    stateViewModel.state.childsShowAlreadyWatchedLine
-
-                                                Box(
-                                                    modifier = Modifier
-                                                        .fillMaxWidth()
-                                                        .clip(MaterialTheme.shapes.medium)
-                                                        .clipToBounds()
-                                                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                                                ) {
-                                                    Row(
+                                                    Column(
                                                         modifier = Modifier
                                                             .fillMaxWidth()
-                                                            .clickable {
-                                                                if (stateViewModel.state.childsShowAlreadyWatchedLine) {
-                                                                    haptic.performHapticFeedback(
-                                                                        HapticFeedbackType.ToggleOff
-                                                                    )
-                                                                } else {
-                                                                    haptic.performHapticFeedback(
-                                                                        HapticFeedbackType.ToggleOn
-                                                                    )
-                                                                }
-                                                                stateViewModel.update {
-                                                                    copy(
-                                                                        childsShowAlreadyWatchedLine = !childsShowAlreadyWatchedLine
-                                                                    )
-                                                                }
-                                                            }
-                                                            .padding(MaterialTheme.spacing.medium),
-                                                        verticalAlignment = Alignment.CenterVertically,
-                                                        horizontalArrangement = Arrangement.Absolute.SpaceBetween
+                                                            .clip(MaterialTheme.shapes.medium)
+                                                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                                                            .padding(MaterialTheme.spacing.medium)
                                                     ) {
                                                         Text(
-                                                            modifier = Modifier.weight(
-                                                                1f,
-                                                                fill = false
-                                                            ),
-                                                            text = stringResource(R.string.showingAlreadyWatchedLine),
-                                                            style = MaterialTheme.typography.titleMedium,
-                                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                        )
-
-                                                        Switch(
-                                                            checked = expanded,
-                                                            onCheckedChange = {
-                                                                if (it) {
-                                                                    haptic.performHapticFeedback(
-                                                                        HapticFeedbackType.ToggleOn
-                                                                    )
-                                                                } else {
-                                                                    haptic.performHapticFeedback(
-                                                                        HapticFeedbackType.ToggleOff
-                                                                    )
-                                                                }
-                                                                stateViewModel.update {
-                                                                    copy(
-                                                                        childsShowAlreadyWatchedLine = it
-                                                                    )
-                                                                }
-                                                            }
-                                                        )
-                                                    }
-                                                }
-                                            }
-
-                                            item("cardsShowAuthor") {
-                                                val expanded = stateViewModel.state.childsShowAuthor
-
-                                                Box(
-                                                    modifier = Modifier
-                                                        .fillMaxWidth()
-                                                        .clip(MaterialTheme.shapes.medium)
-                                                        .clipToBounds()
-                                                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                                                ) {
-                                                    Row(
-                                                        modifier = Modifier
-                                                            .fillMaxWidth()
-                                                            .clickable {
-                                                                if (stateViewModel.state.childsShowAuthor) {
-                                                                    haptic.performHapticFeedback(
-                                                                        HapticFeedbackType.ToggleOff
-                                                                    )
-                                                                } else {
-                                                                    haptic.performHapticFeedback(
-                                                                        HapticFeedbackType.ToggleOn
-                                                                    )
-                                                                }
-                                                                stateViewModel.update {
-                                                                    copy(
-                                                                        childsShowAuthor = !childsShowAuthor
-                                                                    )
-                                                                }
-                                                            }
-                                                            .padding(MaterialTheme.spacing.medium),
-                                                        verticalAlignment = Alignment.CenterVertically,
-                                                        horizontalArrangement = Arrangement.Absolute.SpaceBetween
-                                                    ) {
-                                                        Text(
-                                                            modifier = Modifier.weight(
-                                                                1f,
-                                                                fill = false
-                                                            ),
-                                                            text = stringResource(R.string.showingAuthor),
+                                                            text = stringResource(R.string.cardSize),
                                                             style = MaterialTheme.typography.titleMedium,
                                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                            maxLines = 1,
                                                             overflow = TextOverflow.Ellipsis
                                                         )
 
-                                                        Switch(
-                                                            checked = expanded,
-                                                            onCheckedChange = {
-                                                                if (it) {
-                                                                    haptic.performHapticFeedback(
-                                                                        HapticFeedbackType.ToggleOn
-                                                                    )
-                                                                } else {
-                                                                    haptic.performHapticFeedback(
-                                                                        HapticFeedbackType.ToggleOff
-                                                                    )
-                                                                }
+                                                        val options = listOf(
+                                                            CardSize.SMALL,
+                                                            CardSize.MEDIUM,
+                                                            CardSize.LARGE
+                                                        )
+
+                                                        val steps = options.size - 1
+
+                                                        var sliderValue by rememberSaveable(
+                                                            stateViewModel.state.childsSize
+                                                        ) {
+                                                            mutableIntStateOf(
+                                                                options.indexOf(stateViewModel.state.childsSize)
+                                                            )
+                                                        }
+
+                                                        Slider(
+                                                            value = sliderValue.toFloat(),
+                                                            onValueChange = {
+                                                                haptic.performHapticFeedback(
+                                                                    HapticFeedbackType.SegmentTick
+                                                                )
+                                                                sliderValue = it.toInt()
                                                                 stateViewModel.update {
                                                                     copy(
-                                                                        childsShowAuthor = it
+                                                                        childsSize = options[it.toInt()]
                                                                     )
                                                                 }
-                                                            }
+                                                            },
+                                                            valueRange = 0f..steps.toFloat(),
+                                                            steps = steps - 1,
+                                                            modifier = Modifier.fillMaxWidth()
                                                         )
                                                     }
-                                                }
-                                            }
 
-                                            item("dovodchik") {
-                                                val expanded = stateViewModel.state.dovodchik
+                                                    val expandedTh =
+                                                        stateViewModel.state.childsShowName
 
-                                                Box(
-                                                    modifier = Modifier
-                                                        .fillMaxWidth()
-                                                        .clip(MaterialTheme.shapes.medium)
-                                                        .clipToBounds()
-                                                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                                                ) {
-                                                    Column(
-                                                        modifier = Modifier.fillMaxWidth()
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .fillMaxWidth()
+                                                            .clip(MaterialTheme.shapes.medium)
+                                                            .clipToBounds()
+                                                            .background(MaterialTheme.colorScheme.surfaceVariant)
                                                     ) {
-                                                        Row(
-                                                            modifier = Modifier
-                                                                .fillMaxWidth()
-                                                                .clickable {
-                                                                    if (stateViewModel.state.layoutType != LayoutType.CAROUSEL_GRID) {
-                                                                        if (stateViewModel.state.dovodchik) {
+                                                        Column(
+                                                            modifier = Modifier.fillMaxWidth()
+                                                        ) {
+                                                            Row(
+                                                                modifier = Modifier
+                                                                    .fillMaxWidth()
+                                                                    .clickable {
+                                                                        if (stateViewModel.state.childsShowName) {
                                                                             haptic.performHapticFeedback(
                                                                                 HapticFeedbackType.ToggleOff
                                                                             )
@@ -1614,9 +1467,210 @@ fun CreateCarouselPage(
                                                                         }
                                                                         stateViewModel.update {
                                                                             copy(
-                                                                                dovodchik = !dovodchik
+                                                                                childsShowName = !childsShowName
                                                                             )
                                                                         }
+                                                                    }
+                                                                    .padding(MaterialTheme.spacing.medium),
+                                                                verticalAlignment = Alignment.CenterVertically,
+                                                                horizontalArrangement = Arrangement.Absolute.SpaceBetween
+                                                            ) {
+                                                                Text(
+                                                                    modifier = Modifier.weight(
+                                                                        1f,
+                                                                        fill = false
+                                                                    ),
+                                                                    text = stringResource(R.string.showingName),
+                                                                    style = MaterialTheme.typography.titleMedium,
+                                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                                    maxLines = 1,
+                                                                    overflow = TextOverflow.Ellipsis
+                                                                )
+
+                                                                Switch(
+                                                                    checked = expandedTh,
+                                                                    onCheckedChange = {
+                                                                        if (it) {
+                                                                            haptic.performHapticFeedback(
+                                                                                HapticFeedbackType.ToggleOn
+                                                                            )
+                                                                        } else {
+                                                                            haptic.performHapticFeedback(
+                                                                                HapticFeedbackType.ToggleOff
+                                                                            )
+                                                                        }
+                                                                        stateViewModel.update {
+                                                                            copy(
+                                                                                childsShowName = it
+                                                                            )
+                                                                        }
+                                                                    }
+                                                                )
+                                                            }
+
+                                                            AnimatedVisibility(
+                                                                visible = expandedTh,
+                                                                enter = expandVertically(expandFrom = Alignment.Top) + fadeIn(),
+                                                                exit = shrinkVertically(
+                                                                    shrinkTowards = Alignment.Top
+                                                                ) + fadeOut()
+                                                            ) {
+                                                                val options = listOf(
+                                                                    stringResource(R.string.outside),
+                                                                    stringResource(R.string.inside)
+                                                                )
+
+                                                                val selectedIndex =
+                                                                    when (stateViewModel.state.childsNamePosition) {
+                                                                        0 -> 0
+                                                                        1 -> 1
+                                                                        else -> 1
+                                                                    }
+
+                                                                val disabledAlpha = 0.6f
+                                                                SingleChoiceSegmentedButtonRow(
+                                                                    modifier = Modifier
+                                                                        .fillMaxWidth()
+                                                                        .padding(MaterialTheme.spacing.medium)
+                                                                        .padding(top = 0.dp)
+                                                                ) {
+                                                                    options.forEachIndexed { index, label ->
+                                                                        SegmentedButton(
+                                                                            shape = SegmentedButtonDefaults.itemShape(
+                                                                                index = index,
+                                                                                count = options.size
+                                                                            ),
+                                                                            colors = SegmentedButtonDefaults.colors()
+                                                                                .copy(
+                                                                                    activeContainerColor = MaterialTheme.colorScheme.primary,
+                                                                                    activeContentColor = MaterialTheme.colorScheme.onPrimary,
+                                                                                    inactiveContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                                                                    inactiveContentColor = MaterialTheme.colorScheme.onSurface,
+                                                                                    inactiveBorderColor = MaterialTheme.colorScheme.outline,
+                                                                                    activeBorderColor = MaterialTheme.colorScheme.primary,
+                                                                                    disabledInactiveBorderColor = MaterialTheme.colorScheme.outline.copy(
+                                                                                        alpha = disabledAlpha
+                                                                                    ),
+                                                                                    disabledInactiveContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(
+                                                                                        alpha = disabledAlpha
+                                                                                    ),
+                                                                                    disabledInactiveContentColor = MaterialTheme.colorScheme.onSurface.copy(
+                                                                                        alpha = disabledAlpha
+                                                                                    ),
+                                                                                    disabledActiveContainerColor = MaterialTheme.colorScheme.primary.copy(
+                                                                                        alpha = disabledAlpha
+                                                                                    ),
+                                                                                    disabledActiveContentColor = MaterialTheme.colorScheme.onPrimary.copy(
+                                                                                        alpha = disabledAlpha
+                                                                                    ),
+                                                                                    disabledActiveBorderColor = MaterialTheme.colorScheme.primary.copy(
+                                                                                        alpha = disabledAlpha
+                                                                                    )
+                                                                                ),
+                                                                            onClick = {
+                                                                                haptic.performHapticFeedback(
+                                                                                    HapticFeedbackType.VirtualKey
+                                                                                )
+                                                                                stateViewModel.update {
+                                                                                    copy(
+                                                                                        childsNamePosition = index
+                                                                                    )
+                                                                                }
+                                                                            },
+                                                                            selected = index == selectedIndex
+                                                                        ) {
+                                                                            Text(
+                                                                                text = label,
+                                                                                style = MaterialTheme.typography.bodyMedium,
+                                                                                maxLines = 1,
+                                                                                overflow = TextOverflow.Ellipsis
+                                                                            )
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+
+                                                    Column(
+                                                        modifier = Modifier
+                                                            .fillMaxWidth()
+                                                            .clip(MaterialTheme.shapes.medium)
+                                                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                                                            .padding(MaterialTheme.spacing.medium)
+                                                    ) {
+                                                        Text(
+                                                            text = stringResource(R.string.cardCornerRadius),
+                                                            style = MaterialTheme.typography.titleMedium,
+                                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                            maxLines = 1,
+                                                            overflow = TextOverflow.Ellipsis
+                                                        )
+
+                                                        val options = listOf(
+                                                            SizeType.ESMALL,
+                                                            SizeType.SMALL,
+                                                            SizeType.MEDIUM,
+                                                            SizeType.LARGE,
+                                                            SizeType.XLARGE
+                                                        )
+
+                                                        val steps = options.size - 1
+
+                                                        var sliderValue by rememberSaveable(
+                                                            stateViewModel.state.childsCornerRadius
+                                                        ) {
+                                                            mutableIntStateOf(
+                                                                options.indexOf(stateViewModel.state.childsCornerRadius)
+                                                            )
+                                                        }
+
+                                                        Slider(
+                                                            value = sliderValue.toFloat(),
+                                                            onValueChange = {
+                                                                haptic.performHapticFeedback(
+                                                                    HapticFeedbackType.SegmentTick
+                                                                )
+                                                                sliderValue = it.toInt()
+                                                                stateViewModel.update {
+                                                                    copy(
+                                                                        childsCornerRadius = options[it.toInt()]
+                                                                    )
+                                                                }
+                                                            },
+                                                            valueRange = 0f..steps.toFloat(),
+                                                            steps = steps - 1,
+                                                            modifier = Modifier.fillMaxWidth()
+                                                        )
+                                                    }
+
+                                                    val expandedThs =
+                                                        stateViewModel.state.childsShowAlreadyWatchedLine
+
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .fillMaxWidth()
+                                                            .clip(MaterialTheme.shapes.medium)
+                                                            .clipToBounds()
+                                                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                                                    ) {
+                                                        Row(
+                                                            modifier = Modifier
+                                                                .fillMaxWidth()
+                                                                .clickable {
+                                                                    if (stateViewModel.state.childsShowAlreadyWatchedLine) {
+                                                                        haptic.performHapticFeedback(
+                                                                            HapticFeedbackType.ToggleOff
+                                                                        )
+                                                                    } else {
+                                                                        haptic.performHapticFeedback(
+                                                                            HapticFeedbackType.ToggleOn
+                                                                        )
+                                                                    }
+                                                                    stateViewModel.update {
+                                                                        copy(
+                                                                            childsShowAlreadyWatchedLine = !childsShowAlreadyWatchedLine
+                                                                        )
                                                                     }
                                                                 }
                                                                 .padding(MaterialTheme.spacing.medium),
@@ -1628,15 +1682,13 @@ fun CreateCarouselPage(
                                                                     1f,
                                                                     fill = false
                                                                 ),
-                                                                text = stringResource(R.string.dovodchik),
+                                                                text = stringResource(R.string.showingAlreadyWatchedLine),
                                                                 style = MaterialTheme.typography.titleMedium,
-                                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                                overflow = TextOverflow.Ellipsis
+                                                                color = MaterialTheme.colorScheme.onSurfaceVariant
                                                             )
 
                                                             Switch(
-                                                                checked = stateViewModel.state.dovodchik,
-                                                                enabled = stateViewModel.state.layoutType != LayoutType.CAROUSEL_GRID,
+                                                                checked = expandedThs,
                                                                 onCheckedChange = {
                                                                     if (it) {
                                                                         haptic.performHapticFeedback(
@@ -1649,24 +1701,99 @@ fun CreateCarouselPage(
                                                                     }
                                                                     stateViewModel.update {
                                                                         copy(
-                                                                            dovodchik = it
+                                                                            childsShowAlreadyWatchedLine = it
                                                                         )
                                                                     }
                                                                 }
                                                             )
                                                         }
+                                                    }
 
-                                                        AnimatedVisibility(
-                                                            visible = expanded,
-                                                            enter = expandVertically(expandFrom = Alignment.Top) + fadeIn(),
-                                                            exit = shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut()
+                                                    val expandedFvs =
+                                                        stateViewModel.state.childsShowAuthor
+
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .fillMaxWidth()
+                                                            .clip(MaterialTheme.shapes.medium)
+                                                            .clipToBounds()
+                                                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                                                    ) {
+                                                        Row(
+                                                            modifier = Modifier
+                                                                .fillMaxWidth()
+                                                                .clickable {
+                                                                    if (stateViewModel.state.childsShowAuthor) {
+                                                                        haptic.performHapticFeedback(
+                                                                            HapticFeedbackType.ToggleOff
+                                                                        )
+                                                                    } else {
+                                                                        haptic.performHapticFeedback(
+                                                                            HapticFeedbackType.ToggleOn
+                                                                        )
+                                                                    }
+                                                                    stateViewModel.update {
+                                                                        copy(
+                                                                            childsShowAuthor = !childsShowAuthor
+                                                                        )
+                                                                    }
+                                                                }
+                                                                .padding(MaterialTheme.spacing.medium),
+                                                            verticalAlignment = Alignment.CenterVertically,
+                                                            horizontalArrangement = Arrangement.Absolute.SpaceBetween
+                                                        ) {
+                                                            Text(
+                                                                modifier = Modifier.weight(
+                                                                    1f,
+                                                                    fill = false
+                                                                ),
+                                                                text = stringResource(R.string.showingAuthor),
+                                                                style = MaterialTheme.typography.titleMedium,
+                                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                                overflow = TextOverflow.Ellipsis
+                                                            )
+
+                                                            Switch(
+                                                                checked = expandedFvs,
+                                                                onCheckedChange = {
+                                                                    if (it) {
+                                                                        haptic.performHapticFeedback(
+                                                                            HapticFeedbackType.ToggleOn
+                                                                        )
+                                                                    } else {
+                                                                        haptic.performHapticFeedback(
+                                                                            HapticFeedbackType.ToggleOff
+                                                                        )
+                                                                    }
+                                                                    stateViewModel.update {
+                                                                        copy(
+                                                                            childsShowAuthor = it
+                                                                        )
+                                                                    }
+                                                                }
+                                                            )
+                                                        }
+                                                    }
+
+                                                    val expanded =
+                                                        stateViewModel.state.dovodchik && stateViewModel.state.layoutType == LayoutType.CAROUSEL_FROM_GRID
+
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .fillMaxWidth()
+                                                            .clip(MaterialTheme.shapes.medium)
+                                                            .clipToBounds()
+                                                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                                                    ) {
+                                                        Column(
+                                                            modifier = Modifier.fillMaxWidth()
                                                         ) {
                                                             Row(
                                                                 modifier = Modifier
                                                                     .fillMaxWidth()
                                                                     .clickable {
                                                                         if (stateViewModel.state.layoutType != LayoutType.CAROUSEL_GRID) {
-                                                                            if (stateViewModel.state.showDovodchikDots) {
+                                                                            if (stateViewModel.state.dovodchik) {
                                                                                 haptic.performHapticFeedback(
                                                                                     HapticFeedbackType.ToggleOff
                                                                                 )
@@ -1677,13 +1804,12 @@ fun CreateCarouselPage(
                                                                             }
                                                                             stateViewModel.update {
                                                                                 copy(
-                                                                                    showDovodchikDots = !showDovodchikDots
+                                                                                    dovodchik = !dovodchik
                                                                                 )
                                                                             }
                                                                         }
                                                                     }
-                                                                    .padding(MaterialTheme.spacing.medium)
-                                                                    .padding(top = 0.dp),
+                                                                    .padding(MaterialTheme.spacing.medium),
                                                                 verticalAlignment = Alignment.CenterVertically,
                                                                 horizontalArrangement = Arrangement.Absolute.SpaceBetween
                                                             ) {
@@ -1692,14 +1818,14 @@ fun CreateCarouselPage(
                                                                         1f,
                                                                         fill = false
                                                                     ),
-                                                                    text = stringResource(R.string.showingDovodchikDots),
+                                                                    text = stringResource(R.string.dovodchik),
                                                                     style = MaterialTheme.typography.titleMedium,
                                                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                                                     overflow = TextOverflow.Ellipsis
                                                                 )
 
                                                                 Switch(
-                                                                    checked = stateViewModel.state.showDovodchikDots,
+                                                                    checked = stateViewModel.state.dovodchik,
                                                                     enabled = stateViewModel.state.layoutType != LayoutType.CAROUSEL_GRID,
                                                                     onCheckedChange = {
                                                                         if (it) {
@@ -1713,59 +1839,124 @@ fun CreateCarouselPage(
                                                                         }
                                                                         stateViewModel.update {
                                                                             copy(
-                                                                                showDovodchikDots = it
+                                                                                dovodchik = it
                                                                             )
                                                                         }
                                                                     }
                                                                 )
                                                             }
+
+                                                            AnimatedVisibility(
+                                                                visible = expanded,
+                                                                enter = expandVertically(expandFrom = Alignment.Top) + fadeIn(),
+                                                                exit = shrinkVertically(
+                                                                    shrinkTowards = Alignment.Top
+                                                                ) + fadeOut()
+                                                            ) {
+                                                                Row(
+                                                                    modifier = Modifier
+                                                                        .fillMaxWidth()
+                                                                        .clickable {
+                                                                            if (stateViewModel.state.layoutType != LayoutType.CAROUSEL_GRID) {
+                                                                                if (stateViewModel.state.showDovodchikDots) {
+                                                                                    haptic.performHapticFeedback(
+                                                                                        HapticFeedbackType.ToggleOff
+                                                                                    )
+                                                                                } else {
+                                                                                    haptic.performHapticFeedback(
+                                                                                        HapticFeedbackType.ToggleOn
+                                                                                    )
+                                                                                }
+                                                                                stateViewModel.update {
+                                                                                    copy(
+                                                                                        showDovodchikDots = !showDovodchikDots
+                                                                                    )
+                                                                                }
+                                                                            }
+                                                                        }
+                                                                        .padding(MaterialTheme.spacing.medium)
+                                                                        .padding(top = 0.dp),
+                                                                    verticalAlignment = Alignment.CenterVertically,
+                                                                    horizontalArrangement = Arrangement.Absolute.SpaceBetween
+                                                                ) {
+                                                                    Text(
+                                                                        modifier = Modifier.weight(
+                                                                            1f,
+                                                                            fill = false
+                                                                        ),
+                                                                        text = stringResource(R.string.showingDovodchikDots),
+                                                                        style = MaterialTheme.typography.titleMedium,
+                                                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                                        overflow = TextOverflow.Ellipsis
+                                                                    )
+
+                                                                    Switch(
+                                                                        checked = stateViewModel.state.showDovodchikDots,
+                                                                        enabled = stateViewModel.state.layoutType != LayoutType.CAROUSEL_GRID,
+                                                                        onCheckedChange = {
+                                                                            if (it) {
+                                                                                haptic.performHapticFeedback(
+                                                                                    HapticFeedbackType.ToggleOn
+                                                                                )
+                                                                            } else {
+                                                                                haptic.performHapticFeedback(
+                                                                                    HapticFeedbackType.ToggleOff
+                                                                                )
+                                                                            }
+                                                                            stateViewModel.update {
+                                                                                copy(
+                                                                                    showDovodchikDots = it
+                                                                                )
+                                                                            }
+                                                                        }
+                                                                    )
+                                                                }
+                                                            }
                                                         }
                                                     }
-                                                }
-                                            }
 
-                                            item("addCarousel") {
-                                                Box(
-                                                    modifier = Modifier.fillMaxWidth(),
-                                                    contentAlignment = Alignment.Center
-                                                ) {
-                                                    Button(
-                                                        onClick = {
-                                                            haptic.performHapticFeedback(
-                                                                HapticFeedbackType.ContextClick
-                                                            )
-                                                            focusManager.clearFocus()
-                                                            onSaveAndClose(stateViewModel.state)
-                                                        },
+                                                    Box(
                                                         modifier = Modifier.fillMaxWidth(),
-                                                        colors = ButtonDefaults.buttonColors(
-                                                            containerColor = MaterialTheme.colorScheme.primary,
-                                                            contentColor = MaterialTheme.colorScheme.onPrimary
-                                                        ),
-                                                        shape = CircleShape,
+                                                        contentAlignment = Alignment.Center
                                                     ) {
-                                                        Row(
-                                                            verticalAlignment = Alignment.CenterVertically,
+                                                        Button(
+                                                            onClick = {
+                                                                haptic.performHapticFeedback(
+                                                                    HapticFeedbackType.ContextClick
+                                                                )
+                                                                focusManager.clearFocus()
+                                                                onSaveAndClose(stateViewModel.state)
+                                                            },
+                                                            modifier = Modifier.fillMaxWidth(),
+                                                            colors = ButtonDefaults.buttonColors(
+                                                                containerColor = MaterialTheme.colorScheme.primary,
+                                                                contentColor = MaterialTheme.colorScheme.onPrimary
+                                                            ),
+                                                            shape = CircleShape,
                                                         ) {
-                                                            if(!isEditMode) {
-                                                                Icon(
-                                                                    imageVector = AddIco,
-                                                                    modifier = Modifier.size(
-                                                                        MaterialTheme.dimens.iconLarge
+                                                            Row(
+                                                                verticalAlignment = Alignment.CenterVertically,
+                                                            ) {
+                                                                if (!isEditMode) {
+                                                                    Icon(
+                                                                        imageVector = AddIco,
+                                                                        modifier = Modifier.size(
+                                                                            MaterialTheme.dimens.iconLarge
+                                                                        ),
+                                                                        contentDescription = null
+                                                                    )
+                                                                }
+
+                                                                Text(
+                                                                    text = stringResource(if (!isEditMode) R.string.addCarousel else R.string.save),
+                                                                    style = MaterialTheme.typography.labelLarge,
+                                                                    modifier = Modifier.weight(
+                                                                        1f,
+                                                                        fill = false
                                                                     ),
-                                                                    contentDescription = null
+                                                                    overflow = TextOverflow.Ellipsis
                                                                 )
                                                             }
-
-                                                            Text(
-                                                                text = stringResource(if (!isEditMode) R.string.addCarousel else R.string.save),
-                                                                style = MaterialTheme.typography.labelLarge,
-                                                                modifier = Modifier.weight(
-                                                                    1f,
-                                                                    fill = false
-                                                                ),
-                                                                overflow = TextOverflow.Ellipsis
-                                                            )
                                                         }
                                                     }
                                                 }
@@ -1805,6 +1996,50 @@ fun CreateCarouselPage(
                 }
             }
         }
+
+        Box(
+            modifier = Modifier
+                .padding(top = MaterialTheme.spacing.screenHorizontal + topInset)
+                .align(Alignment.TopStart)
+        ) {
+            FilledIconButton(
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                    focusManager.clearFocus()
+                    onClose()
+                }, colors = IconButtonDefaults.filledIconButtonColors(
+                    containerColor = LocalCustomColors.current.closeButton,
+                    contentColor = LocalCustomColors.current.onCloseButton
+                ), shape = MaterialTheme.shapes.small
+            ) {
+                Icon(
+                    imageVector = CloseIco,
+                    contentDescription = null,
+                    modifier = Modifier.size(MaterialTheme.dimens.iconLarge)
+                )
+            }
+        }
+
+        Box(
+            modifier = Modifier
+                .padding(top = MaterialTheme.spacing.screenHorizontal + topInset)
+                .align(Alignment.TopEnd)
+        ) {
+            IconButton(
+                modifier = Modifier.align(Alignment.TopEnd),
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                    focusManager.clearFocus()
+                }
+            ) {
+                Icon(
+                    imageVector = HelpIco,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.size(MaterialTheme.dimens.iconMedium)
+                )
+            }
+        }
     }
 }
 
@@ -1813,8 +2048,8 @@ fun CreateCarouselPage(
 private fun CarouselCollectionPicker(
     onDismiss: () -> Unit,
     carouselType: CarouselType,
-    initCollectionType: CollectionType?,
-    onApply: (String, CollectionType?) -> Unit,
+    initCollectionType: CollectionType,
+    onApply: (String, CollectionType) -> Unit,
 ) {
     val haptic = LocalHapticFeedback.current
 
@@ -1855,9 +2090,11 @@ private fun CarouselCollectionPicker(
                 style = MaterialTheme.typography.headlineSmall
             )
 
-            Spacer(modifier = Modifier
-                .fillMaxWidth()
-                .height(MaterialTheme.spacing.medium))
+            Spacer(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(MaterialTheme.spacing.medium)
+            )
 
             Column(
                 modifier = Modifier
@@ -1925,7 +2162,7 @@ private fun CarouselCollectionPicker(
                 onClick = {
                     haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
                     animateAndDismiss()
-                    onApply(name, selectedCollection)
+                    onApply(name, selectedCollection ?: CollectionType.None)
                 },
                 modifier = Modifier.fillMaxWidth(),
                 shape = MaterialTheme.shapes.medium,

@@ -6,9 +6,9 @@ import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.dp
 
 enum class WindowType {
-    Compact,   // Телефоны
-    Medium,    // Планшеты (Portrait), Foldables
-    Expanded   // Планшеты (Landscape), Десктоп
+    Compact,
+    Medium,
+    Expanded
 }
 
 @Composable
@@ -16,7 +16,6 @@ fun rememberWindowType(): WindowType {
     val windowInfo = LocalWindowInfo.current
     val density = LocalDensity.current
 
-    // Получаем ширину контейнера приложения и переводим px в dp
     val screenWidthDp = with(density) {
         windowInfo.containerSize.width.toDp()
     }

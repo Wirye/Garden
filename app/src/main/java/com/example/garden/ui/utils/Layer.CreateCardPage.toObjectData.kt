@@ -2,36 +2,76 @@ package com.example.garden.ui.utils
 
 import com.example.garden.Layer
 import com.example.garden.database.ElementType
+import com.example.garden.database.ImageData
 import com.example.garden.database.LinkData
-import com.example.garden.database.LinkType
 import com.example.garden.database.ObjectData
-import com.example.garden.database.PageType
 
-fun Layer.CreateCardPage.toObjectData(songLength: Long? = null) : ObjectData {
+fun Layer.CreateCardPage.toObjectData() : ObjectData {
+    return when (cardType) {
+        ElementType.AnimeCard -> {
+            ObjectData.Card.Anime(
+                id = cardId ?: 0L,
+                position = cardPosition,
+                name = name,
+                author = author,
+                description = description,
+                genre = genreList,
+                image = image ?: ImageData.Url(""),
+                link = LinkData.Self
+            )
+        }
 
-    return ObjectData(
-        id = cardId ?: 0L,
-        parentId = parentId,
-        name = name,
-        author = author,
-        description = description,
-        genre = genreList,
-        elementType = cardType,
-        image = image,
-        alreadyWatched = 0L,
-        length = if (cardType == ElementType.AnimeCard) {
-            episodesList.sumOf { it.length }
-        } else if (cardType == ElementType.MangaCard) {
-            chaptersList.size.toLong()
-        } else if (cardType == ElementType.MusicCard && song != null && songLength != null) {
-            songLength.coerceAtLeast(1L)
-        } else 1L,
-        position = 0,
-        page = PageType.Home,
-        link = LinkData(
-            type = LinkType.SELF,
-            targetId = null,
-            contentPath = null
-        )
-    )
+        ElementType.MangaCard -> {
+            ObjectData.Card.Manga(
+                id = cardId ?: 0L,
+                name = name,
+                author = author,
+                description = description,
+                genre = genreList,
+                image = image ?: ImageData.Url(""),
+                position = cardPosition,
+                link = LinkData.Self
+            )
+        }
+
+        ElementType.MusicCard -> {
+            ObjectData.Card.Music(
+                id = cardId ?: 0L,
+                name = name,
+                author = author,
+                genre = genreList,
+                image = image ?: ImageData.Url(""),
+                position = cardPosition,
+                link = LinkData.Self,
+                song = song,
+                horizontalVideo = horizontalVideo
+            )
+        }
+
+        ElementType.PlaylistCard -> {
+            ObjectData.Card.Playlist(
+                id = cardId ?: 0L,
+                name = name,
+                author = author,
+                genre = genreList,
+                image = image ?: ImageData.Url(""),
+                position = cardPosition,
+                link = LinkData.Self,
+                cardsList = cardsList
+            )
+        }
+
+        else -> {
+            ObjectData.Card.Anime(
+                id = cardId ?: 0L,
+                name = name,
+                author = author,
+                description = description,
+                genre = genreList,
+                image = image ?: ImageData.Url(""),
+                position = cardPosition,
+                link = LinkData.Self
+            )
+        }
+    }
 }

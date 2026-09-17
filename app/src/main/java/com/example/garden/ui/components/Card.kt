@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -46,7 +45,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 import com.example.garden.LocalCustomColors
 import com.example.garden.R
 import com.example.garden.database.ImageData
@@ -55,20 +53,15 @@ import com.example.garden.database.SizeType
 import com.example.garden.ui.components.icons.DeleteIco
 import com.example.garden.ui.components.icons.EditIco
 import com.example.garden.ui.components.icons.MoreVertIco
-import com.example.garden.ui.screens.LocalHazeLayers
-import com.example.garden.ui.screens.LocalHazeStates
-import com.example.garden.ui.screens.LocalLayerIndex
 import com.example.garden.ui.theme.dimens
 import com.example.garden.ui.theme.spacing
-import com.example.garden.ui.utils.hazeSourcesForUpperLayers
 import com.example.garden.ui.utils.toDp
 import com.example.garden.ui.utils.toShape
-import dev.chrisbanes.haze.hazeSource
 import kotlinx.coroutines.launch
 
 @Composable
 fun Card(
-    width: Dp,
+    modifier: Modifier = Modifier,
     aspectRatio: Float, // Final height may be changed due to showName and showAuthor
     showName: Boolean,
     showAuthor: Boolean,
@@ -106,9 +99,8 @@ fun Card(
                 }
         ) {
             Row(
-                modifier = Modifier
-                    .width(width)
-                    .aspectRatio(32f / 9f)
+                modifier = modifier
+                    .height(MaterialTheme.dimens.flatGridItemHeight)
                     .padding(vertical = MaterialTheme.spacing.screenHorizontal / 2)
                     .padding(start = MaterialTheme.spacing.screenHorizontal / 2),
                 verticalAlignment = Alignment.CenterVertically,
@@ -126,11 +118,6 @@ fun Card(
                             .fillMaxHeight()
                             .aspectRatio(aspectRatio)
                             .clip(cornerRadius.toShape())
-                            .hazeSource(LocalHazeLayers.current.mainScreen)
-                            .hazeSourcesForUpperLayers(
-                                LocalHazeStates.current.hazeStates,
-                                LocalLayerIndex.current
-                            )
                     )
 
                     Column(
@@ -190,8 +177,7 @@ fun Card(
         )
 
         Column(
-            modifier = Modifier
-                .width(width)
+            modifier = modifier
                 .pointerInput(Unit) {
                     detectTapGestures(
                         onPress = {
@@ -227,11 +213,6 @@ fun Card(
                     modifier = Modifier
                         .fillMaxSize()
                         .clip(cornerRadius.toShape())
-                        .hazeSource(LocalHazeLayers.current.mainScreen)
-                        .hazeSourcesForUpperLayers(
-                            LocalHazeStates.current.hazeStates,
-                            LocalLayerIndex.current
-                        )
                 )
 
                 if (showName && namePosition == 1) {

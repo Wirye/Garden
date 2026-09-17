@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.parcelize)
+    alias(libs.plugins.serialization)
 }
 
 android {
@@ -91,4 +92,8 @@ dependencies {
     implementation(libs.reorderable)
     implementation(libs.crypto)
     implementation(libs.androidx.profileinstaller)
+    implementation(libs.androidx.pagging.runtime)
+    implementation(libs.androidx.pagging.compose)
+    implementation(libs.org.jetbrains.kotlinx.serialization.json)
+    implementation(libs.androidx.room.paging)
 }

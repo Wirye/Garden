@@ -2,7 +2,6 @@
 agp = "8.13.2"
 kotlin = "2.0.21"
 ksp = "2.0.21-1.0.27"
-
 room = "2.8.4"
 coreKtx = "1.18.0"
 appcompat = "1.7.1"
@@ -29,8 +28,9 @@ activityCompose = "1.13.0"
 haze = "1.6.0"
 reorderable = "2.4.3"
 cryptoVersion = "1.12.0"
-tracingVersion = "1.1.0"
 profileinstallerVersion = "1.4.1"
+pagingVersion = "3.5.1"
+serializationVersion = "1.7.3"
 
 [libraries]
 junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -44,6 +44,8 @@ androidx-navigation-fragment-ktx = { group = "androidx.navigation", name = "navi
 androidx-navigation-ui-ktx = { group = "androidx.navigation", name = "navigation-ui-ktx", version.ref = "navigationUiKtx" }
 androidx-fragment = { group = "androidx.fragment", name = "fragment", version.ref = "fragment" }
 androidx-palette-ktx = { group = "androidx.palette", name = "palette-ktx", version.ref = "paletteKtx" }
+androidx-pagging-runtime = { group = "androidx.paging", name = "paging-runtime", version.ref = "pagingVersion" }
+androidx-pagging-compose = { group = "androidx.paging", name = "paging-compose", version.ref = "pagingVersion" }
 coil = { module = "io.coil-kt:coil", version.ref = "coil" }
 coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coil" }
 room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
@@ -76,7 +78,8 @@ haze = { group = "dev.chrisbanes.haze", name = "haze", version.ref = "haze" }
 haze-materials = { group = "dev.chrisbanes.haze", name = "haze-materials", version.ref = "haze" }
 reorderable = { module = "sh.calvin.reorderable:reorderable", version.ref = "reorderable" }
 crypto = { module = "com.google.crypto.tink:tink-android", version.ref = "cryptoVersion" }
-tracing = { module = "androidx.compose.runtime:runtime-tracing", version.ref = "tracingVersion" }
+org-jetbrains-kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serializationVersion" }
+androidx-room-paging = { group = "androidx.room", name = "room-paging", version.ref = "room" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
@@ -84,3 +87,4 @@ kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 kotlin-compose= { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlin-parcelize = { id = "kotlin-parcelize" }
+serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }

@@ -19,7 +19,19 @@ class CryptoManager(context: Context) {
 
     init {
         AeadConfig.register()
+        aead = initAeadWithFallback(context)
+    }
 
+    private fun initAeadWithFallback(context: Context): Aead {
+        return try {
+            buildAead(context)
+        } catch (_: Exception) {
+            context.getSharedPreferences("tink_prefs", Context.MODE_PRIVATE).edit().clear().apply()
+            buildAead(context)
+        }
+    }
+
+    private fun buildAead(context: Context): Aead {
         val keysetHandle = AndroidKeysetManager.Builder()
             .withSharedPref(context, "tink_keyset", "tink_prefs")
             .withKeyTemplate(KeyTemplates.get("AES256_GCM"))
@@ -27,7 +39,7 @@ class CryptoManager(context: Context) {
             .build()
             .keysetHandle
 
-        aead = keysetHandle.getPrimitive(Aead::class.java)
+        return keysetHandle.getPrimitive(Aead::class.java)
     }
 
     fun encrypt(data: String): String {
@@ -38,9 +50,11 @@ class CryptoManager(context: Context) {
 
     fun decrypt(encryptedData: String): String {
         if (encryptedData.isBlank()) return ""
-        val decodedBytes = android.util.Base64.decode(encryptedData, android.util.Base64.DEFAULT)
-        val decryptedBytes = aead.decrypt(decodedBytes, null)
-        return String(decryptedBytes, StandardCharsets.UTF_8)
+        return try {
+            val decodedBytes = android.util.Base64.decode(encryptedData, android.util.Base64.DEFAULT)
+            val decryptedBytes = aead.decrypt(decodedBytes, null)
+            String(decryptedBytes, StandardCharsets.UTF_8)
+        } catch (_: Exception) { "" }
     }
 }
 
@@ -81,13 +95,10 @@ class AuthManager(private val context: Context) {
 
     val authStateFlow: Flow<AuthState> = context.dataStore.data.map { prefs ->
         AuthState(
-            // Google Data
             googleEmailOrHandle = prefs[KEY_GOOGLE_EMAIL]?.let { cryptoManager.decrypt(it) },
             googleAvatarUrl = prefs[KEY_GOOGLE_AVATAR]?.let { cryptoManager.decrypt(it) },
             googleNickName = prefs[KEY_GOOGLE_NICKNAME]?.let { cryptoManager.decrypt(it) },
             googleToken = prefs[KEY_GOOGLE_TOKEN]?.let { cryptoManager.decrypt(it) },
-
-            // AniLiberty Data
             aniLibertyAvatarUrl = prefs[KEY_ANILIBERTY_AVATAR]?.let { cryptoManager.decrypt(it) },
             aniLibertyNickName = prefs[KEY_ANILIBERTY_NICKNAME]?.let { cryptoManager.decrypt(it) },
             aniLibertyToken = prefs[KEY_ANILIBERTY_TOKEN]?.let { cryptoManager.decrypt(it) }

@@ -1,6 +1,5 @@
 package com.example.garden.ui.screens
 
-import android.util.Log
 import android.widget.Toast
 import androidx.activity.BackEventCompat
 import androidx.activity.OnBackPressedCallback
@@ -38,14 +37,15 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.garden.Layer
 import com.example.garden.R
 import com.example.garden.database.CardSize
 import com.example.garden.database.CarouselType
+import com.example.garden.database.CollectionType
 import com.example.garden.database.ElementType
 import com.example.garden.database.LayoutType
+import com.example.garden.database.ObjectData
 import com.example.garden.database.PageType
 import com.example.garden.database.SizeType
 import com.example.garden.ui.components.MainPageBottomBar
@@ -228,7 +228,6 @@ private fun LayerContent(
                 is Layer.MainPage -> {
                     val mainViewModel: MainViewModel = viewModel()
                     val coroutineScope = rememberCoroutineScope()
-                    val carouselsList by mainViewModel.uiDataFlow.collectAsStateWithLifecycle()
                     val topBarHeightState = remember { mutableStateOf(0.dp) }
                     MainPageTopBar(
                         offsetPx = { 0f },
@@ -241,8 +240,8 @@ private fun LayerContent(
                     )
 
                     MainPage(
+                        viewModel = mainViewModel,
                         layer = layer,
-                        carouselsList = carouselsList.filter { it.page == layer.page },
                         isTopLayer = isTopLayer,
                         topBarHeight = topBarHeightState.value,
                         bottomBarHeight = bottomBarHeight,
@@ -280,7 +279,7 @@ private fun LayerContent(
                                     layoutType = LayoutType.DEFAULT,
                                     page = layer.page,
                                     childsSize = CardSize.MEDIUM,
-                                    carouselCollectionType = null,
+                                    carouselCollectionType = CollectionType.None,
                                     childsShowName = true,
                                     childsShowAuthor = true,
                                     childsCornerRadius = SizeType.MEDIUM,
@@ -295,31 +294,31 @@ private fun LayerContent(
                         },
                         openEditCarouselPage = {
                             coroutineScope.launch {
+                                val info = mainViewModel.getRootObjectById(it.id) as? ObjectData.Carousel ?: return@launch
                                 layersViewModel.openLayer(
-                                    mainViewModel.getParentCard(it).toLayerCreateCarouselPage()
+                                    info.toLayerCreateCarouselPage(page = layer.page)
                                 )
                             }
                         },
                         openEditCardPage = { data, parentId, carouselType ->
                             coroutineScope.launch {
+                                val info = mainViewModel.getRootObjectById(data.id) as? ObjectData.Card ?: return@launch
                                 layersViewModel.openLayer(
-                                    mainViewModel.getParentCard(data).toLayerCreateCardPage(
+                                    info.toLayerCreateCardPage(
                                         parentId = parentId,
                                         carouselType = carouselType
                                     )
                                 )
                             }
                         },
-                        deleteCard = { data, parentId ->
+                        deleteCard = { id ->
                             coroutineScope.launch {
-                                val item = data.toObjectData(parentId)
-                                mainViewModel.deleteObject(item)
+                                mainViewModel.deleteObjectById(id)
                             }
                         },
-                        deleteCarousel = { data, parentId ->
+                        deleteCarousel = { id ->
                             coroutineScope.launch {
-                                val item = data.toObjectData(parentId)
-                                mainViewModel.deleteObject(item)
+                                mainViewModel.deleteObjectById(id)
                             }
                         }
                     )
@@ -342,33 +341,7 @@ private fun LayerContent(
                         onClose = { closeLayer() },
                         onCloseAndApply = { objData, layer ->
                             coroutineScope.launch {
-                                if (layer.cardId == null) {
-                                    when (layer.cardType) {
-                                        ElementType.AnimeCard -> mainViewModel.insertCardWithEpisodes(
-                                            objData,
-                                            layer.episodesList,
-                                            layer.parentId
-                                        )
-
-                                        ElementType.MangaCard -> mainViewModel.insertCardWithChapters(
-                                            objData,
-                                            layer.chaptersList,
-                                            layer.parentId
-                                        )
-
-                                        ElementType.MusicCard -> mainViewModel.insertMusicCard(
-                                            objData,
-                                            layer.parentId,
-                                            layer.song,
-                                            layer.verticalVideo,
-                                            layer.horizontalVideo
-                                        )
-
-                                        else -> {}
-                                    }
-                                } else {
-                                    mainViewModel.editObject(objData)
-                                }
+                                mainViewModel.saveObject(objData, PageType.Home, layer.parentId)
                             }
                             closeLayer()
                         }
@@ -393,11 +366,8 @@ private fun LayerContent(
                         onClose = { closeLayer() },
                         onSaveAndClose = { info ->
                             coroutineScope.launch {
-                                if (info.carouselId == null) {
-                                    mainViewModel.insertCarousel(info.toObjectData(), layer.page)
-                                } else {
-                                    mainViewModel.editObject(info.toObjectData())
-                                }
+                                val data = info.toObjectData()
+                                mainViewModel.saveObject(data, page = layer.page, parentId = null)
                             }
                             closeLayer()
                         }
@@ -423,7 +393,6 @@ private fun LayerContent(
                         onSuccessAuth = {
                             closeLayer()
                             token = it
-                            Log.e("IT", it)
                         },
                         onClose = closeLayer
                     )
@@ -458,14 +427,13 @@ private fun LayerContent(
                 }
 
                 is Layer.GoogleLoginPage -> {
-                    var cockies by remember { mutableStateOf("") }
+                    var cookies by remember { mutableStateOf("") }
                     val context = LocalContext.current
 
                     GoogleLoginPage(
                         modifier = Modifier.fillMaxSize(),
                         onSuccessAuth = {
-                            Log.e("COOCki", it)
-                            cockies = it
+                            cookies = it
                             closeLayer()
                         },
                         onClose = closeLayer
@@ -473,10 +441,10 @@ private fun LayerContent(
 
                     val loginingErrorText = stringResource(R.string.FailedToLoadProfilePleaseTryLoggingInAgain)
 
-                    LaunchedEffect(cockies, loginingErrorText) {
-                        if (cockies.isNotEmpty()) {
+                    LaunchedEffect(cookies, loginingErrorText) {
+                        if (cookies.isNotEmpty()) {
                             withContext(Dispatchers.IO) {
-                                val result = authViewModel.fetchGoogleUserProfile(cockies)
+                                val result = authViewModel.fetchGoogleUserProfile(cookies)
 
                                 result.onSuccess { profile ->
                                     authViewModel.onGoogleSignInSuccess(
@@ -484,7 +452,7 @@ private fun LayerContent(
                                         avatarUrl = profile.avatarUrl,
                                         nickName = profile.name,
                                         token = "google_session",
-                                        cookies = cockies
+                                        cookies = cookies
                                     )
                                 }.onFailure { error ->
                                     withContext(Dispatchers.Main) {

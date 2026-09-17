@@ -18,7 +18,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.room.Room
 import com.example.garden.appsettings.AuthManager
+import com.example.garden.database.AppDatabase
 import com.example.garden.database.CardSize
 import com.example.garden.database.CarouselType
 import com.example.garden.database.CollectionType
@@ -29,8 +33,7 @@ import com.example.garden.database.LayoutType
 import com.example.garden.database.LinkData
 import com.example.garden.database.PageType
 import com.example.garden.database.SizeType
-import com.example.garden.ui.screens.ChapterInfo
-import com.example.garden.ui.screens.EpisodeInfo
+import com.example.garden.repository.ObjectRepositoryImpl
 import com.example.garden.ui.screens.MainScreen
 import com.example.garden.ui.screens.PageWithSearchInput
 import com.example.garden.ui.theme.GardenTheme
@@ -73,17 +76,17 @@ sealed class Layer (
     data class CreateCardPage(
         val parentId: Long,
         val cardId: Long? = null,
+        val cardPosition: Int = -1,
         var name: String,
         var image: ImageData? = null,
         var description: String,
         var author: String,
         var genreList: List<GridGenreItem>,
-        var episodesList: List<EpisodeInfo>,
+        var episodesList: List<com.example.garden.database.EpisodeInfo>,
         var cardType: ElementType,
-        var chaptersList: List<ChapterInfo>,
+        var chaptersList: List<com.example.garden.database.ChapterInfo>,
         var cardsList: List<Long>,
         var horizontalVideo: LinkData? = null,
-        var verticalVideo: LinkData? = null,
         var song: LinkData? = null,
         var carouselType: CarouselType,
     ) : Layer()
@@ -92,9 +95,9 @@ sealed class Layer (
         val localLayer: MainPage = MainPage(PageType.Home, mutableMapOf(), 0),
         var name: String,
         val page: PageType,
-        var childsCornerRadius: SizeType?,
+        var childsCornerRadius: SizeType,
         var childsShowName: Boolean,
-        var childsNamePosition: Int?,
+        var childsNamePosition: Int,
         var childsShowAlreadyWatchedLine: Boolean,
         var layoutType: LayoutType,
         var objectsInOneLine: Int?,
@@ -102,7 +105,7 @@ sealed class Layer (
         var dovodchik: Boolean,
         var showDovodchikDots: Boolean,
         var carouselType: CarouselType,
-        var carouselCollectionType: CollectionType? = null,
+        var carouselCollectionType: CollectionType,
         var showIco: Boolean = false,
         var ico: ImageData? = null,
         var adaptiveGridSize: Boolean = false,
@@ -110,7 +113,8 @@ sealed class Layer (
         var maxLinesForAdaptiveSize: Int? = null,
         var childsSize: CardSize = CardSize.MEDIUM,
         var childsShowAuthor: Boolean = false,
-        val carouselId: Long? = null
+        val carouselId: Long? = null,
+        val carouselPosition: Int = -1
     ) : Layer()
     @Parcelize
     data class PageWithSearch (
@@ -168,10 +172,24 @@ data class CustomColors(
 val LocalCustomColors = staticCompositionLocalOf { CustomColors() }
 
 class MainActivity : ComponentActivity() {
+    private val db by lazy {
+        Room.databaseBuilder(
+            applicationContext,
+            AppDatabase::class.java,
+            "garden_database.db"
+        ).build()
+    }
+
+    private val repository by lazy {
+        ObjectRepositoryImpl(db.objectDataDao())
+    }
+
     private val viewModel: MainViewModel by viewModels {
-        val app = application as App
-        viewModelFactory {
-            MainViewModel(app.dao, app.groupsDao)
+        object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                return MainViewModel(repository) as T
+            }
         }
     }
     private val layersViewModel: LayersViewModel by viewModels()
@@ -199,7 +217,7 @@ class MainActivity : ComponentActivity() {
         )
 
         setContent {
-            viewModel
+            viewModel.insert()
             val windowSizeClass = calculateWindowSizeClass(this)
             GardenTheme(windowSizeClass = windowSizeClass) {
                 val customColors = remember { CustomColors() }

@@ -1,19 +1,12 @@
 package com.example.garden.ui.screens
 
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.FlingBehavior
-import androidx.compose.foundation.gestures.ScrollScope
-import androidx.compose.foundation.gestures.ScrollableDefaults
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -24,29 +17,19 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.Stable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
@@ -66,27 +49,25 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.coerceAtMost
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.times
-import androidx.constraintlayout.compose.ConstraintLayout
-import androidx.constraintlayout.compose.Dimension
+import androidx.paging.compose.LazyPagingItems
+import androidx.paging.compose.collectAsLazyPagingItems
+import androidx.paging.compose.itemKey
 import com.example.garden.Layer
 import com.example.garden.LocalCustomColors
 import com.example.garden.R
 import com.example.garden.database.CarouselType
 import com.example.garden.database.ElementType
+import com.example.garden.database.ImageData
 import com.example.garden.database.LayoutType
-import com.example.garden.database.ObjectData2
-import com.example.garden.database.PageType
-import com.example.garden.database.SizeType
+import com.example.garden.database.ObjectData
+import com.example.garden.database.ObjectWithChilds2
 import com.example.garden.ui.components.AppAsyncImage
-import com.example.garden.ui.components.Card
+import com.example.garden.ui.components.CarouselFactory
 import com.example.garden.ui.components.DropDownMenuWithBlur
 import com.example.garden.ui.components.FullScreenBlobs
-import com.example.garden.ui.components.GridOfCards
 import com.example.garden.ui.components.MainPageTopBar
 import com.example.garden.ui.components.PopupMenuItem
 import com.example.garden.ui.components.icons.AddIco
@@ -100,37 +81,31 @@ import com.example.garden.ui.theme.dimens
 import com.example.garden.ui.theme.spacing
 import com.example.garden.ui.theme.windowInfo
 import com.example.garden.ui.theme.windowSizeClass
-import com.example.garden.ui.utils.availableCardTypes
 import com.example.garden.ui.utils.blockGestures
 import com.example.garden.ui.utils.calculateObjectsInOneLineAndMaxLinesForAdaptiveGridSize
-import com.example.garden.ui.utils.cardScaleCalcForGrid
 import com.example.garden.ui.utils.getAspectRatio
 import com.example.garden.ui.utils.toDp
-import com.example.garden.ui.utils.uploadLayoutTypeToCarouselChilds
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
+import com.example.garden.viewmodel.MainViewModel
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlin.math.abs
+import kotlin.math.round
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun MainPage(
+    viewModel: MainViewModel,
     layer: Layer.MainPage,
-    carouselsList: List<ObjectData2>,
     isTopLayer: Boolean,
     topBarHeight: Dp,
     bottomBarHeight: Dp,
     openSettings: () -> Unit,
     openCreateCardPage: (Long, CarouselType) -> Unit,
     openCreateCarouselPage: () -> Unit,
-    openEditCarouselPage: (ObjectData2) -> Unit,
-    openEditCardPage: (ObjectData2, Long, CarouselType) -> Unit,
-    deleteCard: (ObjectData2, Long?) -> Unit,
-    deleteCarousel: (ObjectData2, Long?) -> Unit
+    openEditCarouselPage: (ObjectData.Carousel) -> Unit,
+    openEditCardPage: (ObjectData.Card, Long, CarouselType) -> Unit,
+    deleteCard: (Long) -> Unit,
+    deleteCarousel: (Long) -> Unit
 ) {
     var visibleCardPos by rememberSaveable(layer.id) {
         mutableIntStateOf(layer.firstElementPosition)
@@ -166,6 +141,9 @@ fun MainPage(
         topBarState.resetBarOffset()
     }
 
+    val pagingItems: LazyPagingItems<ObjectWithChilds2> =
+        viewModel.getPagePagingObjects(layer.page).collectAsLazyPagingItems()
+
     val arrangementSpacing = MaterialTheme.spacing.extraLarge
     Box(
         modifier = Modifier
@@ -183,12 +161,13 @@ fun MainPage(
 
         val isStrokeVisible by remember(topBarHeight) {
             derivedStateOf {
-                val fraction = (topBarState.firstElementScrollOffset / heightPx).coerceIn(0f, 1f)
-                fraction == 1f
+                val fraction =
+                    (abs(topBarState.firstElementScrollOffset) / heightPx).coerceIn(0f, 1f)
+                fraction > 0.2f
             }
         }
 
-        FullScreenBlobs(translationY = translationY)
+        FullScreenBlobs(translationY = translationY())
 
         Box(
             modifier = Modifier
@@ -207,7 +186,7 @@ fun MainPage(
                     )
                 }
         ) {
-            if (carouselsList.isNotEmpty()) {
+            if (pagingItems.itemCount != 0) {
                 LazyColumn(
                     state = listState,
                     modifier = Modifier
@@ -215,7 +194,7 @@ fun MainPage(
                         .nestedScroll(topBarState.nestedScrollConnection),
                     verticalArrangement = Arrangement.spacedBy(arrangementSpacing),
                 ) {
-                    item("topBarPadding") {
+                    item(key = "topBarPadding") {
                         Spacer(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -224,41 +203,31 @@ fun MainPage(
                     }
 
                     items(
-                        items = carouselsList,
-                        key = { carousel -> carousel.id },
+                        count = pagingItems.itemCount,
+                        key = pagingItems.itemKey { if (it.parent.id == 0L) "temp_${it.hashCode()}" else it.parent.id },
                         contentType = { "carousel" }
-                    ) { carousel ->
-                        Box {
+                    ) { index ->
+                        val item = pagingItems[index]
+
+                        if (item != null) {
                             Carousel(
                                 lineWidth = MaterialTheme.windowInfo.widthDp,
                                 layer = layer,
-                                carouselData = carousel,
-                                onAddCard = { parentId, carouselType ->
-                                    openCreateCardPage(
-                                        parentId,
-                                        carouselType
-                                    )
-                                },
-                                onEditCarousel = {},
+                                carouselData = item.parent,
+                                cards = item.childs,
+                                onAddCard = openCreateCardPage,
+                                onEditCarousel = { openEditCarouselPage(item.parent) },
+                                onEditCarouselSettings = { openEditCarouselPage(item.parent) },
                                 onClickCard = {},
                                 onWatchAllClick = {},
-                                onEditCarouselSettings = {
-                                    openEditCarouselPage(it)
-                                },
-                                onEditCard = {
-                                    openEditCardPage(
-                                        it,
-                                        carousel.id,
-                                        carousel.carouselType ?: CarouselType.Anime
-                                    )
-                                },
-                                onDeleteCard = { data, parentId -> deleteCard(data, parentId) },
+                                onEditCard = { openEditCardPage(it, item.parent.id, item.parent.carouselType) },
+                                onDeleteCard = deleteCard,
                                 onDeleteCarousel = deleteCarousel
                             )
                         }
                     }
 
-                    item("bottomBarPadding") {
+                    item(key = "bottomBarPadding") {
                         Spacer(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -298,23 +267,38 @@ fun CarouselPreview(
 ) {
     val layer = info.localLayer
 
-    val childs = remember(info) {
-        mutableStateListOf<ObjectData2>().apply {
-            repeat(20) {
-                add(
-                    ObjectData2(
-                        id = it.toLong(),
-                        page = PageType.Home,
-                        position = it,
-                        name = "${it + 1}",
-                        author = null,
-                        elementType = info.carouselType.availableCardTypes().firstOrNull()
-                            ?: ElementType.AnimeCard,
-                        childs = emptyList(),
-                        alreadyWatched = 1L,
-                        length = 2L,
-                        layoutType = if (info.layoutType == LayoutType.CAROUSEL_FROM_FLAT_GRID) LayoutType.FLAT_GRID_ITEM else LayoutType.DEFAULT
-                    )
+    val childs = List(20) { index ->
+        when (info.carouselType) {
+            CarouselType.Anime, CarouselType.AnimeNManga -> {
+                ObjectData.Card.Anime(
+                    id = index.toLong() + 1L,
+                    position = index,
+                    name = index.toString(),
+                    image = ImageData.Url("")
+                )
+            }
+            CarouselType.Manga -> {
+                ObjectData.Card.Manga(
+                    id = index.toLong() + 1L,
+                    position = index,
+                    name = index.toString(),
+                    image = ImageData.Url("")
+                )
+            }
+            CarouselType.Music, CarouselType.PlaylistNMusic -> {
+                ObjectData.Card.Music(
+                    id = index.toLong() + 1L,
+                    position = index,
+                    name = index.toString(),
+                    image = ImageData.Url("")
+                )
+            }
+            else -> {
+                ObjectData.Card.Anime(
+                    id = index.toLong() + 1L,
+                    position = index,
+                    name = index.toString(),
+                    image = ImageData.Url("")
                 )
             }
         }
@@ -322,8 +306,7 @@ fun CarouselPreview(
 
     val carouselData = remember(info) {
         mutableStateOf(
-            ObjectData2(
-                page = PageType.Home,
+            ObjectData.Carousel(
                 position = 0,
                 name = info.name,
                 childsCornerRadius = info.childsCornerRadius,
@@ -332,12 +315,8 @@ fun CarouselPreview(
                 childsShowAuthor = info.childsShowAuthor,
                 childsNamePosition = info.childsNamePosition,
                 childsShowAlreadyWatchedLine = info.childsShowAlreadyWatchedLine,
-                alreadyWatched = 0L,
-                length = 0L,
-                elementType = ElementType.Carousel,
                 carouselType = info.carouselType,
                 carouselCollectionType = info.carouselCollectionType,
-                childs = childs,
                 layoutType = info.layoutType,
                 maxLines = info.maxLines,
                 maxObjectsInOneLineForAdaptiveSize = info.maxObjectsInOneLineForAdaptiveSize,
@@ -345,9 +324,10 @@ fun CarouselPreview(
                 objectsInOneLine = info.objectsInOneLine,
                 adaptiveGridSize = info.adaptiveGridSize,
                 showIco = info.showIco,
-                image = info.ico,
+                ico = info.ico,
                 dovodchik = info.dovodchik,
-                showDovodchikDots = info.showDovodchikDots
+                showDovodchikDots = info.showDovodchikDots,
+                id = 21L
             )
         )
     }
@@ -358,14 +338,15 @@ fun CarouselPreview(
                 lineWidth = lineWidth,
                 layer = layer,
                 carouselData = carouselData.value,
+                cards = childs,
                 onAddCard = { _, _ -> },
                 onEditCarousel = {},
                 onClickCard = {},
                 onWatchAllClick = {},
                 onEditCarouselSettings = {},
                 onEditCard = {},
-                onDeleteCard = { _, _ -> },
-                onDeleteCarousel = { _, _ -> }
+                onDeleteCard = { _ -> },
+                onDeleteCarousel = { _ -> }
             )
         }
     }
@@ -376,15 +357,16 @@ fun CarouselPreview(
 private fun Carousel(
     lineWidth: Dp,
     layer: Layer.MainPage,
-    carouselData: ObjectData2,
+    carouselData: ObjectData.Carousel,
+    cards: List<ObjectData.Card>,
     onAddCard: (Long, CarouselType) -> Unit,
     onEditCarousel: () -> Unit,
-    onEditCarouselSettings: (ObjectData2) -> Unit,
-    onClickCard: (ObjectData2) -> Unit,
+    onEditCarouselSettings: (ObjectData) -> Unit,
+    onClickCard: (ObjectData) -> Unit,
     onWatchAllClick: (() -> Unit)? = null,
-    onEditCard: (ObjectData2) -> Unit,
-    onDeleteCard: (ObjectData2, Long?) -> Unit,
-    onDeleteCarousel: (ObjectData2, Long?) -> Unit
+    onEditCard: (ObjectData.Card) -> Unit,
+    onDeleteCard: (Long) -> Unit,
+    onDeleteCarousel: (Long) -> Unit
 ) {
     val haptic = LocalHapticFeedback.current
 
@@ -402,125 +384,24 @@ private fun Carousel(
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
         ) {
-            ConstraintLayout(
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(
                         start = MaterialTheme.spacing.screenHorizontal + leftInset,
                         end = MaterialTheme.spacing.screenHorizontal + rightInset
-                    )
+                    ),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                val (titleContainerRef, extraButtonRef) = createRefs()
-                val isExpanded = remember { mutableStateOf(false) }
-
-                Box(
-                    modifier = Modifier.constrainAs(extraButtonRef) {
-                        top.linkTo(parent.top)
-                        bottom.linkTo(parent.bottom)
-                        end.linkTo(parent.end)
-                    }
-                ) {
-                    IconButton(
-                        onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
-                            isExpanded.value = !isExpanded.value
-                        },
-                    ) {
-                        Icon(
-                            imageVector = MoreVertIco,
-                            modifier = Modifier.size(MaterialTheme.dimens.iconMedium),
-                            tint = MaterialTheme.colorScheme.onBackground,
-                            contentDescription = null
-                        )
-                    }
-
-
-                    DropDownMenuWithBlur(
-                        expanded = { isExpanded.value },
-                        hazeState = LocalHazeLayers.current.mainScreen,
-                        onDismissRequest = { isExpanded.value = false }
-                    ) {
-                        PopupMenuItem(
-                            text = stringResource(R.string.edit),
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
-                                onEditCarousel()
-                                isExpanded.value = false
-                            }
-                        ) {
-                            Icon(
-                                imageVector = EditIco,
-                                modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
-                                tint = MaterialTheme.colorScheme.onBackground,
-                                contentDescription = null
-                            )
-                        }
-                        PopupMenuItem(
-                            text = stringResource(R.string.addCard),
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
-                                onAddCard(
-                                    carouselData.id,
-                                    carouselData.carouselType ?: CarouselType.Anime
-                                )
-                                isExpanded.value = false
-                            }
-                        ) {
-                            Icon(
-                                imageVector = AddIco,
-                                modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
-                                tint = MaterialTheme.colorScheme.onBackground,
-                                contentDescription = null
-                            )
-                        }
-                        PopupMenuItem(
-                            text = stringResource(R.string.setting),
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
-                                onEditCarouselSettings(carouselData)
-                                isExpanded.value = false
-                            }
-                        ) {
-                            Icon(
-                                imageVector = SettingsIco,
-                                modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
-                                tint = MaterialTheme.colorScheme.onBackground,
-                                contentDescription = null
-                            )
-                        }
-
-                        PopupMenuItem(
-                            text = stringResource(R.string.delete),
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
-                                onDeleteCarousel(carouselData, null)
-                                isExpanded.value = false
-                            }
-                        ) {
-                            Icon(
-                                imageVector = DeleteIco,
-                                modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
-                                tint = LocalCustomColors.current.closeButton,
-                                contentDescription = null
-                            )
-                        }
-                    }
-                }
-
                 Row(
+                    modifier = Modifier.weight(1f, fill = false),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(0.dp),
-                    modifier = Modifier.constrainAs(titleContainerRef) {
-                        top.linkTo(parent.top)
-                        bottom.linkTo(parent.bottom)
-                        start.linkTo(parent.start)
-                        end.linkTo(extraButtonRef.start)
-                        width = Dimension.fillToConstraints
-                    }
                 ) {
-                    if (carouselData.showIco && carouselData.image != null) {
+                    if (carouselData.showIco && carouselData.ico != null) {
                         AppAsyncImage(
-                            imageData = carouselData.image,
+                            imageData = carouselData.ico,
                             contentDescription = null,
                             modifier = Modifier
                                 .size(MaterialTheme.dimens.minButtonHeight)
@@ -532,8 +413,7 @@ private fun Carousel(
                         )
                     }
 
-                    val carouselName = (carouselData.name
-                        ?: stringResource(id = R.string.withoutName)).ifEmpty {
+                    val carouselName = carouselData.name.ifEmpty {
                         stringResource(
                             id = R.string.withoutName
                         )
@@ -561,6 +441,7 @@ private fun Carousel(
                                     indication = null
                                 ) {
                                     haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                                    onWatchAllClick()
                                 },
                             contentAlignment = Alignment.Center
                         ) {
@@ -573,99 +454,120 @@ private fun Carousel(
                         }
                     }
                 }
-            }
 
-            val spacingMedium = MaterialTheme.spacing.medium
-            val spacingScreenHorizontal = MaterialTheme.spacing.screenHorizontal
-            val spacingMarginBetweenElementsInGrid =
-                MaterialTheme.spacing.marginBetweenElementsInGrid
-            val widthSizeClass = MaterialTheme.windowSizeClass.widthSizeClass
+                val isExpanded = remember { mutableStateOf(false) }
+                Box {
+                    IconButton(
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                            isExpanded.value = !isExpanded.value
+                        },
+                    ) {
+                        Icon(
+                            imageVector = MoreVertIco,
+                            modifier = Modifier.size(MaterialTheme.dimens.iconMedium),
+                            tint = MaterialTheme.colorScheme.onBackground,
+                            contentDescription = null
+                        )
+                    }
 
-            val cards by produceState(
-                initialValue = emptyList(),
-                carouselData,
-                lineWidth,
-                spacingMedium,
-                spacingScreenHorizontal,
-                spacingMarginBetweenElementsInGrid,
-                widthSizeClass
-            ) {
-                value = withContext(Dispatchers.Default) {
-                    uploadLayoutTypeToCarouselChilds(
-                        carouselData,
-                        lineWidth = lineWidth,
-                        spacingMedium = spacingMedium,
-                        spacingScreenHorizontal = spacingScreenHorizontal,
-                        spacingMarginBetweenElementsInGrid = spacingMarginBetweenElementsInGrid,
-                        widthSizeClass = widthSizeClass
-                    )
-                }
-            }
-
-            var visibleCardPos = layer.scrollPositionCarousels[carouselData.id] ?: 0
-
-            val holderOnlyIndexSaver = Saver<LazyListState, Pair<Int, Int>>(
-                save = { Pair(toFirstVisible(cards, it.firstVisibleItemIndex), 0) },
-                restore = { restoredIndex ->
-                    LazyListState(
-                        firstVisibleItemIndex = fromFirstVisible(
-                            cards,
-                            restoredIndex.component1()
-                        ),
-                        firstVisibleItemScrollOffset = restoredIndex.component2()
-                    )
-                }
-            )
-
-            val currentHolderIndex: (Int) -> Int = {
-                fromFirstVisible(cards, it)
-            }
-
-            val listState = rememberSaveable(
-                carouselData.id,
-                saver = holderOnlyIndexSaver
-            ) {
-                LazyListState(
-                    firstVisibleItemIndex = currentHolderIndex(visibleCardPos),
-                    firstVisibleItemScrollOffset = 0,
-                )
-            }
-
-            LaunchedEffect(Unit, listState, carouselData.id) {
-                snapshotFlow { listState.isScrollInProgress }
-                    .collect { isScrolling ->
-                        if (!isScrolling && listState.layoutInfo.totalItemsCount > 0) {
-                            val holderIndex = listState.firstVisibleItemIndex
-                            val cardPos = toFirstVisible(cards, holderIndex)
-                            if (cardPos != visibleCardPos) {
-                                visibleCardPos = cardPos
-                                layer.scrollPositionCarousels[carouselData.id] =
-                                    visibleCardPos
+                    DropDownMenuWithBlur(
+                        expanded = { isExpanded.value },
+                        hazeState = LocalHazeLayers.current.mainScreen,
+                        onDismissRequest = { isExpanded.value = false }
+                    ) {
+                        PopupMenuItem(
+                            text = stringResource(R.string.edit),
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                                onEditCarousel()
+                                isExpanded.value = false
                             }
+                        ) {
+                            Icon(
+                                imageVector = EditIco,
+                                modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
+                                tint = MaterialTheme.colorScheme.onBackground,
+                                contentDescription = null
+                            )
+                        }
+
+                        PopupMenuItem(
+                            text = stringResource(R.string.addCard),
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                                onAddCard(
+                                    carouselData.id,
+                                    carouselData.carouselType
+                                )
+                                isExpanded.value = false
+                            }
+                        ) {
+                            Icon(
+                                imageVector = AddIco,
+                                modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
+                                tint = MaterialTheme.colorScheme.onBackground,
+                                contentDescription = null
+                            )
+                        }
+
+                        PopupMenuItem(
+                            text = stringResource(R.string.setting),
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                                onEditCarouselSettings(carouselData)
+                                isExpanded.value = false
+                            }
+                        ) {
+                            Icon(
+                                imageVector = SettingsIco,
+                                modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
+                                tint = MaterialTheme.colorScheme.onBackground,
+                                contentDescription = null
+                            )
+                        }
+
+                        PopupMenuItem(
+                            text = stringResource(R.string.delete),
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                                onDeleteCarousel(carouselData.id)
+                                isExpanded.value = false
+                            }
+                        ) {
+                            Icon(
+                                imageVector = DeleteIco,
+                                modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
+                                tint = LocalCustomColors.current.closeButton,
+                                contentDescription = null
+                            )
                         }
                     }
+                }
             }
 
             val childsSize = carouselData.childsSize
-            if (cards.isNotEmpty() && carouselData.layoutType != LayoutType.CAROUSEL_GRID && childsSize != null) {
-                val margin = when (carouselData.layoutType) {
-                    LayoutType.CAROUSEL_FROM_FLAT_GRID,
-                    LayoutType.CAROUSEL_FROM_GRID -> 0.dp
+            if (cards.isNotEmpty()) {
+                val margin = MaterialTheme.spacing.medium
 
-                    else -> MaterialTheme.spacing.medium
+                val cardElType = when (cards[0]) {
+                    is ObjectData.Card.Anime -> ElementType.AnimeCard
+                    is ObjectData.Card.Manga -> ElementType.MangaCard
+                    is ObjectData.Card.Music -> ElementType.MusicCard
+                    else -> ElementType.AnimeCard
                 }
 
-                val gridMode =
-                    carouselData.layoutType == LayoutType.CAROUSEL_FROM_GRID || carouselData.layoutType == LayoutType.CAROUSEL_FROM_FLAT_GRID
+                val cardAspRatio = cardElType.getAspectRatio()
 
-                val cardElType = cards.first().elementType
+                val paddingHorizontal = MaterialTheme.spacing.screenHorizontal
+
                 val cardWidth = when (carouselData.layoutType) {
                     LayoutType.CAROUSEL_FROM_GRID -> {
-                        lineWidth.value.dp
+                        lineWidth.value.dp - rightInset - leftInset - paddingHorizontal * 2
                     }
 
                     LayoutType.CAROUSEL_FROM_FLAT_GRID -> {
-                        (lineWidth.value.dp - MaterialTheme.spacing.screenHorizontal - MaterialTheme.spacing.extraLarge).coerceAtMost(
+                        (lineWidth.value.dp - paddingHorizontal * 2 - rightInset - leftInset - MaterialTheme.spacing.extraLarge).coerceAtMost(
                             600.dp
                         )
                     }
@@ -679,560 +581,52 @@ private fun Carousel(
                     }
                 }
 
-                val cardAspRatio = cardElType.getAspectRatio()
+                val oneCardWidth = childsSize.toDp(
+                    cardType = cardElType, maxCardWidth = lineWidth -
+                            (MaterialTheme.spacing.screenHorizontal * 2),
+                    windowWidthSizeClass = MaterialTheme.windowSizeClass.widthSizeClass
+                ).width
 
-                val paddingHorizontal = MaterialTheme.spacing.screenHorizontal
 
-                val padding =
-                    if (carouselData.layoutType == LayoutType.CAROUSEL_FROM_GRID || carouselData.layoutType == LayoutType.CAROUSEL_FROM_FLAT_GRID
-                    ) 0.dp
-                    else paddingHorizontal
+                val cardsInOneLine = round(lineWidth / oneCardWidth).toInt()
 
-                val paddingStart =
-                    padding + if (carouselData.layoutType == LayoutType.CAROUSEL_FROM_GRID || carouselData.layoutType == LayoutType.CAROUSEL_FROM_FLAT_GRID
-                    ) {
-                        0.dp
-                    } else leftInset
+                val res = if (carouselData.adaptiveGridSize) calculateObjectsInOneLineAndMaxLinesForAdaptiveGridSize(
+                    parent = carouselData,
+                    objectsInOneLine = cardsInOneLine
+                ) else Pair(carouselData.objectsInOneLine ?: cardsInOneLine.coerceAtLeast(1), carouselData.maxLines)
 
-                val paddingEnd =
-                    padding + if (carouselData.layoutType == LayoutType.CAROUSEL_FROM_GRID || carouselData.layoutType == LayoutType.CAROUSEL_FROM_FLAT_GRID
-                    ) {
-                        0.dp
-                    } else rightInset
-
-                val dots by produceState(
-                    initialValue = emptyList(), cards, lineWidth,
-                    cards.size, cardWidth, margin, paddingStart, paddingEnd
-                ) {
-                    value = withContext(Dispatchers.Default) {
-                        calculateAmountOfDots(
-                            itemsCount = cards.size,
-                            cardWidth = cardWidth,
-                            marginBetweenElementsHorizontal = margin,
-                            paddingStart = paddingStart,
-                            paddingEnd = paddingEnd,
-                            lineWidth = lineWidth
-                        )
-                    }
-                }
-
-                val carouselState = rememberCarouselState(
-                    dotList = dots,
-                    listState = listState,
+                val newCarouselData = carouselData.copy(
+                    objectsInOneLine = res.first,
+                    maxLines = res.second
                 )
 
-                val flingBehavior = rememberCarouselSnapFlingBehavior(
-                    carouselState = carouselState
+                CarouselFactory(
+                    layer = layer,
+                    carousel = newCarouselData,
+                    childs = cards,
+                    cardWidth = cardWidth,
+                    cardAspectRatio = cardAspRatio,
+                    paddingStart = leftInset + paddingHorizontal,
+                    paddingEnd = rightInset + paddingHorizontal,
+                    marginBetweenElements = margin,
+                    onEditCard = onEditCard,
+                    onClickCard = onClickCard,
+                    onDeleteCard = onDeleteCard
                 )
-                val coroutineScope = rememberCoroutineScope()
-
-                LaunchedEffect(Unit, carouselData.id) {
-                    snapshotFlow { listState.layoutInfo.totalItemsCount }.first { it > 0 }
-
-                    val targetIndex = currentHolderIndex(visibleCardPos)
-                    if (listState.firstVisibleItemIndex != targetIndex) {
-                        listState.scrollToItem(targetIndex)
-                        val activeDot = carouselState.calculateTargetIndexForFling(0f)
-                        if (carouselState.activeDot != activeDot && carouselData.dovodchik) {
-                            carouselState.scrollToDot(activeDot, false)
-                        }
-                    }
-                }
-
-                LaunchedEffect(Unit, carouselState) {
-                    val activeDot = carouselState.calculateTargetIndexForFling(0f)
-                    carouselState.scrollToDot(activeDot, false)
-                }
-
-                LazyRow(
-                    state = listState,
-                    modifier = Modifier.fillMaxWidth(),
-                    contentPadding = PaddingValues(start = paddingStart, end = paddingEnd),
-                    horizontalArrangement = Arrangement.spacedBy(margin),
-                    flingBehavior = if (carouselData.dovodchik) flingBehavior else ScrollableDefaults.flingBehavior(),
+            }
+            else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
                 ) {
-                    items(
-                        items = cards,
-                        key = { card -> card.id },
-                        contentType = { "card" }
-                    ) { card ->
-                        if (gridMode) {
-                            val allCardsAmount =
-                                remember(cards) { cards.sumOf { it.childs.size } }
-                            GridOfCards(
-                                allCardsAmount = allCardsAmount,
-                                gridInfo = card,
-                                maxLines = card.maxLines ?: Int.MAX_VALUE,
-                                maxObjectsInOneLine = card.objectsInOneLine ?: 1,
-                                lineWidth = if (card.layoutType == LayoutType.CARD_FLAT_GRID) cardWidth else lineWidth,
-                                paddingStart = leftInset + if (carouselData.layoutType == LayoutType.CAROUSEL_FROM_FLAT_GRID) MaterialTheme.spacing.screenHorizontal / 2 else MaterialTheme.spacing.screenHorizontal,
-                                paddingEnd = rightInset + MaterialTheme.spacing.screenHorizontal,
-                                marginBetweenElements = when (carouselData.layoutType) {
-                                    LayoutType.CAROUSEL_FROM_FLAT_GRID -> 0.dp
-                                    else -> MaterialTheme.spacing.marginBetweenElementsInGrid
-                                },
-                                onCardClick = { onClickCard(it) },
-                                onCardEdit = { onEditCard(it) },
-                                onCardDelete = { onDeleteCard(it, carouselData.id) }
-                            )
-                        } else {
-                            Card(
-                                width = cardWidth,
-                                aspectRatio = cardAspRatio,
-                                showAlreadyWatchedLine = carouselData.childsShowAlreadyWatchedLine,
-                                alreadyWatched = card.alreadyWatched,
-                                length = card.length,
-                                image = card.image,
-                                showName = carouselData.childsShowName,
-                                name = card.name,
-                                namePosition = carouselData.childsNamePosition ?: 1,
-                                showAuthor = carouselData.childsShowAuthor,
-                                author = card.author,
-                                cornerRadius = carouselData.childsCornerRadius
-                                    ?: SizeType.ESMALL,
-                                layoutType = card.layoutType,
-                                onClick = { onClickCard(card) },
-                                onEdit = { onEditCard(card) },
-                                onDelete = { onDeleteCard(card, carouselData.id) }
-                            )
-                        }
-                    }
-                }
-                if (cards.isNotEmpty() && carouselData.dovodchik && carouselData.showDovodchikDots) {
-                    CarouselIndicators(
-                        currentPage = carouselState.activeDot,
-                        onPageClick = {
-                            coroutineScope.launch {
-                                carouselState.scrollToDot(it)
-                            }
-                        },
-                        modifier = Modifier.align(Alignment.CenterHorizontally),
-                        lineWidth = lineWidth,
-                        snapPointsDp = dots
+                    Text(
+                        text = stringResource(R.string.nothingIsHere),
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.38f),
+                        modifier = Modifier.align(Alignment.Center)
                     )
                 }
-            } else {
-                if (cards.isNotEmpty() && childsSize != null) {
-                    val cardType = remember(cards) { cards.first().elementType }
-                    val width = remember(childsSize, cardType, lineWidth, widthSizeClass) {
-                        childsSize.toDp(cardType, lineWidth, widthSizeClass).width
-                    }
-                    val margin = MaterialTheme.spacing.marginBetweenElementsInGrid
-                    val amountOfCards by remember(width, lineWidth, margin, spacingMedium) {
-                        mutableIntStateOf(
-                            cardScaleCalcForGrid(
-                                width,
-                                lineWidth,
-                                margin,
-                                null,
-                                spacingMedium
-                            ).second.toInt()
-                        )
-                    }
-                    val res by remember(carouselData, amountOfCards) {
-                        mutableStateOf(
-                            calculateObjectsInOneLineAndMaxLinesForAdaptiveGridSize(
-                                carouselData,
-                                amountOfCards
-                            )
-                        )
-                    }
-                    val maxLines by remember(res.second) {
-                        mutableIntStateOf(
-                            res.second ?: Int.MAX_VALUE
-                        )
-                    }
-                    val objectsInOneLine by remember(res.first) { mutableIntStateOf(res.first) }
-
-                    val allCardsAmount = remember(cards) { cards.sumOf { it.childs.size } }
-
-                    GridOfCards(
-                        allCardsAmount = allCardsAmount,
-                        gridInfo = carouselData,
-                        maxLines = maxLines,
-                        maxObjectsInOneLine = objectsInOneLine,
-                        lineWidth = lineWidth,
-                        paddingStart = leftInset + MaterialTheme.spacing.screenHorizontal,
-                        paddingEnd = rightInset + MaterialTheme.spacing.screenHorizontal,
-                        marginBetweenElements = MaterialTheme.spacing.marginBetweenElementsInGrid,
-                        onCardClick = onClickCard,
-                        onCardEdit = onEditCard,
-                        onCardDelete = { onDeleteCard(it, carouselData.id) }
-                    )
-                } else {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = MaterialTheme.spacing.extraLarge)
-                    ) {
-                        Text(
-                            text = stringResource(R.string.nothingIsHere),
-                            style = MaterialTheme.typography.titleLarge,
-                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.38f),
-                            modifier = Modifier.align(Alignment.Center)
-                        )
-                    }
-                }
             }
         }
-    }
-}
-
-
-@Composable
-private fun CarouselIndicators(
-    currentPage: Int,
-    onPageClick: (Int) -> Unit,
-    snapPointsDp: List<ListDot>,
-    lineWidth: Dp,
-    modifier: Modifier = Modifier,
-    activeColor: Color = MaterialTheme.colorScheme.primary,
-    inactiveColor: Color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.38f),
-) {
-    val haptic = LocalHapticFeedback.current
-
-    val totalCount = snapPointsDp.size
-    if (totalCount <= 1) return
-
-    val listState = rememberLazyListState()
-
-    LaunchedEffect(currentPage) {
-        val visibleItems = listState.layoutInfo.visibleItemsInfo
-        if (visibleItems.isNotEmpty()) {
-            val lastVisibleIndex = visibleItems.last().index
-            val firstVisibleIndex = visibleItems.first().index
-
-            if (currentPage >= lastVisibleIndex) {
-                listState.animateScrollToItem(currentPage)
-            } else if (currentPage < firstVisibleIndex) {
-                listState.animateScrollToItem(currentPage)
-            }
-        }
-    }
-
-    LazyRow(
-        state = listState,
-        modifier = modifier
-            .width(lineWidth)
-            .padding(vertical = MaterialTheme.spacing.extraSmall),
-        contentPadding = PaddingValues(horizontal = MaterialTheme.spacing.screenHorizontal),
-        horizontalArrangement = Arrangement.spacedBy(
-            MaterialTheme.spacing.dotSpacing,
-            Alignment.CenterHorizontally
-        ),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        items(totalCount) { index ->
-            val isSelected = index == currentPage
-
-            val width by animateDpAsState(
-                targetValue = if (isSelected) MaterialTheme.dimens.activeDotWidth else MaterialTheme.dimens.dotSize,
-                animationSpec = tween(durationMillis = 200),
-                label = "dotWidth"
-            )
-
-            val color by animateColorAsState(
-                targetValue = if (isSelected) activeColor else inactiveColor,
-                animationSpec = tween(durationMillis = 200),
-                label = "dotColor"
-            )
-
-            Box(
-                modifier = Modifier
-                    .size(width = width, height = MaterialTheme.dimens.dotSize)
-                    .clip(CircleShape)
-                    .background(color)
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null
-                    ) {
-                        haptic.performHapticFeedback(HapticFeedbackType.VirtualKey)
-                        onPageClick(index)
-                    }
-            )
-        }
-    }
-}
-
-private fun toFirstVisible(list: List<ObjectData2>, firstVisibleHolder: Int): Int {
-    if (list.isEmpty()) return 0
-    val safeHolderIndex = firstVisibleHolder.coerceIn(0, list.lastIndex)
-    val firstVisibleItem = list[safeHolderIndex]
-
-    return if (firstVisibleItem.layoutType == LayoutType.CARD_GRID || firstVisibleItem.layoutType == LayoutType.CARD_FLAT_GRID) {
-        var objPos = 0
-        for (i in 0 until safeHolderIndex) {
-            val obj = list[i]
-            objPos += obj.childs.size
-            if (i == safeHolderIndex - 1) {
-                objPos += 1
-            }
-        }
-        objPos
-    } else {
-        safeHolderIndex
-    }
-}
-
-private fun fromFirstVisible(list: List<ObjectData2>, firstVisible: Int): Int {
-    if (list.isEmpty()) return 0
-
-    val isGridPack =
-        list.firstOrNull()?.layoutType == LayoutType.CARD_GRID || list.firstOrNull()?.layoutType == LayoutType.CARD_FLAT_GRID
-    if (isGridPack) {
-        var currentMaxPos = -1
-        for (i in list.indices) {
-            val obj = list[i]
-            currentMaxPos += obj.childs.size
-            if (firstVisible <= currentMaxPos) {
-                return i
-            }
-        }
-        return list.lastIndex
-    } else {
-        return firstVisible.coerceIn(0, list.lastIndex)
-    }
-}
-
-data class ListDot(
-    val targetPos: Int,
-    val offset: Dp
-)
-
-fun calculateAmountOfDots(
-    itemsCount: Int,
-    cardWidth: Dp,
-    marginBetweenElementsHorizontal: Dp,
-    paddingStart: Dp,
-    paddingEnd: Dp,
-    lineWidth: Dp // Excluding indents, grid width will be lineWidth - (paddingStart + paddingEnd)
-): List<ListDot> {
-    if (itemsCount <= 0) return emptyList()
-
-// The first point always points to the 0th element with an offset of -paddingHorizontal
-    val firstDotOffset = -paddingStart
-    val initialDot = ListDot(targetPos = 0, offset = firstDotOffset)
-
-    if (itemsCount == 1) return listOf(initialDot)
-
-// Calculating the total content width and maximum scroll
-    val totalContentWidth = (paddingStart + paddingEnd) +
-            (cardWidth * itemsCount) +
-            (marginBetweenElementsHorizontal * (itemsCount - 1))
-
-    val maxScroll = (totalContentWidth - lineWidth).coerceAtLeast(0.dp)
-
-// If all content fits on one screen, the first dot is enough
-    if (maxScroll == 0.dp) return listOf(initialDot)
-
-    val result = mutableListOf(initialDot)
-    var currentCardPosition = 0
-    var currentScroll = 0.dp
-
-    val lastIndex = itemsCount - 1
-
-    while (currentCardPosition < lastIndex && currentScroll < maxScroll) {
-        val windowEnd = currentScroll + lineWidth
-
-        // Find all elements intersecting the current visible window [windowStart, windowEnd]
-        val visibleCardIndices = mutableListOf<Int>()
-
-        for (i in (currentCardPosition + 1)..lastIndex) {
-            val itemStart = paddingStart + (i * (cardWidth + marginBetweenElementsHorizontal))
-
-            // An element is considered visible if its start is before the end of the current screen.
-            if (itemStart < windowEnd) {
-                visibleCardIndices.add(i)
-            } else {
-                break
-            }
-        }
-
-        // If there are no new elements in the window or only one next one is visible, we take it;
-        // if several are visible, we take the most recent of the visible ones.
-        val nextTargetPos = when {
-            visibleCardIndices.isEmpty() -> currentCardPosition + 1
-            visibleCardIndices.size == 1 -> visibleCardIndices.first()
-            else -> visibleCardIndices.last()
-        }.coerceAtMost(lastIndex)
-
-        // Calculate the offset for the found element
-        val targetOffset = when (nextTargetPos) {
-            0 -> -paddingStart
-            lastIndex -> Int.MAX_VALUE.dp
-            else -> -marginBetweenElementsHorizontal
-        }
-
-        result.add(ListDot(targetPos = nextTargetPos, offset = targetOffset))
-
-        // Update the current position and scroll for the next step.
-        currentCardPosition = nextTargetPos
-
-        currentScroll = if (nextTargetPos == lastIndex) {
-            maxScroll
-        } else {
-            val nextItemStart =
-                paddingStart + (nextTargetPos * (cardWidth + marginBetweenElementsHorizontal))
-            (nextItemStart + targetOffset).coerceAtLeast(0.dp)
-        }
-    }
-
-    result[result.lastIndex] =
-        result[result.lastIndex].copy(targetPos = itemsCount - 1, offset = paddingEnd)
-    return result
-}
-
-//class CarouselViewModel : ViewModel() {
-//
-//    private val _cards = MutableStateFlow<List<ObjectData2>>(emptyList())
-//    val cards: StateFlow<List<ObjectData2>> = _cards.asStateFlow()
-//
-//    private val _dots = MutableStateFlow<List<ListDot>>(emptyList())
-//    val dots: StateFlow<List<ListDot>> = _dots.asStateFlow()
-//
-//    fun calculateCarouselCards(
-//        parent: ObjectData2,
-//        lineWidth: Dp,
-//        spacingMedium: Dp,
-//        spacingMarginBetweenElementsInGrid: Dp,
-//        widthSizeClass: WindowWidthSizeClass,
-//        spacingScreenHorizontal: Dp
-//    ) {
-//        viewModelScope.launch(Dispatchers.Default) {
-//            val updatedCards = uploadLayoutTypeToCarouselChilds(
-//                parent,
-//                lineWidth = lineWidth,
-//                spacingMedium = spacingMedium,
-//                spacingScreenHorizontal = spacingScreenHorizontal,
-//                spacingMarginBetweenElementsInGrid = spacingMarginBetweenElementsInGrid,
-//                widthSizeClass = widthSizeClass
-//            )
-//            _cards.value = updatedCards
-//        }
-//    }
-//
-//    fun calculateCarouselDots(
-//        itemsCount: Int,
-//        cardWidth: Dp,
-//        marginHorizontal: Dp,
-//        paddingStart: Dp,
-//        paddingEnd: Dp,
-//        lineWidth: Dp
-//    ) {
-//        viewModelScope.launch(Dispatchers.Default) {
-//            val calculatedDots = calculateAmountOfDots(
-//                itemsCount = itemsCount,
-//                cardWidth = cardWidth,
-//                marginBetweenElementsHorizontal = marginHorizontal,
-//                paddingStart = paddingStart,
-//                paddingEnd = paddingEnd,
-//                lineWidth = lineWidth
-//            )
-//            _dots.value = calculatedDots
-//        }
-//    }
-//}
-
-@Stable
-private class CarouselState(
-    val dotList: List<ListDot>,
-    val listState: LazyListState,
-    private val density: Density,
-    initialActiveDot: Int = 0
-) {
-    var activeDot by mutableIntStateOf(initialActiveDot)
-        private set
-
-    suspend fun scrollToDot(index: Int, animate: Boolean = true) {
-        if (dotList.isEmpty()) return
-
-        val targetIndex = index.coerceIn(0, dotList.lastIndex)
-        val dot = dotList[targetIndex]
-
-        activeDot = targetIndex
-
-        if (animate) {
-            listState.animateScrollToItem(
-                index = dot.targetPos,
-                scrollOffset = with(density) { dot.offset.toPx().toInt() },
-            )
-        } else {
-            listState.scrollToItem(
-                index = dot.targetPos,
-                scrollOffset = with(density) { dot.offset.toPx().toInt() },
-            )
-        }
-
-    }
-
-    fun calculateTargetIndexForFling(velocity: Float): Int {
-        if (dotList.isEmpty()) return 0
-
-        val maxIndex = dotList.lastIndex
-
-        return when {
-            velocity > 300f -> (activeDot + 1).coerceAtMost(maxIndex)
-
-            velocity < -300f -> (activeDot - 1).coerceAtLeast(0)
-
-            else -> {
-                val visibleItems = listState.layoutInfo.visibleItemsInfo
-                if (visibleItems.isEmpty()) return activeDot
-
-                val startPadding = listState.layoutInfo.beforeContentPadding
-
-                dotList.mapIndexed { dotIndex, dot ->
-                    val item = visibleItems.find { it.index == dot.targetPos }
-                    if (item != null) {
-                        val dotOffsetPx = with(density) { dot.offset.toPx() }
-                        val targetPosPx = startPadding + dotOffsetPx
-                        dotIndex to abs(item.offset - targetPosPx)
-                    } else {
-                        dotIndex to Float.MAX_VALUE
-                    }
-                }.minByOrNull { it.second }?.first ?: activeDot
-            }
-        }
-    }
-}
-
-private class CarouselFlingBehavior(
-    private val carouselState: CarouselState,
-    private val coroutineScope: CoroutineScope
-) : FlingBehavior {
-
-    override suspend fun ScrollScope.performFling(initialVelocity: Float): Float {
-        val targetDotIndex = carouselState.calculateTargetIndexForFling(initialVelocity)
-
-        coroutineScope.launch {
-            carouselState.scrollToDot(targetDotIndex)
-        }
-
-        return 0f
-    }
-}
-
-@Composable
-private fun rememberCarouselState(
-    dotList: List<ListDot>,
-    listState: LazyListState = rememberLazyListState()
-): CarouselState {
-    val density = LocalDensity.current
-    return remember(dotList, listState, density) {
-        CarouselState(
-            dotList = dotList,
-            listState = listState,
-            density = density
-        )
-    }
-}
-
-@Composable
-private fun rememberCarouselSnapFlingBehavior(
-    carouselState: CarouselState,
-    coroutineScope: CoroutineScope = rememberCoroutineScope()
-): FlingBehavior {
-    return remember(carouselState) {
-        CarouselFlingBehavior(carouselState, coroutineScope)
     }
 }

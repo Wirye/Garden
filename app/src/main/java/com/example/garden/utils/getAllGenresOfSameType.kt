@@ -1,18 +1,15 @@
 package com.example.garden.utils
 
+import com.example.garden.database.Genre
 import com.example.garden.database.GridGenreItem
+import com.example.garden.database.MusicGenre
 
 fun getAllGenresOfSameType(selected: List<GridGenreItem>): List<GridGenreItem> {
-    val result = mutableListOf<GridGenreItem>()
-    val groupedByClass = selected.groupBy { it.getGenreClass() }
-    for ((clazz, items) in groupedByClass) {
-        if (clazz.isEnum) {
-            @Suppress("UNCHECKED_CAST")
-            val allEnumValues = (clazz.enumConstants as Array<GridGenreItem>).toList()
-            result.addAll(allEnumValues)
-        } else {
-            result.addAll(items)
+    return selected.flatMap { item ->
+        when (item) {
+            is Genre -> Genre.entries
+            is MusicGenre -> MusicGenre.entries
+            else -> listOf(item)
         }
-    }
-    return result
+    }.distinct()
 }

@@ -46,6 +46,7 @@ import com.example.garden.ui.components.icons.SettingsIco
 import com.example.garden.ui.screens.LocalHazeLayers
 import com.example.garden.ui.theme.dimens
 import com.example.garden.ui.theme.spacing
+import kotlin.math.abs
 
 @Composable
 fun MainPageTopBar(
@@ -109,7 +110,10 @@ fun MainPageTopBar(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = additionPadding, horizontal = screenHorizontal),
+                    .padding(vertical = additionPadding, horizontal = screenHorizontal)
+                    .graphicsLayer {
+                        this.alpha = (1f - abs(offsetPx()) / abs(size.height * 2))
+                    },
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {

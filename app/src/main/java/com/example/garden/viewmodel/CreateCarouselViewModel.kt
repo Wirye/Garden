@@ -51,6 +51,16 @@ class CreateCarouselViewModel(
     )
         private set
 
+    var gridSizesError by mutableStateOf(
+        (initialLayer.layoutType == LayoutType.CAROUSEL_GRID || initialLayer.layoutType == LayoutType.CAROUSEL_FROM_GRID || initialLayer.layoutType == LayoutType.CAROUSEL_FROM_FLAT_GRID) && ((initialLayer.objectsInOneLine
+            ?: 0) * (initialLayer.maxLines ?: 0) > 30)
+    )
+
+    var maxGridSizesError by mutableStateOf(
+        (initialLayer.layoutType == LayoutType.CAROUSEL_GRID || initialLayer.layoutType == LayoutType.CAROUSEL_FROM_GRID || initialLayer.layoutType == LayoutType.CAROUSEL_FROM_FLAT_GRID) && initialLayer.adaptiveGridSize && ((initialLayer.maxObjectsInOneLineForAdaptiveSize
+            ?: 0) * (initialLayer.maxLinesForAdaptiveSize ?: 0) > 30)
+    )
+
     fun update(transform: Layer.CreateCarouselPage.() -> Layer.CreateCarouselPage) {
         state = state.transform()
         onUpdate(state)
@@ -77,6 +87,14 @@ class CreateCarouselViewModel(
         layoutTypeError = state.layoutType == LayoutType.CAROUSEL_FROM_FLAT_GRID && (
                 state.adaptiveGridSize || state.objectsInOneLine != 1 || state.maxObjectsInOneLineForAdaptiveSize != null || state.maxLinesForAdaptiveSize != null
                 )
+
+        gridSizesError =
+            (state.layoutType == LayoutType.CAROUSEL_GRID || state.layoutType == LayoutType.CAROUSEL_FROM_GRID || state.layoutType == LayoutType.CAROUSEL_FROM_FLAT_GRID) && ((state.objectsInOneLine
+                ?: 0) * (state.maxLines ?: 0) > 30)
+
+        maxGridSizesError =
+            (state.layoutType == LayoutType.CAROUSEL_GRID || state.layoutType == LayoutType.CAROUSEL_FROM_GRID || state.layoutType == LayoutType.CAROUSEL_FROM_FLAT_GRID) && state.adaptiveGridSize && ((state.maxObjectsInOneLineForAdaptiveSize
+                ?: 0) * (state.maxLinesForAdaptiveSize ?: 0) > 30)
     }
 
     companion object {
