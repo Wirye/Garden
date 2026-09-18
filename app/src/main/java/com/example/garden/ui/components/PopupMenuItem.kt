@@ -17,6 +17,7 @@ import com.example.garden.ui.theme.spacing
 fun PopupMenuItem(
     text: String,
     onClick: () -> Unit,
+    textColor: Color = MaterialTheme.colorScheme.onSurface,
     icon: (@Composable () -> Unit)? = null
 ) {
     Surface(
@@ -36,7 +37,7 @@ fun PopupMenuItem(
             Text(
                 text = text,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface
+                color = textColor
             )
         }
     }

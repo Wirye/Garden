@@ -51,8 +51,37 @@ interface ObjectDataDao {
     @Query("SELECT * FROM objectData WHERE link = :link LIMIT 1")
     fun getObjectByLink(link: LinkData): Flow<ObjectEntity?>
 
+    @Query("SELECT * FROM objectData WHERE parentId = :parentId ORDER BY position ASC")
+    fun getCardsByParentId(parentId: Long) : Flow<List<ObjectEntity>>
+
     @Query("SELECT * FROM objectData WHERE id = :id LIMIT 1")
     suspend fun getById(id: Long): ObjectEntity?
+
+    @Query("UPDATE objectData SET position = :newPosition WHERE id = :id")
+    suspend fun updatePosition(id: Long, newPosition: Int)
+
+    @Query("""
+        SELECT objectData.* FROM objectData
+        JOIN objectData_fts ON objectData.id = objectData_fts.rowid
+        WHERE objectData_fts MATCH :query
+          AND objectData.elementType IN (:allowedTypes)
+          AND objectData.link NOT LIKE 'insert%'
+        ORDER BY objectData.position ASC
+    """)
+    fun searchCardsFts(
+        query: String,
+        allowedTypes: List<String>
+    ): PagingSource<Int, ObjectEntity>
+
+    @Query("""
+        SELECT * FROM objectData
+        WHERE elementType IN (:allowedTypes)
+          AND link NOT LIKE 'insert%'
+        ORDER BY position ASC
+    """)
+    fun getAllCardsPaging(
+        allowedTypes: List<String>
+    ): PagingSource<Int, ObjectEntity>
 
     @Query("""
     DELETE FROM objectData 

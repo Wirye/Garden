@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.visible
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -46,6 +47,8 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -123,7 +126,7 @@ fun PageWithSearch(
                         key = key,
                         startsInfo = PageWithSearchInput(
                             items = childs,
-                            initType = when(it.javaClass) {
+                            initType = when (it.javaClass) {
                                 ChapterInfo::class.java -> PageWithSearchItemsDefaults.BaseChapterPage
                                 else -> PageWithSearchItemsDefaults.BaseChapterPage
                             }
@@ -171,6 +174,7 @@ fun PageWithSearch(
                             image = null
                         )
                     )
+
                     ChapterPageInfo::class.java -> inputList.add(
                         ChapterPageInfo(
                             id = generateNewChapterId(),
@@ -178,6 +182,7 @@ fun PageWithSearch(
                             name = null
                         )
                     )
+
                     ChapterInfo::class.java -> inputList.add(
                         ChapterInfo(
                             id = generateNewChapterId(),
@@ -186,6 +191,7 @@ fun PageWithSearch(
                             childs = mutableListOf()
                         )
                     )
+
                     else -> {}
                 }
             }
@@ -230,8 +236,12 @@ fun PageWithSearch(
     val density = LocalDensity.current
     val topInset = with(density) { WindowInsets.safeDrawing.getTop(density).toDp() }
     val bottomInset = with(density) { WindowInsets.safeDrawing.getBottom(density).toDp() }
-    val leftInset = with(density) { WindowInsets.safeDrawing.getLeft(density, LocalLayoutDirection.current).toDp() }
-    val rightInset = with(density) { WindowInsets.safeDrawing.getRight(density, LocalLayoutDirection.current).toDp() }
+    val leftInset = with(density) {
+        WindowInsets.safeDrawing.getLeft(density, LocalLayoutDirection.current).toDp()
+    }
+    val rightInset = with(density) {
+        WindowInsets.safeDrawing.getRight(density, LocalLayoutDirection.current).toDp()
+    }
 
     val searchText = searchState.text.toString()
     LaunchedEffect(searchText) {
@@ -275,15 +285,21 @@ fun PageWithSearch(
         ) {
             LazyColumn(
                 state = listState,
-                modifier = Modifier.fillMaxSize().imePadding(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .imePadding(),
                 contentPadding = PaddingValues(
                     start = MaterialTheme.spacing.screenHorizontal + leftInset,
                     end = MaterialTheme.spacing.screenHorizontal + rightInset,
-                    bottom = MaterialTheme.spacing.extraLarge*4 + MaterialTheme.spacing.medium + bottomInset
+                    bottom = MaterialTheme.spacing.extraLarge * 4 + MaterialTheme.spacing.medium + bottomInset
                 )
             ) {
                 item("topBarSpacer") {
-                    Spacer(modifier = Modifier.fillMaxWidth().height(MaterialTheme.spacing.screenHorizontal + topInset))
+                    Spacer(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(MaterialTheme.spacing.screenHorizontal + topInset)
+                    )
                 }
 
                 item("topBarText") {
@@ -292,7 +308,11 @@ fun PageWithSearch(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Spacer(modifier = Modifier.size(MaterialTheme.dimens.minButtonHeight))
+                        Spacer(
+                            modifier = Modifier
+                                .height(MaterialTheme.dimens.minButtonHeight)
+                                .width(MaterialTheme.dimens.minButtonHeight + MaterialTheme.spacing.small)
+                        )
 
                         OutlinedTextField(
                             state = searchState,
@@ -300,7 +320,9 @@ fun PageWithSearch(
                                 .weight(1f),
                             shape = CircleShape,
                             colors = OutlinedTextFieldDefaults.colors(
-                                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0f),
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(
+                                    alpha = 0f
+                                ),
                                 focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0f),
                                 focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                                 unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh
@@ -325,12 +347,20 @@ fun PageWithSearch(
                             lineLimits = TextFieldLineLimits.SingleLine
                         )
 
-                        Spacer(modifier = Modifier.size(MaterialTheme.dimens.minButtonHeight))
+                        Spacer(
+                            modifier = Modifier
+                                .height(MaterialTheme.dimens.minButtonHeight)
+                                .width(MaterialTheme.dimens.minButtonHeight + MaterialTheme.spacing.small)
+                        )
                     }
                 }
 
                 item("spacer") {
-                    Spacer(modifier = Modifier.fillMaxWidth().height(MaterialTheme.spacing.screenHorizontal))
+                    Spacer(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(MaterialTheme.spacing.screenHorizontal)
+                    )
                 }
 
                 itemsIndexed(
@@ -379,7 +409,9 @@ fun PageWithSearch(
                         }
                     }
 
-                    Spacer(modifier = Modifier.fillMaxWidth().height(MaterialTheme.spacing.small))
+                    Spacer(modifier = Modifier
+                        .fillMaxWidth()
+                        .height(MaterialTheme.spacing.small))
                 }
 
                 if (inputList.isEmpty()) {
@@ -400,11 +432,14 @@ fun PageWithSearch(
         }
 
         Row(
-            modifier = Modifier.fillMaxWidth().align(Alignment.TopStart).padding(
-                start = MaterialTheme.spacing.screenHorizontal + leftInset,
-                top = MaterialTheme.spacing.screenHorizontal + topInset,
-                end = MaterialTheme.spacing.screenHorizontal + rightInset
-            ),
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.TopStart)
+                .padding(
+                    start = MaterialTheme.spacing.screenHorizontal + leftInset,
+                    top = MaterialTheme.spacing.screenHorizontal + topInset,
+                    end = MaterialTheme.spacing.screenHorizontal + rightInset
+                ),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -476,9 +511,18 @@ fun PageWithSearch(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            Color.Transparent,
+                            MaterialTheme.colorScheme.surface
+                        )
+                    )
+                )
         ) {
             Column(
-                modifier = Modifier.padding(bottom = MaterialTheme.spacing.screenHorizontal + bottomInset),
+                modifier = Modifier.padding(bottom = MaterialTheme.spacing.screenHorizontal + bottomInset)
+                    .padding(horizontal = MaterialTheme.spacing.screenHorizontal),
                 verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
@@ -514,7 +558,10 @@ fun PageWithSearch(
                     onClick = {
                         focusManager.clearFocus()
                         haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
-                        resultSenderViewModel.sendResult(requestKey = layer.key, data = PageWithSearchSaveOutput(inputList))
+                        resultSenderViewModel.sendResult(
+                            requestKey = layer.key,
+                            data = PageWithSearchSaveOutput(inputList)
+                        )
                         onClose()
                     },
                     modifier = Modifier
@@ -549,7 +596,8 @@ fun PageWithSearch(
                         val keyItem = currentPendingKeys[index]
                         val inputListItemIndex = inputList.indexOfFirst { it.id == keyItem.first }
                         if (inputListItemIndex != -1) {
-                            inputList[inputListItemIndex] = inputList[inputListItemIndex].copyWithChilds(newData.items.toMutableList())
+                            inputList[inputListItemIndex] =
+                                inputList[inputListItemIndex].copyWithChilds(newData.items.toMutableList())
                             forSaveInLayer(inputList)
                         }
                     }
@@ -679,7 +727,7 @@ private fun PageWithSearchItem(
                 }) {
                     Icon(
                         imageVector = EditIco,
-                        contentDescription = "Редактировать",
+                        contentDescription = null,
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(MaterialTheme.dimens.iconMedium)
                     )
@@ -688,7 +736,7 @@ private fun PageWithSearchItem(
 
             Icon(
                 imageVector = DragHandleIco,
-                contentDescription = "Переместить",
+                contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = dragModifier
                     .padding(MaterialTheme.spacing.small)
@@ -701,7 +749,7 @@ private fun PageWithSearchItem(
             }) {
                 Icon(
                     imageVector = DeleteIco,
-                    contentDescription = "Удалить",
+                    contentDescription = null,
                     tint = MaterialTheme.colorScheme.error,
                     modifier = Modifier.size(MaterialTheme.dimens.iconMedium)
                 )
@@ -717,7 +765,7 @@ data class PageWithSearchInput(
     val initType: PageWithSearchItem  // This element will not be displayed in the list
 ) : Parcelable
 
-interface PageWithSearchItem: Parcelable {
+interface PageWithSearchItem : Parcelable {
     val id: Long
     val name: String?
     val link: LinkData?
@@ -761,7 +809,8 @@ data class ChapterInfo(
 ) : PageWithSearchItem {
     override fun copyWithName(newName: String) = copy(name = newName)
     override fun copyWithImage(newImage: ImageData?) = copy()
-    override fun copyWithChilds(newChilds: MutableList<PageWithSearchItem>?) = copy(childs = newChilds ?: mutableListOf())
+    override fun copyWithChilds(newChilds: MutableList<PageWithSearchItem>?) =
+        copy(childs = newChilds ?: mutableListOf())
 }
 
 @Parcelize
@@ -782,12 +831,12 @@ data class ChapterPageInfo(
 }
 
 object PageWithSearchItemsDefaults {
-   val BaseChapter = ChapterInfo(
+    val BaseChapter = ChapterInfo(
         id = 0L,
         name = "",
         link = LinkData.Self,
         childs = mutableListOf()
-   )
+    )
 
     val BaseEpisode = EpisodeInfo(
         id = 0L,

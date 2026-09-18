@@ -55,10 +55,11 @@ import com.example.garden.database.GridGenreItem
 import com.example.garden.database.MusicGenre
 import com.example.garden.database.YearSezon
 import com.example.garden.ui.theme.spacing
+import com.example.garden.ui.utils.blockGestures
+import com.example.garden.ui.utils.bottomSheetAnimateAndDismiss
 import com.example.garden.ui.utils.clearFocus
 import com.example.garden.utils.getAllGenresOfSameType
 import com.example.garden.utils.getGenreClass
-import kotlinx.coroutines.launch
 
 enum class GenreEditorGenresType {
     ANIME, MUSIC
@@ -156,13 +157,11 @@ fun GenreEditor(
     val coroutineScope = rememberCoroutineScope()
 
     val animateAndDismiss: () -> Unit = {
-        coroutineScope.launch {
-            sheetState.hide()
-        }.invokeOnCompletion {
-            if (!sheetState.isVisible) {
-                onDismiss()
-            }
-        }
+        bottomSheetAnimateAndDismiss(
+            coroutineScope = coroutineScope,
+            sheetState = sheetState,
+            onDismiss = onDismiss
+        )
     }
 
     ModalBottomSheet(
@@ -177,6 +176,7 @@ fun GenreEditor(
                 .fillMaxWidth()
                 .padding(horizontal = MaterialTheme.spacing.screenHorizontal)
                 .clearFocus(focusManager)
+                .blockGestures()
         ) {
             Text(
                 modifier = Modifier.fillMaxWidth(),

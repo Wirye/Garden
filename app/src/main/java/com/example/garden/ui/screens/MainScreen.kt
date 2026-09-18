@@ -24,9 +24,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -47,7 +49,9 @@ import com.example.garden.database.ElementType
 import com.example.garden.database.LayoutType
 import com.example.garden.database.ObjectData
 import com.example.garden.database.PageType
+import com.example.garden.database.PlayListType
 import com.example.garden.database.SizeType
+import com.example.garden.ui.components.CarouselChildsEdit
 import com.example.garden.ui.components.MainPageBottomBar
 import com.example.garden.ui.components.MainPageTopBar
 import com.example.garden.ui.theme.LocalWindowInfo
@@ -229,6 +233,23 @@ private fun LayerContent(
                     val mainViewModel: MainViewModel = viewModel()
                     val coroutineScope = rememberCoroutineScope()
                     val topBarHeightState = remember { mutableStateOf(0.dp) }
+
+                    var editingCarouselId by remember { mutableLongStateOf(-1L) }
+
+                    var isEditCarouselChildsExpanded by rememberSaveable { mutableStateOf(false) }
+                    if (isEditCarouselChildsExpanded && editingCarouselId != -1L) {
+                        CarouselChildsEdit(
+                            id = editingCarouselId,
+                            mainViewModel = mainViewModel,
+                            onDismiss = { isEditCarouselChildsExpanded = false },
+                            onSave = {
+                                coroutineScope.launch {
+                                    mainViewModel.updatePositions(it)
+                                }
+                            }
+                        )
+                    }
+
                     MainPageTopBar(
                         offsetPx = { 0f },
                         active = false,
@@ -267,7 +288,8 @@ private fun LayerContent(
                                     },
                                     chaptersList = emptyList(),
                                     cardsList = emptyList(),
-                                    carouselType = carouselType
+                                    carouselType = carouselType,
+                                    playlistType = PlayListType.Music,
                                 )
                             )
                         },
@@ -311,6 +333,10 @@ private fun LayerContent(
                                 )
                             }
                         },
+                        openCarouselChildsEdit = {
+                            editingCarouselId = it
+                            isEditCarouselChildsExpanded = true
+                        },
                         deleteCard = { id ->
                             coroutineScope.launch {
                                 mainViewModel.deleteObjectById(id)
@@ -335,6 +361,7 @@ private fun LayerContent(
                     val coroutineScope = rememberCoroutineScope()
 
                     CreateCardPage(
+                        mainViewModel = mainViewModel,
                         layer = layer,
                         layersViewModel = layersViewModel,
                         resultSenderViewModel = resultSenderViewModel,

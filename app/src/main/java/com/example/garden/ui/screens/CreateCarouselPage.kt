@@ -92,6 +92,7 @@ import com.example.garden.database.LayoutType
 import com.example.garden.database.SizeType
 import com.example.garden.ui.components.AppAsyncImage
 import com.example.garden.ui.components.AsyncImageWithAddPlaceholder
+import com.example.garden.ui.components.HelpDialog
 import com.example.garden.ui.components.SelectableDropDownMenuWithBlur
 import com.example.garden.ui.components.SmartFilePicker
 import com.example.garden.ui.components.icons.AddIco
@@ -103,13 +104,13 @@ import com.example.garden.ui.theme.dimens
 import com.example.garden.ui.theme.spacing
 import com.example.garden.ui.theme.windowInfo
 import com.example.garden.ui.utils.blockGestures
+import com.example.garden.ui.utils.bottomSheetAnimateAndDismiss
 import com.example.garden.ui.utils.clearFocus
 import com.example.garden.ui.utils.dataForModel
 import com.example.garden.ui.utils.getAllCollectionByCarouselType
 import com.example.garden.ui.utils.hazeSourcesForUpperLayers
 import com.example.garden.viewmodel.CreateCarouselViewModel
 import dev.chrisbanes.haze.hazeSource
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -1001,7 +1002,7 @@ fun CreateCarouselPage(
                                                                                 .padding(
                                                                                     MaterialTheme.spacing.medium
                                                                                 ),
-                                                                            verticalAlignment = Alignment.CenterVertically,
+                                                                            verticalAlignment = Alignment.Top,
                                                                             horizontalArrangement = Arrangement.SpaceAround
                                                                         ) {
                                                                             var maxLines by rememberSaveable(
@@ -1024,10 +1025,10 @@ fun CreateCarouselPage(
                                                                             OutlinedTextField(
                                                                                 value = maxLines,
                                                                                 onValueChange = {
-                                                                                    maxLines = it
+                                                                                    maxLines = it.filter { char ->  char.isDigit() }
                                                                                     stateViewModel.update {
                                                                                         copy(
-                                                                                            maxLines = if (maxLines.isEmpty()) null else maxLines.toInt()
+                                                                                            maxLines = if (maxLines.isEmpty()) null else maxLines.filter { char ->  char.isDigit() }.toInt()
                                                                                         )
                                                                                     }
                                                                                 },
@@ -1057,7 +1058,7 @@ fun CreateCarouselPage(
                                                                                             ),
                                                                                             style = MaterialTheme.typography.bodySmall,
                                                                                             color = MaterialTheme.colorScheme.error,
-                                                                                            maxLines = 1,
+                                                                                            maxLines = 2,
                                                                                             overflow = TextOverflow.Ellipsis
                                                                                         )
                                                                                     }
@@ -1083,10 +1084,10 @@ fun CreateCarouselPage(
                                                                                 value = objectsInOneLine,
                                                                                 onValueChange = {
                                                                                     objectsInOneLine =
-                                                                                        it
+                                                                                        it.filter { char ->  char.isDigit() }
                                                                                     stateViewModel.update {
                                                                                         copy(
-                                                                                            objectsInOneLine = if (objectsInOneLine.isEmpty()) null else objectsInOneLine.toInt()
+                                                                                            objectsInOneLine = if (objectsInOneLine.isEmpty()) null else objectsInOneLine.filter { char ->  char.isDigit() }.toInt()
                                                                                         )
                                                                                     }
                                                                                 },
@@ -1116,7 +1117,7 @@ fun CreateCarouselPage(
                                                                                             ),
                                                                                             style = MaterialTheme.typography.bodySmall,
                                                                                             color = MaterialTheme.colorScheme.error,
-                                                                                            maxLines = 1,
+                                                                                            maxLines = 2,
                                                                                             overflow = TextOverflow.Ellipsis
                                                                                         )
                                                                                     }
@@ -1225,7 +1226,7 @@ fun CreateCarouselPage(
                                                                                         MaterialTheme.spacing.medium
                                                                                     )
                                                                                     .padding(top = 0.dp),
-                                                                                verticalAlignment = Alignment.CenterVertically,
+                                                                                verticalAlignment = Alignment.Top,
                                                                                 horizontalArrangement = Arrangement.SpaceAround
                                                                             ) {
                                                                                 var maxLinesForAdaptiveGridSize by rememberSaveable(
@@ -1250,10 +1251,10 @@ fun CreateCarouselPage(
                                                                                     value = maxLinesForAdaptiveGridSize,
                                                                                     onValueChange = {
                                                                                         maxLinesForAdaptiveGridSize =
-                                                                                            it
+                                                                                            it.filter { char ->  char.isDigit() }
                                                                                         stateViewModel.update {
                                                                                             copy(
-                                                                                                maxLinesForAdaptiveSize = if (maxLinesForAdaptiveGridSize.isEmpty()) null else maxLinesForAdaptiveGridSize.toInt()
+                                                                                                maxLinesForAdaptiveSize = if (maxLinesForAdaptiveGridSize.isEmpty()) null else maxLinesForAdaptiveGridSize.filter { char ->  char.isDigit() }.toInt()
                                                                                             )
                                                                                         }
                                                                                     },
@@ -1283,7 +1284,7 @@ fun CreateCarouselPage(
                                                                                                 ),
                                                                                                 style = MaterialTheme.typography.bodySmall,
                                                                                                 color = MaterialTheme.colorScheme.error,
-                                                                                                maxLines = 1,
+                                                                                                maxLines = 2,
                                                                                                 overflow = TextOverflow.Ellipsis
                                                                                             )
                                                                                         }
@@ -1309,10 +1310,10 @@ fun CreateCarouselPage(
                                                                                     value = maxObjectsInOneLineForAdaptiveSize,
                                                                                     onValueChange = {
                                                                                         maxObjectsInOneLineForAdaptiveSize =
-                                                                                            it
+                                                                                            it.filter { char ->  char.isDigit() }
                                                                                         stateViewModel.update {
                                                                                             copy(
-                                                                                                maxObjectsInOneLineForAdaptiveSize = if (maxObjectsInOneLineForAdaptiveSize.isEmpty()) null else maxObjectsInOneLineForAdaptiveSize.toInt()
+                                                                                                maxObjectsInOneLineForAdaptiveSize = if (maxObjectsInOneLineForAdaptiveSize.isEmpty()) null else maxObjectsInOneLineForAdaptiveSize.filter { char ->  char.isDigit() }.toInt()
                                                                                             )
                                                                                         }
                                                                                     },
@@ -1355,7 +1356,7 @@ fun CreateCarouselPage(
                                                                                                 ),
                                                                                                 style = MaterialTheme.typography.bodySmall,
                                                                                                 color = MaterialTheme.colorScheme.error,
-                                                                                                maxLines = 1,
+                                                                                                maxLines = 2,
                                                                                                 overflow = TextOverflow.Ellipsis
                                                                                             )
                                                                                         }
@@ -2020,6 +2021,16 @@ fun CreateCarouselPage(
             }
         }
 
+        var isHelpDialogExpanded by rememberSaveable { mutableStateOf(false) }
+        if (isHelpDialogExpanded) {
+            HelpDialog(
+                title = stringResource(R.string.AboutCreateCarousel),
+                message = stringResource(R.string.CreateCarouselHelpPageText)
+            ) {
+                isHelpDialogExpanded = false
+            }
+        }
+
         Box(
             modifier = Modifier
                 .padding(top = MaterialTheme.spacing.screenHorizontal + topInset)
@@ -2030,6 +2041,7 @@ fun CreateCarouselPage(
                 onClick = {
                     haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
                     focusManager.clearFocus()
+                    isHelpDialogExpanded = true
                 }
             ) {
                 Icon(
@@ -2057,13 +2069,11 @@ private fun CarouselCollectionPicker(
     val coroutineScope = rememberCoroutineScope()
 
     val animateAndDismiss: () -> Unit = {
-        coroutineScope.launch {
-            sheetState.hide()
-        }.invokeOnCompletion {
-            if (!sheetState.isVisible) {
-                onDismiss()
-            }
-        }
+        bottomSheetAnimateAndDismiss(
+            coroutineScope = coroutineScope,
+            sheetState = sheetState,
+            onDismiss = onDismiss
+        )
     }
 
     var selectedCollection: CollectionType? by rememberSaveable { mutableStateOf(initCollectionType) }

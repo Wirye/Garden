@@ -2,6 +2,7 @@ package com.example.garden.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -29,6 +30,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -49,6 +51,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import com.example.garden.LocalCustomColors
 import com.example.garden.R
+import com.example.garden.ui.components.HelpDialog
 import com.example.garden.ui.components.icons.CloseIco
 import com.example.garden.ui.components.icons.EyeIco
 import com.example.garden.ui.components.icons.EyeOffIco
@@ -89,9 +92,12 @@ fun AniLibertyLoginPage(
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
+    val fillInAllFieldsErrorText = stringResource(R.string.FillInAllFields)
+    val authorizationError = stringResource(R.string.AuthorizationError)
+
     val performLogin = {
         if (loginText.isBlank() || passwordText.isBlank()) {
-            errorMessage = "Заполните все поля"
+            errorMessage = fillInAllFieldsErrorText
         } else {
             focusManager.clearFocus()
             isLoading = true
@@ -104,166 +110,179 @@ fun AniLibertyLoginPage(
                     result.onSuccess { sessionKey ->
                         onSuccessAuth(sessionKey)
                     }.onFailure { error ->
-                        errorMessage = error.localizedMessage ?: "Ошибка авторизации"
+                        errorMessage = error.localizedMessage ?: authorizationError
                     }
                 }
             }
         }
     }
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(
-                top = topInset + MaterialTheme.spacing.screenHorizontal,
-                start = leftInset + MaterialTheme.spacing.screenHorizontal,
-                end = rightInset + MaterialTheme.spacing.screenHorizontal
-            )
+    Box(
+        modifier = Modifier
             .blockGestures()
-            .clearFocus(focusManager),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)
+            .clearFocus(focusManager)
+            .background(MaterialTheme.colorScheme.background)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            FilledIconButton(
-                onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
-                    focusManager.clearFocus()
-                    onClose()
-                },
-                colors = IconButtonDefaults.filledIconButtonColors(
-                    containerColor = LocalCustomColors.current.closeButton,
-                    contentColor = LocalCustomColors.current.onCloseButton
-                ),
-                shape = MaterialTheme.shapes.small
-            ) {
-                Icon(
-                    imageVector = CloseIco,
-                    contentDescription = null,
-                    modifier = Modifier.size(MaterialTheme.dimens.iconLarge)
-                )
-            }
-
-            Text(
-                modifier = Modifier.weight(1f, fill = false),
-                text = stringResource(R.string.aniLibertyLogin),
-                style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onBackground,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                softWrap = false
-            )
-
-            IconButton(onClick = {
-                haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
-                focusManager.clearFocus()
-            }) {
-                Icon(
-                    imageVector = HelpIco,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier.size(MaterialTheme.dimens.iconMedium)
-                )
-            }
-        }
-
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-                .imePadding(),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
+            modifier = modifier
+                .fillMaxSize()
+                .padding(
+                    top = topInset + MaterialTheme.spacing.screenHorizontal,
+                    start = leftInset + MaterialTheme.spacing.screenHorizontal,
+                    end = rightInset + MaterialTheme.spacing.screenHorizontal
+                ),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)
         ) {
-            OutlinedTextField(
-                value = loginText,
-                onValueChange = { loginText = it },
-                label = { Text("Логин или Email") },
-                singleLine = true,
-                enabled = !isLoading,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .semantics { contentType = ContentType.Username },
-                shape = MaterialTheme.shapes.medium,
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Email,
-                    imeAction = ImeAction.Next
-                ),
-                keyboardActions = KeyboardActions(
-                    onNext = { focusManager.moveFocus(FocusDirection.Down) }
-                )
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                FilledIconButton(
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                        focusManager.clearFocus()
+                        onClose()
+                    },
+                    colors = IconButtonDefaults.filledIconButtonColors(
+                        containerColor = LocalCustomColors.current.closeButton,
+                        contentColor = LocalCustomColors.current.onCloseButton
+                    ),
+                    shape = MaterialTheme.shapes.small
+                ) {
+                    Icon(
+                        imageVector = CloseIco,
+                        contentDescription = null,
+                        modifier = Modifier.size(MaterialTheme.dimens.iconLarge)
+                    )
+                }
 
-            Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
-
-            OutlinedTextField(
-                value = passwordText,
-                onValueChange = { passwordText = it },
-                label = { Text("Пароль") },
-                singleLine = true,
-                enabled = !isLoading,
-                visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Password,
-                    imeAction = ImeAction.Done
-                ),
-                keyboardActions = KeyboardActions(
-                    onDone = { performLogin() }
-                ),
-                shape = MaterialTheme.shapes.medium,
-                trailingIcon = {
-                    if (passwordText.isNotEmpty()) {
-                        IconButton(onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.VirtualKey)
-                            isPasswordVisible = !isPasswordVisible
-                        }) {
-                            Icon(
-                                imageVector = if (isPasswordVisible) EyeOffIco else EyeIco,
-                                modifier = Modifier.size(MaterialTheme.dimens.iconMedium),
-                                contentDescription = null
-                            )
-                        }
-                    }
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .semantics { contentType = ContentType.Password }
-            )
-
-            if (errorMessage != null) {
-                Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
                 Text(
-                    text = errorMessage!!,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyMedium
+                    modifier = Modifier.weight(1f, fill = false),
+                    text = stringResource(R.string.aniLibertyLogin),
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    softWrap = false
                 )
-            }
 
-            Spacer(modifier = Modifier.height(MaterialTheme.spacing.medium))
+                var isHelpDialogExpanded by rememberSaveable { mutableStateOf(false) }
+                if (isHelpDialogExpanded) {
+                    HelpDialog(
+                        title = stringResource(R.string.AboutAniLibertyLogin),
+                        message = stringResource(R.string.IJustAddItForBeauty),
+                    ) { isHelpDialogExpanded = false }
+                }
 
-            Button(
-                onClick = {
+                IconButton(onClick = {
                     haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
                     focusManager.clearFocus()
-                    performLogin()
-                },
-                enabled = !isLoading,
+                    isHelpDialogExpanded = true
+                }) {
+                    Icon(
+                        imageVector = HelpIco,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onBackground,
+                        modifier = Modifier.size(MaterialTheme.dimens.iconMedium)
+                    )
+                }
+            }
+
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .weight(1f)
+                    .imePadding(),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                if (isLoading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(MaterialTheme.dimens.iconMedium),
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        strokeWidth = MaterialTheme.dimens.strokeThick
+                OutlinedTextField(
+                    value = loginText,
+                    onValueChange = { loginText = it },
+                    label = { Text(stringResource(R.string.LoginOrEmail)) },
+                    singleLine = true,
+                    enabled = !isLoading,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .semantics { contentType = ContentType.Username },
+                    shape = MaterialTheme.shapes.medium,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Email,
+                        imeAction = ImeAction.Next
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onNext = { focusManager.moveFocus(FocusDirection.Down) }
                     )
-                } else {
-                    Text("Войти")
+                )
+
+                Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
+
+                OutlinedTextField(
+                    value = passwordText,
+                    onValueChange = { passwordText = it },
+                    label = { Text(stringResource(R.string.Password)) },
+                    singleLine = true,
+                    enabled = !isLoading,
+                    visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Password,
+                        imeAction = ImeAction.Done
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onDone = { performLogin() }
+                    ),
+                    shape = MaterialTheme.shapes.medium,
+                    trailingIcon = {
+                        if (passwordText.isNotEmpty()) {
+                            IconButton(onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.VirtualKey)
+                                isPasswordVisible = !isPasswordVisible
+                            }) {
+                                Icon(
+                                    imageVector = if (isPasswordVisible) EyeOffIco else EyeIco,
+                                    modifier = Modifier.size(MaterialTheme.dimens.iconMedium),
+                                    contentDescription = null
+                                )
+                            }
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .semantics { contentType = ContentType.Password }
+                )
+
+                if (errorMessage != null) {
+                    Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
+                    Text(
+                        text = errorMessage!!,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(MaterialTheme.spacing.medium))
+
+                Button(
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                        focusManager.clearFocus()
+                        performLogin()
+                    },
+                    enabled = !isLoading,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                ) {
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(MaterialTheme.dimens.iconMedium),
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            strokeWidth = MaterialTheme.dimens.strokeThick
+                        )
+                    } else {
+                        Text(stringResource(R.string.LogIn))
+                    }
                 }
             }
         }

@@ -55,9 +55,9 @@ import com.example.garden.ui.components.icons.EditIco
 import com.example.garden.ui.components.icons.MoreVertIco
 import com.example.garden.ui.theme.dimens
 import com.example.garden.ui.theme.spacing
+import com.example.garden.ui.utils.bottomSheetAnimateAndDismiss
 import com.example.garden.ui.utils.toDp
 import com.example.garden.ui.utils.toShape
-import kotlinx.coroutines.launch
 
 @Composable
 fun Card(
@@ -74,6 +74,8 @@ fun Card(
     showAlreadyWatchedLine: Boolean,
     cornerRadius: SizeType,
     layoutType: LayoutType,
+    isSupportEditing: Boolean = true,
+    isSupportDeleting: Boolean = true,
     onClick: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit
@@ -85,7 +87,9 @@ fun Card(
         ExtraOptions(
             onDismiss = { isExtraOptionsExpanded = false },
             onCardDelete = onDelete,
-            onCardEdit = onEdit
+            onCardEdit = onEdit,
+            isSupportEditing = isSupportEditing,
+            isSupportDeleting = isSupportDeleting
         )
     }
 
@@ -107,6 +111,7 @@ fun Card(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Row(
+                    modifier = Modifier.weight(1f, fill = false),
                     horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -316,7 +321,9 @@ fun Card(
 private fun ExtraOptions(
     onDismiss: () -> Unit,
     onCardDelete: () -> Unit,
-    onCardEdit: () -> Unit
+    onCardEdit: () -> Unit,
+    isSupportEditing: Boolean = true,
+    isSupportDeleting: Boolean = true
 ) {
     val haptic = LocalHapticFeedback.current
 
@@ -324,13 +331,11 @@ private fun ExtraOptions(
     val coroutineScope = rememberCoroutineScope()
 
     val animateAndDismiss: () -> Unit = {
-        coroutineScope.launch {
-            sheetState.hide()
-        }.invokeOnCompletion {
-            if (!sheetState.isVisible) {
-                onDismiss()
-            }
-        }
+        bottomSheetAnimateAndDismiss(
+            coroutineScope = coroutineScope,
+            sheetState = sheetState,
+            onDismiss = onDismiss
+        )
     }
 
     ModalBottomSheet(
@@ -340,82 +345,85 @@ private fun ExtraOptions(
         Column(
             modifier = Modifier.fillMaxWidth()
         ) {
-            Box(
-                modifier = Modifier
-                    .clip(MaterialTheme.shapes.medium)
-                    .clickable {
-                        haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
-                        onCardEdit()
-                        animateAndDismiss()
-                    }
-            ) {
-                Row(
+            if (isSupportEditing) {
+                Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(MaterialTheme.spacing.screenHorizontal),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(
-                        onClick = {
+                        .clip(MaterialTheme.shapes.medium)
+                        .clickable {
                             haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
                             onCardEdit()
                             animateAndDismiss()
                         }
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(MaterialTheme.spacing.screenHorizontal),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = EditIco,
-                            modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
-                            contentDescription = null
+                        IconButton(
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                                onCardEdit()
+                                animateAndDismiss()
+                            }
+                        ) {
+                            Icon(
+                                imageVector = EditIco,
+                                modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
+                                contentDescription = null
+                            )
+                        }
+
+                        Text(
+                            modifier = Modifier.weight(1f, fill = false),
+                            text = stringResource(R.string.edit),
+                            style = MaterialTheme.typography.titleMedium,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
-
-                    Text(
-                        modifier = Modifier.weight(1f, fill = false),
-                        text = stringResource(R.string.edit),
-                        style = MaterialTheme.typography.titleMedium,
-                        overflow = TextOverflow.Ellipsis
-                    )
                 }
             }
 
-
-            Box(
-                modifier = Modifier
-                    .clip(MaterialTheme.shapes.medium)
-                    .clickable {
-                        haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
-                        onCardDelete()
-                        animateAndDismiss()
-                    }
-            ) {
-                Row(
+            if (isSupportDeleting) {
+                Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(MaterialTheme.spacing.screenHorizontal),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(
-                        onClick = {
+                        .clip(MaterialTheme.shapes.medium)
+                        .clickable {
                             haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
                             onCardDelete()
                             animateAndDismiss()
                         }
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(MaterialTheme.spacing.screenHorizontal),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = DeleteIco,
-                            modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
-                            tint = LocalCustomColors.current.closeButton,
-                            contentDescription = null
+                        IconButton(
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                                onCardDelete()
+                                animateAndDismiss()
+                            }
+                        ) {
+                            Icon(
+                                imageVector = DeleteIco,
+                                modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
+                                tint = LocalCustomColors.current.closeButton,
+                                contentDescription = null
+                            )
+                        }
+
+                        Text(
+                            modifier = Modifier.weight(1f, fill = false),
+                            text = stringResource(R.string.delete),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = LocalCustomColors.current.closeButton,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
-
-                    Text(
-                        modifier = Modifier.weight(1f, fill = false),
-                        text = stringResource(R.string.delete),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = LocalCustomColors.current.closeButton,
-                        overflow = TextOverflow.Ellipsis
-                    )
                 }
             }
         }

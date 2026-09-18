@@ -141,6 +141,8 @@ fun StandardCarousel(
                     namePosition = parent.childsNamePosition,
                     alreadyWatched = 0L,
                     length = 0L,
+                    isSupportEditing = card.isUserCreated,
+                    isSupportDeleting = card.isUserCreated,
                     onEdit = { onEditCard(card) },
                     onDelete = { onDeleteCard(card.id) },
                     onClick = { onClickCard(card) }

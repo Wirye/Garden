@@ -90,6 +90,9 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlin.math.abs
 import kotlin.math.round
+import androidx.compose.runtime.collectAsState
+import com.example.garden.database.PlayListType
+import com.example.garden.viewmodel.CarouselState
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -104,6 +107,7 @@ fun MainPage(
     openCreateCarouselPage: () -> Unit,
     openEditCarouselPage: (ObjectData.Carousel) -> Unit,
     openEditCardPage: (ObjectData.Card, Long, CarouselType) -> Unit,
+    openCarouselChildsEdit: (Long) -> Unit,
     deleteCard: (Long) -> Unit,
     deleteCarousel: (Long) -> Unit
 ) {
@@ -210,20 +214,58 @@ fun MainPage(
                         val item = pagingItems[index]
 
                         if (item != null) {
-                            Carousel(
-                                lineWidth = MaterialTheme.windowInfo.widthDp,
-                                layer = layer,
-                                carouselData = item.parent,
-                                cards = item.childs,
-                                onAddCard = openCreateCardPage,
-                                onEditCarousel = { openEditCarouselPage(item.parent) },
-                                onEditCarouselSettings = { openEditCarouselPage(item.parent) },
-                                onClickCard = {},
-                                onWatchAllClick = {},
-                                onEditCard = { openEditCardPage(it, item.parent.id, item.parent.carouselType) },
-                                onDeleteCard = deleteCard,
-                                onDeleteCarousel = deleteCarousel
-                            )
+                            val carouselState = viewModel.carouselStates.collectAsState().value[item.parent.id] ?: CarouselState.Success
+
+                            val cards = if (carouselState is CarouselState.Loading && item.childs.isEmpty()) {
+                                List(15) { index ->
+                                    when (item.parent.carouselType) {
+                                        CarouselType.Anime, CarouselType.AnimeNManga -> ObjectData.Card.Anime(
+                                            id = 0L, position = index, name = "", image = ImageData.Url("")
+                                        )
+                                        CarouselType.Manga -> ObjectData.Card.Manga(
+                                            id = 0L, position = index, name = "", image = ImageData.Url("")
+                                        )
+                                        CarouselType.Music, CarouselType.PlaylistNMusic -> ObjectData.Card.Music(
+                                            id = 0L, position = index, name = "", image = ImageData.Url("")
+                                        )
+                                        CarouselType.Playlist -> ObjectData.Card.Playlist(
+                                            id = 0L, position = index, name = "", image = ImageData.Url(""), playListType = PlayListType.Music
+                                        )
+                                    }
+                                }
+                            } else {
+                                item.childs
+                            }
+
+                            if (carouselState is CarouselState.Success || carouselState is CarouselState.Loading) {
+                                Carousel(
+                                    lineWidth = MaterialTheme.windowInfo.widthDp,
+                                    layer = layer,
+                                    carouselData = item.parent,
+                                    cards = cards,
+                                    onAddCard = openCreateCardPage,
+                                    onEditCarousel = { openCarouselChildsEdit(item.parent.id) },
+                                    onEditCarouselSettings = { openEditCarouselPage(item.parent) },
+                                    onClickCard = {},
+                                    onWatchAllClick = {},
+                                    onEditCard = { openEditCardPage(it, item.parent.id, item.parent.carouselType) },
+                                    onDeleteCard = deleteCard,
+                                    onDeleteCarousel = deleteCarousel
+                                )
+                            } else if (carouselState is CarouselState.Error) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = MaterialTheme.spacing.large),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = carouselState.message,
+                                        style = MaterialTheme.typography.titleLarge,
+                                        color = MaterialTheme.colorScheme.error
+                                    )
+                                }
+                            }
                         }
                     }
 
@@ -361,7 +403,7 @@ private fun Carousel(
     cards: List<ObjectData.Card>,
     onAddCard: (Long, CarouselType) -> Unit,
     onEditCarousel: () -> Unit,
-    onEditCarouselSettings: (ObjectData) -> Unit,
+    onEditCarouselSettings: () -> Unit,
     onClickCard: (ObjectData) -> Unit,
     onWatchAllClick: (() -> Unit)? = null,
     onEditCard: (ObjectData.Card) -> Unit,
@@ -515,7 +557,7 @@ private fun Carousel(
                             text = stringResource(R.string.setting),
                             onClick = {
                                 haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
-                                onEditCarouselSettings(carouselData)
+                                onEditCarouselSettings()
                                 isExpanded.value = false
                             }
                         ) {
@@ -529,6 +571,7 @@ private fun Carousel(
 
                         PopupMenuItem(
                             text = stringResource(R.string.delete),
+                            textColor = LocalCustomColors.current.closeButton,
                             onClick = {
                                 haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
                                 onDeleteCarousel(carouselData.id)
@@ -554,7 +597,7 @@ private fun Carousel(
                     is ObjectData.Card.Anime -> ElementType.AnimeCard
                     is ObjectData.Card.Manga -> ElementType.MangaCard
                     is ObjectData.Card.Music -> ElementType.MusicCard
-                    else -> ElementType.AnimeCard
+                    is ObjectData.Card.Playlist -> ElementType.PlaylistCard
                 }
 
                 val cardAspRatio = cardElType.getAspectRatio()

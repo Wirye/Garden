@@ -1,9 +1,9 @@
 package com.example.garden.database
 
+import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
-import android.content.Context
 import androidx.room.TypeConverters
 import com.example.garden.database.converters.Converters
 import com.example.garden.database.converters.GridGenreConverters
@@ -19,8 +19,9 @@ import com.example.garden.database.dao.ObjectDataDao
         ObjectEntity::class,
         EpisodeProgressEntity::class,
         MediaGroupEntity::class,
+        ObjectFtsEntity::class,
     ],
-    version = 13,
+    version = 17,
     exportSchema = false
 )
 @TypeConverters(
@@ -42,15 +43,26 @@ abstract class AppDatabase : RoomDatabase() {
 
         fun getDatabase(context: Context): AppDatabase {
             return Instance ?: synchronized(this) {
-                Room.databaseBuilder(
-                    context,
-                    AppDatabase::class.java,
-                    "garden_beta.db"
-                )
-                    .fallbackToDestructiveMigration(true)
-                    .build()
-                    .also { Instance = it }
+                try {
+                    buildDatabase(context)
+                } catch (_: Exception) {
+                    context.deleteDatabase("garden_beta.db")
+                    context.deleteDatabase("garden_beta_v14.db")
+                    buildDatabase(context)
+                }
             }
+        }
+
+        private fun buildDatabase(context: Context): AppDatabase {
+            return Room.databaseBuilder(
+                context.applicationContext,
+                AppDatabase::class.java,
+                "garden_beta.db"
+            )
+                .fallbackToDestructiveMigrationOnDowngrade(true)
+                .fallbackToDestructiveMigration(true)
+                .build()
+                .also { Instance = it }
         }
     }
 }

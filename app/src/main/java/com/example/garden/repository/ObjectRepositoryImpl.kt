@@ -5,6 +5,8 @@ import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.filter
 import androidx.paging.map
+import androidx.room.withTransaction
+import com.example.garden.database.AppDatabase
 import com.example.garden.database.ElementType
 import com.example.garden.database.LinkData
 import com.example.garden.database.ObjectData
@@ -16,6 +18,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
 class ObjectRepositoryImpl(
+    private val db: AppDatabase,
     private val dao: ObjectDataDao
 ) : ObjectRepository {
 
@@ -27,10 +30,8 @@ class ObjectRepositoryImpl(
             pagingData
                 .filter { it.info is ObjectData.Carousel }
                 .map {
-                    it.info.copyWithIdAndPositionAndLink(
-                        it.id,
-                        it.position,
-                        it.link
+                    it.info.injectObjectEntityData(
+                        it
                     ) as ObjectData.Carousel
                 }
         }
@@ -51,19 +52,15 @@ class ObjectRepositoryImpl(
                     .filter { it.parent.info is ObjectData.Carousel }
                     .map {
                         ObjectWithChilds2(
-                            parent = it.parent.info.copyWithIdAndPositionAndLink(
-                                it.parent.id,
-                                it.parent.position,
-                                it.parent.link
+                            parent = it.parent.info.injectObjectEntityData(
+                                it.parent
                             ) as ObjectData.Carousel,
                             childs = it.childs
                                 .filter { child -> child.info is ObjectData.Card }
                                 .take(30)
                                 .map { child ->
-                                    child.info.copyWithIdAndPositionAndLink(
-                                        child.id,
-                                        child.position,
-                                        child.link
+                                    child.info.injectObjectEntityData(
+                                        child
                                     ) as ObjectData.Card
                                 }
                         )
@@ -79,10 +76,8 @@ class ObjectRepositoryImpl(
             pagingData
                 .filter { it.info is ObjectData.Card }
                 .map {
-                    it.info.copyWithIdAndPositionAndLink(
-                        it.id,
-                        it.position,
-                        it.link
+                    it.info.injectObjectEntityData(
+                        it
                     ) as ObjectData.Card
                 }
         }
@@ -96,16 +91,34 @@ class ObjectRepositoryImpl(
             pagingData
                 .filter { it.info is ObjectData.Card }
                 .map {
-                    it.info.copyWithIdAndPositionAndLink(
-                        it.id,
-                        it.position,
-                        it.link
+                    it.info.injectObjectEntityData(
+                        it
                     ) as ObjectData.Card
                 }
         }
     }
 
-    override suspend fun saveObject(data: ObjectData, page: PageType, parentId: Long?): Long {
+    override fun searchCards(
+        query: String,
+        allowedTypes: List<ElementType>
+    ): Flow<PagingData<ObjectEntity>> {
+        val cleanQuery = query.trim()
+        val typeNames = allowedTypes.map { it.name }
+        return Pager(
+            config = PagingConfig(pageSize = 20, enablePlaceholders = false, prefetchDistance = 6),
+            pagingSourceFactory = {
+                if (cleanQuery.isEmpty()) {
+                    dao.getAllCardsPaging(typeNames)
+                } else {
+                    dao.searchCardsFts(cleanQuery, typeNames)
+                }
+            }
+        ).flow
+    }
+
+    override fun getCardsByParentId(parentId: Long): Flow<List<ObjectEntity>> = dao.getCardsByParentId(parentId)
+
+    override suspend fun saveObject(data: ObjectData, page: PageType, parentId: Long?, isUserCreated: Boolean): Long {
         val elementType = resolveElementType(data)
         val entity = ObjectEntity(
             id = data.id,
@@ -114,7 +127,9 @@ class ObjectRepositoryImpl(
             position = data.position,
             elementType = elementType,
             link = data.link ?: LinkData.None,
-            info = data
+            info = data,
+            isUserCreated = isUserCreated,
+            name = data.name
         )
         return dao.upsertObject(entity)
     }
@@ -137,10 +152,8 @@ class ObjectRepositoryImpl(
                 }
 
                 else -> {
-                    return entity.info.copyWithIdAndPositionAndLink(
-                        id = entity.id,
-                        position = entity.position,
-                        link = entity.link
+                    return entity.info.injectObjectEntityData(
+                        entity = entity
                     )
                 }
             }
@@ -149,13 +162,22 @@ class ObjectRepositoryImpl(
         return null
     }
 
+    override suspend fun updatePositions(cards: List<ObjectData.Card>) {
+        db.withTransaction {
+            cards.forEach { card ->
+                dao.updatePosition(id = card.id, newPosition = card.position)
+            }
+        }
+    }
+
     override suspend fun getById(id: Long): ObjectEntity? = dao.getObjectById(id)
 
     override suspend fun saveCarouselWithChilds(
         carousel: ObjectData.Carousel,
-        page: PageType
+        page: PageType,
+        isUserCreated: Boolean
     ): Long {
-        val carouselId = saveObject(carousel, page, parentId = null)
+        val carouselId = saveObject(carousel, page, parentId = null, isUserCreated = isUserCreated)
         return carouselId
     }
 

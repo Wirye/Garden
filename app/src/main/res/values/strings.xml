@@ -85,6 +85,9 @@
     <string name="editEpisodes">Редактировать эпизоды</string>
     <string name="editChapters">Редактировать главы</string>
     <string name="editContent">Редактировать содержимое</string>
+    <string name="changePlayListType">Изменить тип плейлиста</string>
+    <string name="Close">Закрыть</string>
+    <string name="AboutCreateCarousel">О создании карусели</string>
     <string name="description">Описание</string>
     <string name="delete">Удалить</string>
     <string name="change">Изменить</string>
@@ -138,7 +141,7 @@
     <string name="flatGrid">Плоская сетка</string>
     <string name="absent">Отсутствует</string>
     <string name="fastChoiceYouTubeMusic">Быстрый выбор: YouTube Music</string>
-    <string name="spacer"></string>
+    <string name="spacer">""</string>
     <string name="save">Сохранить</string>
     <string name="Placeholder">Заглушка</string>
     <string name="Account">Аккаунт</string>
@@ -149,4 +152,34 @@
     <string name="LogoutFromAniLiberty">Выйти из АниЛиберти?</string>
     <string name="LogoutFromGoogle">Выйти из google?</string>
     <string name="TheProductOfColumnsAndRowsCannotExceedThirty">Произведение столбцов и строк не может превышать 30</string>
+    <string name="CarouselChildsEdit">Редактирование карточек карусели</string>
+    <string name="SelectCard_action">Выберите карточку</string>
+    <string name="SelectCards_action">Выберите карточки</string>
+    <string name="Choice">Выбрать</string>
+    <string name="GoogleLogin">Вход в Google</string>
+    <string name="AboutGoogleLogin">О входе в гугл</string>
+    <string name="AboutAniLibertyLogin">О входе в АниЛиберти</string>
+    <string name="IJustAddItForBeauty">Я просто добавил это для красоты</string>
+    <string name="FillInAllFields">Заполните все поля</string>
+    <string name="LoginOrEmail">Логин или Email</string>
+    <string name="Password">Пароль</string>
+    <string name="LogIn">Войти</string>
+    <string name="AuthorizationError">Ошибка авторизации</string>
+    <string name="CreateCarouselHelpPageText">"Что такое пресеты и зачем они нужны?
+Пресеты - это не только определённые настройки карусели, но и их функции, например пресет "Быстрый выбор: YouTube Music" добавляет в карусель карточки реального быстрого выбора из YouTube Music
+
+Как работает адаптивный размер?
+Адаптивный размер подстраивает сетку в зависимости от того, сколько карточек по ширине в неё помещается, например, если у нас стоит 3 на 3 обычный размер и 4 на 2 адаптивный, то если в карусель физически может поместиться 4 карточки, то сетка изменится на 4 на 2, если же например стоит 3 на 3 обычный и 6 на 1 - адаптивный, то при 4 будет 2, а при 5 - тоже 2. Подробный алгоритм вы можете найти в коде на гитхабе, файл - calculateObjectsInOneLineAndMaxLinesForAdaptiveGridSize.kt
+
+Почему произведение столбцов и строк не может превышать 30?
+Потому что на главных страницах действует ограничение на кол-во отображаемых карточек в карусели - максимум 30
+
+Как посмотреть все карточки карусели?
+Для этого есть кнопка с значком > после названия карусели
+
+Почему точки доводчика доступны только в карусели из сеток?
+Я посчитал, что поддерживать отображение точек для других типов нецелесообразно, но доводчик при этом останется для всех типов
+
+Почему я не могу добавлять карточку в карусель?
+Если кнопки Добавить карточку нету - значит карусель с таким пресетом не поддерживает сторонние карточки"</string>
 </resources>

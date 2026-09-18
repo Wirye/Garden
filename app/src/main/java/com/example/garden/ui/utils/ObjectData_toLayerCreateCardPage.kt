@@ -4,6 +4,7 @@ import com.example.garden.Layer
 import com.example.garden.database.CarouselType
 import com.example.garden.database.ElementType
 import com.example.garden.database.ObjectData
+import com.example.garden.database.PlayListType
 
 fun ObjectData.Card.toLayerCreateCardPage(parentId: Long, carouselType: CarouselType) : Layer.CreateCardPage {
     return Layer.CreateCardPage(
@@ -31,6 +32,7 @@ fun ObjectData.Card.toLayerCreateCardPage(parentId: Long, carouselType: Carousel
         chaptersList = if (this is ObjectData.Card.Manga) chaptersList else emptyList(),
         cardsList = if (this is ObjectData.Card.Playlist) cardsList else emptyList(),
         song = if (this is ObjectData.Card.Music) song else null,
-        horizontalVideo = if (this is ObjectData.Card.Music) horizontalVideo else null
+        horizontalVideo = if (this is ObjectData.Card.Music) horizontalVideo else null,
+        playlistType = if (this is ObjectData.Card.Playlist) playListType else PlayListType.Music
     )
 }

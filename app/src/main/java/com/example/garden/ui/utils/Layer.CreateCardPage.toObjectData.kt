@@ -57,7 +57,8 @@ fun Layer.CreateCardPage.toObjectData() : ObjectData {
                 image = image ?: ImageData.Url(""),
                 position = cardPosition,
                 link = LinkData.Self,
-                cardsList = cardsList
+                cardsList = cardsList,
+                playListType = playlistType
             )
         }
 

@@ -20,7 +20,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import androidx.room.Room
 import com.example.garden.appsettings.AuthManager
 import com.example.garden.database.AppDatabase
 import com.example.garden.database.CardSize
@@ -32,6 +31,7 @@ import com.example.garden.database.ImageData
 import com.example.garden.database.LayoutType
 import com.example.garden.database.LinkData
 import com.example.garden.database.PageType
+import com.example.garden.database.PlayListType
 import com.example.garden.database.SizeType
 import com.example.garden.repository.ObjectRepositoryImpl
 import com.example.garden.ui.screens.MainScreen
@@ -89,6 +89,7 @@ sealed class Layer (
         var horizontalVideo: LinkData? = null,
         var song: LinkData? = null,
         var carouselType: CarouselType,
+        var playlistType: PlayListType,
     ) : Layer()
     @Parcelize
     data class CreateCarouselPage(
@@ -173,15 +174,11 @@ val LocalCustomColors = staticCompositionLocalOf { CustomColors() }
 
 class MainActivity : ComponentActivity() {
     private val db by lazy {
-        Room.databaseBuilder(
-            applicationContext,
-            AppDatabase::class.java,
-            "garden_database.db"
-        ).build()
+        AppDatabase.getDatabase(applicationContext)
     }
 
     private val repository by lazy {
-        ObjectRepositoryImpl(db.objectDataDao())
+        ObjectRepositoryImpl(db, db.objectDataDao())
     }
 
     private val viewModel: MainViewModel by viewModels {
@@ -204,7 +201,7 @@ class MainActivity : ComponentActivity() {
     @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
+        viewModel
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.auto(
                 lightScrim = android.graphics.Color.TRANSPARENT,
@@ -217,7 +214,6 @@ class MainActivity : ComponentActivity() {
         )
 
         setContent {
-            viewModel.insert()
             val windowSizeClass = calculateWindowSizeClass(this)
             GardenTheme(windowSizeClass = windowSizeClass) {
                 val customColors = remember { CustomColors() }

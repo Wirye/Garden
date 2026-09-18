@@ -38,14 +38,17 @@ import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.windowsizeclass.WindowHeightSizeClass
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
@@ -53,6 +56,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
@@ -81,7 +85,9 @@ import com.example.garden.database.ElementType
 import com.example.garden.database.ImageData
 import com.example.garden.database.LinkData
 import com.example.garden.database.ObjectData
+import com.example.garden.database.PlayListType
 import com.example.garden.ui.components.AsyncImageWithAddPlaceholder
+import com.example.garden.ui.components.CardChoice
 import com.example.garden.ui.components.DropDownMenuWithBlur
 import com.example.garden.ui.components.GenreEditor
 import com.example.garden.ui.components.GenreEditorGenresType
@@ -103,6 +109,7 @@ import com.example.garden.ui.theme.windowInfo
 import com.example.garden.ui.theme.windowSizeClass
 import com.example.garden.ui.utils.availableCardTypes
 import com.example.garden.ui.utils.blockGestures
+import com.example.garden.ui.utils.bottomSheetAnimateAndDismiss
 import com.example.garden.ui.utils.clearFocus
 import com.example.garden.ui.utils.dataForModel
 import com.example.garden.ui.utils.getAspectRatio
@@ -114,6 +121,7 @@ import com.example.garden.ui.utils.toEpisodeInfo
 import com.example.garden.ui.utils.toObjectData
 import com.example.garden.viewmodel.CreateCardViewModel
 import com.example.garden.viewmodel.LayersViewModel
+import com.example.garden.viewmodel.MainViewModel
 import com.example.garden.viewmodel.PageWithSearchSaveOutput
 import com.example.garden.viewmodel.ResultSenderViewModel
 import dev.chrisbanes.haze.hazeSource
@@ -123,6 +131,7 @@ import kotlinx.coroutines.flow.filterNotNull
 @Suppress("UNCHECKED_CAST")
 @Composable
 fun CreateCardPage(
+    mainViewModel: MainViewModel,
     layer: Layer.CreateCardPage,
     layersViewModel: LayersViewModel,
     resultSenderViewModel: ResultSenderViewModel,
@@ -151,6 +160,7 @@ fun CreateCardPage(
             layer.cardType = updated.cardType
             layer.carouselType = updated.carouselType
             layer.cardsList = updated.cardsList
+            layer.playlistType = updated.playlistType
         }
     }
 
@@ -256,7 +266,9 @@ fun CreateCardPage(
                 nameState.text.toString()
             }.distinctUntilChanged()
                 .collect { text ->
-                    layer.name = text
+                    stateViewModel.update {
+                        copy(name = text)
+                    }
                 }
         }
 
@@ -265,7 +277,9 @@ fun CreateCardPage(
                 authorState.text.toString()
             }.distinctUntilChanged()
                 .collect { text ->
-                    layer.author = text
+                    stateViewModel.update {
+                        copy(author = text)
+                    }
                 }
         }
 
@@ -343,7 +357,7 @@ fun CreateCardPage(
             )
         ) {
             item("topBarSpacer") {
-                Spacer(modifier = Modifier.height(topInset+ MaterialTheme.spacing.screenHorizontal - spacing))
+                Spacer(modifier = Modifier.height(topInset + MaterialTheme.spacing.screenHorizontal - spacing))
             }
 
             item("topBarText") {
@@ -835,12 +849,12 @@ fun CreateCardPage(
                                     .background(backgroundColor)
                                     .animateContentSize(animationSpec = tween(300))
                                     .padding(if (isSelected.value) MaterialTheme.spacing.medium else 0.dp),
-                                verticalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                    horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)
                                 ) {
                                     Button(
                                         onClick = {
@@ -982,34 +996,116 @@ fun CreateCardPage(
                     }
 
                     ElementType.PlaylistCard -> {
-                        Button(
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
-                                focusManager.clearFocus()
-                            },
-                            shape = CircleShape,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                            ),
-                            contentPadding = PaddingValues(MaterialTheme.spacing.medium)
+                        var isCardsChoiceOpen by rememberSaveable { mutableStateOf(false) }
+                        if (isCardsChoiceOpen) {
+                            CardChoice(
+                                mainViewModel = mainViewModel,
+                                isSingleChoice = false,
+                                onDismiss = { isCardsChoiceOpen = false },
+                                cardTypes = stateViewModel.state.playlistType.availableCardTypes(),
+                                initCardsList = stateViewModel.state.cardsList,
+                                onApply = {
+                                    stateViewModel.update {
+                                        copy(cardsList = it)
+                                    }
+                                }
+                            )
+                        }
+
+                        var isChangePlayListTypeOpen by rememberSaveable { mutableStateOf(false) }
+                        if (isChangePlayListTypeOpen) {
+                            PlayListTypeChoice(
+                                onDismiss = { isChangePlayListTypeOpen = false },
+                                initType = stateViewModel.state.playlistType,
+                                onApply = {
+                                    if (
+                                        (stateViewModel.state.playlistType == PlayListType.Anime && (it == PlayListType.Manga || it == PlayListType.Music)) ||
+                                        (stateViewModel.state.playlistType == PlayListType.Manga && (it == PlayListType.Anime || it == PlayListType.Music)) ||
+                                        (stateViewModel.state.playlistType == PlayListType.Music && it != PlayListType.Music) ||
+                                        (stateViewModel.state.playlistType == PlayListType.AnimeNManga && it == PlayListType.Music)
+                                    ) {
+                                        stateViewModel.update {
+                                            copy(cardsList = emptyList())
+                                        }
+                                    }
+                                    stateViewModel.update { copy(playlistType = it) }
+                                }
+                            )
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .clip(MaterialTheme.shapes.medium)
+                                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(
-                                    MaterialTheme.spacing.small
-                                )
+                            Column(
+                                modifier = Modifier.padding(MaterialTheme.spacing.medium),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)
                             ) {
-                                Icon(
-                                    imageVector = EditIco,
-                                    modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
-                                    contentDescription = null
-                                )
-                                Text(
-                                    text = stringResource(R.string.editContent),
-                                    style = MaterialTheme.typography.labelLarge,
-                                    modifier = Modifier.weight(1f, fill = false)
-                                )
+                                Button(
+                                    onClick = {
+                                        haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                                        focusManager.clearFocus()
+                                        isChangePlayListTypeOpen = true
+                                    },
+                                    shape = CircleShape,
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                                    ),
+                                    contentPadding = PaddingValues(MaterialTheme.spacing.medium)
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(
+                                            MaterialTheme.spacing.small
+                                        )
+                                    ) {
+                                        Icon(
+                                            imageVector = EditIco,
+                                            modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
+                                            contentDescription = null
+                                        )
+                                        Text(
+                                            text = stringResource(R.string.changePlayListType),
+                                            style = MaterialTheme.typography.labelLarge,
+                                            modifier = Modifier.weight(1f, fill = false)
+                                        )
+                                    }
+                                }
+
+                                Button(
+                                    onClick = {
+                                        haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                                        focusManager.clearFocus()
+                                        isCardsChoiceOpen = true
+                                    },
+                                    shape = CircleShape,
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                                    ),
+                                    contentPadding = PaddingValues(MaterialTheme.spacing.medium)
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(
+                                            MaterialTheme.spacing.small
+                                        )
+                                    ) {
+                                        Icon(
+                                            imageVector = EditIco,
+                                            modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
+                                            contentDescription = null
+                                        )
+                                        Text(
+                                            text = stringResource(R.string.editContent),
+                                            style = MaterialTheme.typography.labelLarge,
+                                            modifier = Modifier.weight(1f, fill = false)
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -1022,7 +1118,10 @@ fun CreateCardPage(
         Box(
             modifier = Modifier
                 .align(Alignment.TopStart)
-                .padding(top = topInset + MaterialTheme.spacing.screenHorizontal, start = MaterialTheme.spacing.screenHorizontal + leftInset)
+                .padding(
+                    top = topInset + MaterialTheme.spacing.screenHorizontal,
+                    start = MaterialTheme.spacing.screenHorizontal + leftInset
+                )
         ) {
             FilledIconButton(
                 onClick = {
@@ -1045,7 +1144,10 @@ fun CreateCardPage(
         Box(
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .padding(top = topInset + MaterialTheme.spacing.screenHorizontal, end = MaterialTheme.spacing.screenHorizontal + rightInset)
+                .padding(
+                    top = topInset + MaterialTheme.spacing.screenHorizontal,
+                    end = MaterialTheme.spacing.screenHorizontal + rightInset
+                )
         ) {
             val isExtraButtonsMenuOpened = remember { mutableStateOf(false) }
             Box {
@@ -1081,6 +1183,13 @@ fun CreateCardPage(
                                     modifier = Modifier.size(MaterialTheme.dimens.iconLarge)
                                 )
                             }
+                        )
+                    } else {
+                        PopupMenuItem(
+                            text = stringResource(R.string.nothingIsHere),
+                            textColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f),
+                            onClick = {},
+                            icon = {}
                         )
                     }
                 }
@@ -1157,7 +1266,13 @@ fun CreateCardPage(
                         val newEpisodes = newData.items.filterIsInstance<EpisodeInfo>().toList()
 
                         stateViewModel.update {
-                            copy(episodesList = newEpisodes.map { it.toEpisodeInfo(newEpisodes.indexOf(it)) })
+                            copy(episodesList = newEpisodes.map {
+                                it.toEpisodeInfo(
+                                    newEpisodes.indexOf(
+                                        it
+                                    )
+                                )
+                            })
                         }
                     }
                     currentPendingEditEpisodesKey.value = ""
@@ -1169,10 +1284,115 @@ fun CreateCardPage(
                         val newChapters = newData.items.filterIsInstance<ChapterInfo>().toList()
 
                         stateViewModel.update {
-                            copy(chaptersList = newChapters.map { it.toChapterInfo(newChapters.indexOf(it)) })
+                            copy(chaptersList = newChapters.map {
+                                it.toChapterInfo(
+                                    newChapters.indexOf(
+                                        it
+                                    )
+                                )
+                            })
                         }
                     }
                     currentPendingEditChaptersKey.value = ""
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun PlayListTypeChoice(
+    onDismiss: () -> Unit,
+    initType: PlayListType,
+    onApply: (PlayListType) -> Unit
+) {
+    val haptic = LocalHapticFeedback.current
+
+    val focusManager = LocalFocusManager.current
+
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
+    val coroutineScope = rememberCoroutineScope()
+
+    val animateAndDismiss: () -> Unit = {
+        bottomSheetAnimateAndDismiss(
+            coroutineScope = coroutineScope,
+            sheetState = sheetState,
+            onDismiss = onDismiss
+        )
+    }
+
+    val playListTypes by remember { mutableStateOf(PlayListType.entries.toList()) }
+
+    var selectedType by remember { mutableStateOf(initType) }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+    ) {
+        Box {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = MaterialTheme.spacing.screenHorizontal),
+                contentPadding = PaddingValues(bottom = MaterialTheme.spacing.large + MaterialTheme.dimens.minButtonHeight),
+                verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
+            ) {
+                items(
+                    count = playListTypes.size,
+                    key = { it.toString() },
+                    contentType = { "PlayListTypeChoiceItem" }
+                ) { index ->
+                    val itemText = stringResource(playListTypes[index].displayNameId)
+                    val isSelected = selectedType == playListTypes[index]
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(MaterialTheme.shapes.medium)
+                            .background(
+                                if (isSelected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh
+                            )
+                            .clickable {
+                                haptic.performHapticFeedback(HapticFeedbackType.VirtualKey)
+                                selectedType = playListTypes[index]
+                            }
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(MaterialTheme.spacing.medium)
+                        ) {
+                            Text(
+                                text = itemText,
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = if (isSelected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .padding(horizontal = MaterialTheme.spacing.screenHorizontal),
+                contentAlignment = Alignment.Center
+            ) {
+                Button(
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                        focusManager.clearFocus()
+                        onApply(selectedType)
+                        animateAndDismiss()
+                    }
+                ) {
+                    Text(
+                        text = stringResource(R.string.apply),
+                        style = MaterialTheme.typography.labelLarge
+                    )
                 }
             }
         }

@@ -4,21 +4,44 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
-import com.example.garden.database.CardSize
-import com.example.garden.database.ImageData
-import com.example.garden.database.LayoutType
-import com.example.garden.database.LinkData
+import com.example.garden.database.ElementType
 import com.example.garden.database.ObjectData
+import com.example.garden.database.ObjectEntity
 import com.example.garden.database.ObjectWithChilds2
 import com.example.garden.database.PageType
 import com.example.garden.repository.ObjectRepository
+import com.example.garden.utils.search.buildFuzzyFtsQuery
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.time.Duration.Companion.milliseconds
+
+sealed interface CarouselState {
+    data object Success : CarouselState
+    data object Loading : CarouselState
+    data class Error(val message: String) : CarouselState
+}
+
+private data class SearchCardsState(
+    val query: String = "",
+    val isSearching: Boolean = false,
+    val allowedTypes: List<ElementType> = emptyList()
+)
 
 class MainViewModel(
     private val repository: ObjectRepository
 ) : ViewModel() {
+    private val _carouselStates = MutableStateFlow<Map<Long, CarouselState>>(emptyMap())
+    val carouselStates: StateFlow<Map<Long, CarouselState>> = _carouselStates.asStateFlow()
+
     private val pagingFlowsCache =
         ConcurrentHashMap<PageType, Flow<PagingData<ObjectWithChilds2>>>()
 
@@ -29,149 +52,39 @@ class MainViewModel(
         }
     }
 
-    fun insert() {
-        viewModelScope.launch {
-            repository.saveObject(
-                ObjectData.Carousel(
-                    id = 1L,
-                    position = 0,
-                    name = "Ничегооооооооооооооооооооооооо",
-                    childsShowName = true,
-                    childsShowAuthor = true,
-                    maxLines = 4,
-                    layoutType = LayoutType.CAROUSEL_FROM_FLAT_GRID,
-                    dovodchik = true,
-                    showDovodchikDots = true
-                ),
-                page = PageType.Home
-            )
+    private val searchCardsQuery = MutableStateFlow(SearchCardsState("", false, emptyList()))
 
-            repository.saveObject(
-                ObjectData.Card.Anime(
-                    id = 2L,
-                    position = 0,
-                    name = "Ничего",
-                    image = ImageData.Url("https://anilibria.top/storage/releases/posters/10089/PKg3Ru0WTMgTSSXhIpJICXjdE5DNvvLE.webp"),
-                    link = LinkData.Self
-                ),
-                page = PageType.Home,
-                parentId = 1L
-            )
-
-            repository.saveObject(
-                ObjectData.Card.Anime(
-                    id = 3L,
-                    position = 1,
-                    name = "Ничего",
-                    image = ImageData.Url("https://anilibria.top/storage/releases/posters/10089/PKg3Ru0WTMgTSSXhIpJICXjdE5DNvvLE.webp"),
-                    link = LinkData.Self
-                ),
-                page = PageType.Home,
-                parentId = 1L
-            )
-
-            repository.saveObject(
-                ObjectData.Card.Anime(
-                    id = 4L,
-                    position = 2,
-                    name = "Ничего",
-                    image = ImageData.Url("https://anilibria.top/storage/releases/posters/10089/PKg3Ru0WTMgTSSXhIpJICXjdE5DNvvLE.webp"),
-                    link = LinkData.Self
-                ),
-                page = PageType.Home,
-                parentId = 1L
-            )
-
-            repository.saveObject(
-                ObjectData.Card.Anime(
-                    id = 5L,
-                    position = 3,
-                    name = "Ничего",
-                    image = ImageData.Url("https://anilibria.top/storage/releases/posters/10089/PKg3Ru0WTMgTSSXhIpJICXjdE5DNvvLE.webp"),
-                    link = LinkData.Self
-                ),
-                page = PageType.Home,
-                parentId = 1L
-            )
-
-            repository.saveObject(
-                ObjectData.Carousel(
-                    id = 6L,
-                    position = 1,
-                    name = "Ничего",
-                    childsShowName = true,
-                    childsShowAuthor = true,
-                    childsSize = CardSize.SMALL,
-                    layoutType = LayoutType.CAROUSEL_FROM_GRID,
-                    objectsInOneLine = 2,
-                    maxLines = 1,
-                    dovodchik = true,
-                    showDovodchikDots = true
-                ),
-                page = PageType.Home
-            )
-
-            repository.saveObject(
-                ObjectData.Card.Anime(
-                    id = 7L,
-                    position = 0,
-                    name = "Ничего",
-                    image = ImageData.Url("https://anilibria.top/storage/releases/posters/10089/PKg3Ru0WTMgTSSXhIpJICXjdE5DNvvLE.webp"),
-                    link = LinkData.Self
-                ),
-                page = PageType.Home,
-                parentId = 6L
-            )
-
-            repository.saveObject(
-                ObjectData.Card.Anime(
-                    id = 8L,
-                    position = 1,
-                    name = "Ничего",
-                    image = ImageData.Url("https://anilibria.top/storage/releases/posters/10089/PKg3Ru0WTMgTSSXhIpJICXjdE5DNvvLE.webp"),
-                    link = LinkData.Self
-                ),
-                page = PageType.Home,
-                parentId = 6L
-            )
-
-            repository.saveObject(
-                ObjectData.Card.Anime(
-                    id = 9L,
-                    position = 2,
-                    name = "Ничего",
-                    image = ImageData.Url("https://www.aniliberty.top/storage/releases/posters/10290/tc8bOapcxYF5xJ3M2UNjiklndO8iYioQ.webp"),
-                    link = LinkData.Self
-                ),
-                page = PageType.Home,
-                parentId = 6L
-            )
-
-            repository.saveObject(
-                ObjectData.Card.Anime(
-                    id = 10L,
-                    position = 3,
-                    name = "Ничего",
-                    image = ImageData.Url("https://www.aniliberty.top/storage/releases/posters/10290/tc8bOapcxYF5xJ3M2UNjiklndO8iYioQ.webp"),
-                    link = LinkData.Self
-                ),
-                page = PageType.Home,
-                parentId = 6L
-            )
-
-            repository.saveObject(
-                ObjectData.Card.Anime(
-                    id = 11L,
-                    position = 4,
-                    name = "Ничего",
-                    image = ImageData.Url("https://www.aniliberty.top/storage/releases/posters/10290/tc8bOapcxYF5xJ3M2UNjiklndO8iYioQ.webp"),
-                    link = LinkData.Self
-                ),
-                page = PageType.Home,
-                parentId = 6L
-            )
-        }
+    @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
+    fun searchCards(
+        query: String,
+        allowedTypes: List<ElementType>
+    ) {
+        searchCardsQuery.value = SearchCardsState(query, true, allowedTypes)
     }
+
+    fun clearCardsSearch() {
+        searchCardsQuery.value = SearchCardsState("", false, listOf())
+    }
+
+    @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
+    val searchCardsFlow: Flow<PagingData<ObjectEntity>> = searchCardsQuery
+        .debounce{
+            if (it.isSearching) 300.milliseconds else 0.milliseconds
+        }
+        .distinctUntilChanged()
+        .flatMapLatest {
+            if (it.isSearching) {
+                repository.searchCards(buildFuzzyFtsQuery(it.query.replace(" ", "")), it.allowedTypes)
+            } else {
+                flowOf(PagingData.empty())
+            }
+        }
+        .cachedIn(viewModelScope)
+
+    suspend fun updatePositions(cards: List<ObjectData.Card>) = repository.updatePositions(cards)
+
+    fun getCardsByParentId(parentId: Long): Flow<List<ObjectEntity>> =
+        repository.getCardsByParentId(parentId)
 
     suspend fun getRootObjectById(id: Long): ObjectData? = repository.getRootObjectById(id)
 
@@ -180,14 +93,10 @@ class MainViewModel(
 
         val maxPosition = repository.getMaxChildPosition(parentId)
 
-        val newData = if (data.position != -1) data.copyWithIdAndPositionAndLink(
-            id = data.id,
-            position = objPosition ?: data.position,
-            link = data.link ?: LinkData.None
-        ) else data.copyWithIdAndPositionAndLink(
-            id = data.id,
-            position = maxPosition?.plus(1) ?: 0,
-            link = data.link ?: LinkData.None
+        val newData = if (data.position != -1) data.copyWithPosition(
+            position = objPosition ?: data.position
+        ) else data.copyWithPosition(
+            position = maxPosition?.plus(1) ?: 0
         )
 
         return repository.saveObject(newData, page, parentId)
