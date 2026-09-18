@@ -40,9 +40,12 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
@@ -68,6 +71,8 @@ import com.example.garden.ResultKeys
 import com.example.garden.database.ImageData
 import com.example.garden.database.LinkData
 import com.example.garden.ui.components.AsyncImageWithAddPlaceholder
+import com.example.garden.ui.components.DropDownMenuWithBlur
+import com.example.garden.ui.components.PopupMenuItem
 import com.example.garden.ui.components.SmartFilePicker
 import com.example.garden.ui.components.icons.AddIco
 import com.example.garden.ui.components.icons.CloseIco
@@ -494,17 +499,34 @@ fun PageWithSearch(
                 lineLimits = TextFieldLineLimits.SingleLine
             )
 
-            IconButton(onClick = {
-                haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
-                focusManager.clearFocus()
-            }) {
-                Icon(
-                    imageVector = MoreVertIco,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier.size(MaterialTheme.dimens.iconLarge)
-                )
+            var isExtraOptionsExpanded by rememberSaveable { mutableStateOf(false) }
+            Box {
+                IconButton(onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                    focusManager.clearFocus()
+                    isExtraOptionsExpanded = !isExtraOptionsExpanded
+                }) {
+                    Icon(
+                        imageVector = MoreVertIco,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onBackground,
+                        modifier = Modifier.size(MaterialTheme.dimens.iconLarge)
+                    )
+                }
+
+                DropDownMenuWithBlur(
+                    expanded = { isExtraOptionsExpanded },
+                    hazeState = LocalHazeLayers.current.mainScreen,
+                    onDismissRequest = { isExtraOptionsExpanded = false }
+                ) {
+                    PopupMenuItem(
+                        text = stringResource(R.string.nothingIsHere),
+                        textColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f),
+                        onClick = {}
+                    )
+                }
             }
+
         }
 
         Box(
@@ -521,7 +543,8 @@ fun PageWithSearch(
                 )
         ) {
             Column(
-                modifier = Modifier.padding(bottom = MaterialTheme.spacing.screenHorizontal + bottomInset)
+                modifier = Modifier
+                    .padding(bottom = MaterialTheme.spacing.screenHorizontal + bottomInset)
                     .padding(horizontal = MaterialTheme.spacing.screenHorizontal),
                 verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
                 horizontalAlignment = Alignment.CenterHorizontally
