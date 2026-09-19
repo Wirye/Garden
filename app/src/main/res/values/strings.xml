@@ -167,6 +167,8 @@
     <string name="Password">Пароль</string>
     <string name="LogIn">Войти</string>
     <string name="AuthorizationError">Ошибка авторизации</string>
+    <string name="GoogleAccount">Гугл аккаунт</string>
+    <string name="AniLibertyAccount">АниЛиберти аккаунт</string>
     <string name="CreateCarouselHelpPageText">"Что такое пресеты и зачем они нужны?
 Пресеты - это не только определённые настройки карусели, но и их функции, например пресет "Быстрый выбор: YouTube Music" добавляет в карусель карточки реального быстрого выбора из YouTube Music
 

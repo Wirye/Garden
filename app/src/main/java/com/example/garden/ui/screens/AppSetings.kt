@@ -40,6 +40,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -66,9 +67,16 @@ import com.example.garden.ui.theme.dimens
 import com.example.garden.ui.theme.spacing
 import com.example.garden.ui.utils.blockGestures
 import com.example.garden.ui.utils.clearFocus
+import com.example.garden.utils.search.searchInList
 import com.example.garden.viewmodel.AuthViewModel
 import com.example.garden.viewmodel.LayersViewModel
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlin.time.Duration.Companion.milliseconds
 
+@OptIn(FlowPreview::class)
 @Composable
 fun AppSettings(
     authViewModel: AuthViewModel,
@@ -105,6 +113,20 @@ fun AppSettings(
         authViewModel.refreshGoogleUserProfile()
         authViewModel.refreshAniLibertyUserProfile()
     }
+
+    val settings = listOf(
+        stringResource(R.string.GoogleAccount),
+        stringResource(R.string.AniLibertyAccount)
+    )
+
+    val searchedSettings by remember(settings) {
+        snapshotFlow { searchState.text.toString() }
+            .debounce(500.milliseconds)
+            .distinctUntilChanged()
+            .map { query ->
+                searchInList(settings, query, 30).ifEmpty { settings }
+            }
+    }.collectAsStateWithLifecycle(initialValue = settings)
 
     Column(
         modifier = Modifier
@@ -181,146 +203,301 @@ fun AppSettings(
             modifier = Modifier.weight(1f, fill = true),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            item("GoogleProfile") {
-                Column(
-                    modifier = Modifier
-                        .clip(MaterialTheme.shapes.extraLarge)
-                        .background(MaterialTheme.colorScheme.surfaceVariant),
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .clickable {
-                                if (!isGoogleAuthorized) {
-                                    haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
-                                    layersViewModel.openLayer(
-                                        Layer.GoogleLoginPage()
-                                    )
-                                }
-                            }
-                    ) {
-                        Row(
+            items(
+                searchedSettings.size,
+                key = { index -> searchedSettings[index] },
+                contentType = { "settings" }
+            ) { index ->
+                when (searchedSettings[index]) {
+                    stringResource(R.string.GoogleAccount) -> {
+                        Column(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(MaterialTheme.spacing.medium),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
+                                .clip(MaterialTheme.shapes.extraLarge)
+                                .background(MaterialTheme.colorScheme.surfaceVariant),
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
-                            ) {
-                                AppAsyncImage(
-                                    imageData = ImageData.Url("https://www.google.com/s2/favicons?domain=google.com&sz=128"),
-                                    contentDescription = null,
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier
-                                        .size(MaterialTheme.dimens.minButtonHeight)
-                                        .clip(CircleShape)
-                                )
-
-                                Text(
-                                    text = stringResource(R.string.Account),
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-
-                            if (!isGoogleAuthorized) {
-                                Icon(
-                                    imageVector = LoginIco,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
-                                )
-                            }
-                        }
-                    }
-
-                    val googleProfileVisibleState =
-                        remember { MutableTransitionState(isGoogleAuthorized) }.apply {
-                            targetState = isGoogleAuthorized
-                        }
-
-                    AnimatedVisibility(
-                        visibleState = googleProfileVisibleState,
-                        enter = expandVertically() + fadeIn(),
-                        exit = shrinkVertically() + fadeOut(),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        var isLogoutAskExpanded by remember { mutableStateOf(false) }
-                        if (isLogoutAskExpanded) {
-                            ConfirmLogoutDialog(
-                                title = stringResource(R.string.LogoutFromGoogle),
-                                message = stringResource(R.string.PersonalizedContentWillBecomeUnavailable),
-                                onConfirm = {
-                                    authViewModel.logoutGoogle()
-                                    isLogoutAskExpanded = false
-                                },
-                                onDismiss = { isLogoutAskExpanded = false }
-                            )
-                        }
-
-                        Box(
-                            modifier = Modifier
-                                .clip(
-                                    MaterialTheme.shapes.extraLarge.copy(
-                                        topStart = CornerSize(0.dp),
-                                        topEnd = CornerSize(0.dp)
-                                    )
-                                )
-                                .background(MaterialTheme.colorScheme.surfaceVariant)
-                                .clickable {
-                                    haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
-                                    isLogoutAskExpanded = true
-                                }
-                        ) {
-                            Row(
+                            Box(
                                 modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(MaterialTheme.spacing.medium),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
+                                    .clickable {
+                                        if (!isGoogleAuthorized) {
+                                            haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                                            layersViewModel.openLayer(
+                                                Layer.GoogleLoginPage()
+                                            )
+                                        }
+                                    }
                             ) {
                                 Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(MaterialTheme.spacing.medium),
                                     verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
+                                    horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
-                                    AppAsyncImage(
-                                        imageData = if (linkToGoogleAvatar != null) ImageData.Url(
-                                            linkToGoogleAvatar
-                                        ) else null,
-                                        contentDescription = null,
-                                        contentScale = ContentScale.Crop,
-                                        modifier = Modifier
-                                            .size(MaterialTheme.dimens.minButtonHeight)
-                                            .clip(CircleShape)
-                                    )
-
-                                    Column {
-                                        Text(
-                                            text = googleUserName
-                                                ?: stringResource(R.string.withoutName),
-                                            style = MaterialTheme.typography.titleMedium,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(
-                                                alpha = 0.8f
-                                            )
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
+                                    ) {
+                                        AppAsyncImage(
+                                            imageData = ImageData.Url("https://www.google.com/s2/favicons?domain=google.com&sz=128"),
+                                            contentDescription = null,
+                                            contentScale = ContentScale.Crop,
+                                            modifier = Modifier
+                                                .size(MaterialTheme.dimens.minButtonHeight)
+                                                .clip(CircleShape)
                                         )
 
                                         Text(
-                                            text = googleEmailOrHandle
-                                                ?: stringResource(R.string.withoutEmail),
+                                            text = stringResource(R.string.Account),
                                             style = MaterialTheme.typography.titleMedium,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
+
+                                    if (!isGoogleAuthorized) {
+                                        Icon(
+                                            imageVector = LoginIco,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                                                alpha = 0.3f
+                                            )
+                                        )
+                                    }
+                                }
+                            }
+
+                            val googleProfileVisibleState =
+                                remember { MutableTransitionState(isGoogleAuthorized) }.apply {
+                                    targetState = isGoogleAuthorized
                                 }
 
-                                Icon(
-                                    imageVector = LogoutIco,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
-                                )
+                            AnimatedVisibility(
+                                visibleState = googleProfileVisibleState,
+                                enter = expandVertically() + fadeIn(),
+                                exit = shrinkVertically() + fadeOut(),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                var isLogoutAskExpanded by remember { mutableStateOf(false) }
+                                if (isLogoutAskExpanded) {
+                                    ConfirmLogoutDialog(
+                                        title = stringResource(R.string.LogoutFromGoogle),
+                                        message = stringResource(R.string.PersonalizedContentWillBecomeUnavailable),
+                                        onConfirm = {
+                                            authViewModel.logoutGoogle()
+                                            isLogoutAskExpanded = false
+                                        },
+                                        onDismiss = { isLogoutAskExpanded = false }
+                                    )
+                                }
+
+                                Box(
+                                    modifier = Modifier
+                                        .clip(
+                                            MaterialTheme.shapes.extraLarge.copy(
+                                                topStart = CornerSize(0.dp),
+                                                topEnd = CornerSize(0.dp)
+                                            )
+                                        )
+                                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                                        .clickable {
+                                            haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                                            isLogoutAskExpanded = true
+                                        }
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(MaterialTheme.spacing.medium),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(
+                                                MaterialTheme.spacing.small
+                                            )
+                                        ) {
+                                            AppAsyncImage(
+                                                imageData = if (linkToGoogleAvatar != null) ImageData.Url(
+                                                    linkToGoogleAvatar
+                                                ) else null,
+                                                contentDescription = null,
+                                                contentScale = ContentScale.Crop,
+                                                modifier = Modifier
+                                                    .size(MaterialTheme.dimens.minButtonHeight)
+                                                    .clip(CircleShape)
+                                            )
+
+                                            Column {
+                                                Text(
+                                                    text = googleUserName
+                                                        ?: stringResource(R.string.withoutName),
+                                                    style = MaterialTheme.typography.titleMedium,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                                                        alpha = 0.8f
+                                                    )
+                                                )
+
+                                                Text(
+                                                    text = googleEmailOrHandle
+                                                        ?: stringResource(R.string.withoutEmail),
+                                                    style = MaterialTheme.typography.titleMedium,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+                                        }
+
+                                        Icon(
+                                            imageVector = LogoutIco,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                                                alpha = 0.3f
+                                            )
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    stringResource(R.string.AniLibertyAccount) -> {
+                        Column(
+                            modifier = Modifier
+                                .clip(MaterialTheme.shapes.extraLarge)
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .clickable {
+                                        if (!isAniLibertyAuthorized) {
+                                            haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                                            layersViewModel.openLayer(
+                                                Layer.AniLibertyLoginPage()
+                                            )
+                                        }
+                                    }
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(MaterialTheme.spacing.medium),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
+                                    ) {
+                                        AppAsyncImage(
+                                            imageData = ImageData.Url("https://www.google.com/s2/favicons?domain=aniliberty.top&sz=128"),
+                                            contentDescription = null,
+                                            contentScale = ContentScale.Crop,
+                                            modifier = Modifier
+                                                .size(MaterialTheme.dimens.minButtonHeight)
+                                                .clip(CircleShape)
+                                        )
+
+                                        Text(
+                                            text = stringResource(R.string.Account),
+                                            style = MaterialTheme.typography.titleMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+
+                                    if (!isAniLibertyAuthorized) {
+                                        Icon(
+                                            imageVector = LoginIco,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                                                alpha = 0.3f
+                                            )
+                                        )
+                                    }
+                                }
+                            }
+
+                            val aniLibertyProfileVisibleState =
+                                remember { MutableTransitionState(isAniLibertyAuthorized) }.apply {
+                                    targetState = isAniLibertyAuthorized
+                                }
+
+                            AnimatedVisibility(
+                                visibleState = aniLibertyProfileVisibleState,
+                                enter = expandVertically() + fadeIn(),
+                                exit = shrinkVertically() + fadeOut(),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                var isLogoutAskExpanded by remember { mutableStateOf(false) }
+                                if (isLogoutAskExpanded) {
+                                    ConfirmLogoutDialog(
+                                        title = stringResource(R.string.LogoutFromAniLiberty),
+                                        message = stringResource(R.string.PersonalizedContentWillBecomeUnavailable),
+                                        onConfirm = {
+                                            isLogoutAskExpanded = false
+                                            authViewModel.logoutAniLiberty()
+                                        },
+                                        onDismiss = { isLogoutAskExpanded = false }
+                                    )
+                                }
+
+                                Box(
+                                    modifier = Modifier
+                                        .clip(
+                                            MaterialTheme.shapes.extraLarge.copy(
+                                                topStart = CornerSize(0.dp),
+                                                topEnd = CornerSize(0.dp)
+                                            )
+                                        )
+                                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                                        .clickable {
+                                            haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                                            isLogoutAskExpanded = true
+                                        }
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(MaterialTheme.spacing.medium),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(
+                                                MaterialTheme.spacing.small
+                                            )
+                                        ) {
+                                            AppAsyncImage(
+                                                imageData = if (linkToAniLibertyAvatar != null) ImageData.Url(
+                                                    linkToAniLibertyAvatar
+                                                ) else null,
+                                                contentDescription = null,
+                                                contentScale = ContentScale.Crop,
+                                                modifier = Modifier
+                                                    .size(MaterialTheme.dimens.minButtonHeight)
+                                                    .clip(CircleShape)
+                                            )
+
+                                            Text(
+                                                text = aniLibertyUserName
+                                                    ?: stringResource(R.string.withoutName),
+                                                style = MaterialTheme.typography.titleMedium,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+
+                                        Icon(
+                                            imageVector = LogoutIco,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                                                alpha = 0.3f
+                                            )
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -331,141 +508,6 @@ fun AppSettings(
                         .fillMaxWidth()
                         .height(MaterialTheme.spacing.medium)
                 )
-            }
-
-            item("AniLibertyProfile") {
-                Column(
-                    modifier = Modifier
-                        .clip(MaterialTheme.shapes.extraLarge)
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .clickable {
-                                if (!isAniLibertyAuthorized) {
-                                    haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
-                                    layersViewModel.openLayer(
-                                        Layer.AniLibertyLoginPage()
-                                    )
-                                }
-                            }
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(MaterialTheme.spacing.medium),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
-                            ) {
-                                AppAsyncImage(
-                                    imageData = ImageData.Url("https://www.google.com/s2/favicons?domain=aniliberty.top&sz=128"),
-                                    contentDescription = null,
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier
-                                        .size(MaterialTheme.dimens.minButtonHeight)
-                                        .clip(CircleShape)
-                                )
-
-                                Text(
-                                    text = stringResource(R.string.Account),
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-
-                            if (!isAniLibertyAuthorized) {
-                                Icon(
-                                    imageVector = LoginIco,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
-                                )
-                            }
-                        }
-                    }
-
-                    val aniLibertyProfileVisibleState =
-                        remember { MutableTransitionState(isAniLibertyAuthorized) }.apply {
-                            targetState = isAniLibertyAuthorized
-                        }
-
-                    AnimatedVisibility(
-                        visibleState = aniLibertyProfileVisibleState,
-                        enter = expandVertically() + fadeIn(),
-                        exit = shrinkVertically() + fadeOut(),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        var isLogoutAskExpanded by remember { mutableStateOf(false) }
-                        if (isLogoutAskExpanded) {
-                            ConfirmLogoutDialog(
-                                title = stringResource(R.string.LogoutFromAniLiberty),
-                                message = stringResource(R.string.PersonalizedContentWillBecomeUnavailable),
-                                onConfirm = {
-                                    isLogoutAskExpanded = false
-                                    authViewModel.logoutAniLiberty()
-                                },
-                                onDismiss = { isLogoutAskExpanded = false }
-                            )
-                        }
-
-                        Box(
-                            modifier = Modifier
-                                .clip(
-                                    MaterialTheme.shapes.extraLarge.copy(
-                                        topStart = CornerSize(0.dp),
-                                        topEnd = CornerSize(0.dp)
-                                    )
-                                )
-                                .background(MaterialTheme.colorScheme.surfaceVariant)
-                                .clickable {
-                                    haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
-                                    isLogoutAskExpanded = true
-                                }
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(MaterialTheme.spacing.medium),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
-                                ) {
-                                    AppAsyncImage(
-                                        imageData = if (linkToAniLibertyAvatar != null) ImageData.Url(
-                                            linkToAniLibertyAvatar
-                                        ) else null,
-                                        contentDescription = null,
-                                        contentScale = ContentScale.Crop,
-                                        modifier = Modifier
-                                            .size(MaterialTheme.dimens.minButtonHeight)
-                                            .clip(CircleShape)
-                                    )
-
-                                    Text(
-                                        text = aniLibertyUserName
-                                            ?: stringResource(R.string.withoutName),
-                                        style = MaterialTheme.typography.titleMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-
-                                Icon(
-                                    imageVector = LogoutIco,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
-                                )
-                            }
-                        }
-                    }
-                }
             }
         }
     }
