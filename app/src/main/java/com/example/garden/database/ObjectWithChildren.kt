@@ -8,6 +8,7 @@ data class ObjectWithChilds(
     val parent: ObjectEntity,
 
     @Relation(
+        entity = ResolvedObjectEntity::class,
         parentColumn = "id",
         entityColumn = "parentId"
     )

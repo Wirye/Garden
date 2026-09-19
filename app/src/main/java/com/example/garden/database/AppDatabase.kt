@@ -21,7 +21,8 @@ import com.example.garden.database.dao.ObjectDataDao
         MediaGroupEntity::class,
         ObjectFtsEntity::class,
     ],
-    version = 17,
+    views = [ResolvedObjectEntity::class],
+    version = 20,
     exportSchema = false
 )
 @TypeConverters(

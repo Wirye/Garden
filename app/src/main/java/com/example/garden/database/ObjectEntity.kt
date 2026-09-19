@@ -3,6 +3,7 @@ package com.example.garden.database
 import android.os.Parcelable
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.room.ColumnInfo
+import androidx.room.DatabaseView
 import androidx.room.Entity
 import androidx.room.Fts4
 import androidx.room.FtsOptions
@@ -745,6 +746,48 @@ data class ObjectFtsEntity(
     @ColumnInfo(name = "rowid")
     val rowid: Long,
     val name: String
+)
+
+@DatabaseView(
+    viewName = "resolved_object_data",
+    value = """
+        SELECT 
+            child.id AS id,
+            child.page AS page,
+            child.parentId AS parentId,
+            child.position AS position,
+            child.elementType AS elementType,
+            child.link AS link,
+            child.isUserCreated AS isUserCreated,
+            
+            CASE 
+                WHEN child.link LIKE 'insert:%' AND parent.id IS NOT NULL 
+                THEN parent.name 
+                ELSE child.name 
+            END AS name,
+            
+            CASE 
+                WHEN child.link LIKE 'insert:%' AND parent.id IS NOT NULL 
+                THEN parent.info 
+                ELSE child.info 
+            END AS info
+
+        FROM objectData AS child
+        LEFT JOIN objectData AS parent 
+            ON child.link LIKE 'insert:%' 
+           AND CAST(SUBSTR(child.link, 8) AS INTEGER) = parent.id
+    """
+)
+data class ResolvedObjectEntity(
+    val id: Long = 0,
+    val parentId: Long? = null,
+    val page: PageType,
+    val position: Int,
+    val elementType: ElementType,
+    val link: LinkData,
+    val isUserCreated: Boolean,
+    val name: String,
+    val info: ObjectData
 )
 
 @Entity(

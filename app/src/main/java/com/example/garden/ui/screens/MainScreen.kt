@@ -1,5 +1,6 @@
 package com.example.garden.ui.screens
 
+import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.BackEventCompat
 import androidx.activity.OnBackPressedCallback
@@ -7,6 +8,9 @@ import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.MutableTransitionState
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.rememberTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -15,12 +19,28 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -34,13 +54,22 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.DialogWindowProvider
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.garden.Layer
+import com.example.garden.LocalCustomColors
 import com.example.garden.R
 import com.example.garden.database.CardSize
 import com.example.garden.database.CarouselType
@@ -51,10 +80,16 @@ import com.example.garden.database.ObjectData
 import com.example.garden.database.PageType
 import com.example.garden.database.PlayListType
 import com.example.garden.database.SizeType
+import com.example.garden.ui.components.CardChoice
 import com.example.garden.ui.components.CarouselChildsEdit
 import com.example.garden.ui.components.MainPageBottomBar
 import com.example.garden.ui.components.MainPageTopBar
+import com.example.garden.ui.components.icons.AddIco
+import com.example.garden.ui.components.icons.FolderIco
 import com.example.garden.ui.theme.LocalWindowInfo
+import com.example.garden.ui.theme.dimens
+import com.example.garden.ui.theme.spacing
+import com.example.garden.ui.utils.availableCardTypes
 import com.example.garden.ui.utils.hazeSourcesForUpperLayers
 import com.example.garden.ui.utils.toLayerCreateCardPage
 import com.example.garden.ui.utils.toLayerCreateCarouselPage
@@ -260,6 +295,62 @@ private fun LayerContent(
                         onEdit = {}
                     )
 
+                    var isCardChoiceExpandedState by rememberSaveable { mutableStateOf(Triple(-1L, false, CarouselType.Anime)) }
+                    if (isCardChoiceExpandedState.second && isCardChoiceExpandedState.first != -1L) {
+                        CardChoice (
+                            mainViewModel = mainViewModel,
+                            isSingleChoice = true,
+                            cardTypes = isCardChoiceExpandedState.third.availableCardTypes(),
+                            initCardsList = emptyList(),
+                            onDismiss = { isCardChoiceExpandedState = Triple(-1L, false, CarouselType.Anime) },
+                            onApply = {
+                                coroutineScope.launch {
+                                    mainViewModel.insertObjectWithLinkInsert(parentId = isCardChoiceExpandedState.first, targetId = it.first())
+                                }
+                            }
+                        )
+                    }
+
+                    var isCreateCardChoiceExpandedState by rememberSaveable { mutableStateOf(Triple(-1L, false, CarouselType.Anime)) }
+                    Box {
+                        CreateCardChoice(
+                            expanded = isCreateCardChoiceExpandedState.second,
+                            hazeState = LocalHazeLayers.current.mainScreen,
+                            onDismiss = { isCreateCardChoiceExpandedState = Triple(isCreateCardChoiceExpandedState.first, false, isCreateCardChoiceExpandedState.third) },
+                            onAddCard = {
+                                if (isCreateCardChoiceExpandedState.first != -1L) {
+                                    layersViewModel.openLayer(
+                                        Layer.CreateCardPage(
+                                            parentId = isCreateCardChoiceExpandedState.first,
+                                            name = "",
+                                            description = "",
+                                            author = "",
+                                            genreList = emptyList(),
+                                            episodesList = emptyList(),
+                                            cardType = when (isCreateCardChoiceExpandedState.third) {
+                                                CarouselType.Anime -> ElementType.AnimeCard
+                                                CarouselType.Manga -> ElementType.MangaCard
+                                                CarouselType.Music -> ElementType.MusicCard
+                                                CarouselType.Playlist -> ElementType.PlaylistCard
+                                                CarouselType.PlaylistNMusic -> ElementType.PlaylistCard
+                                                CarouselType.AnimeNManga -> ElementType.AnimeCard
+                                            },
+                                            chaptersList = emptyList(),
+                                            cardsList = emptyList(),
+                                            carouselType = isCreateCardChoiceExpandedState.third,
+                                            playlistType = PlayListType.Music,
+                                        )
+                                    )
+                                }
+                                isCreateCardChoiceExpandedState = Triple(isCreateCardChoiceExpandedState.first, false, isCreateCardChoiceExpandedState.third)
+                            },
+                            onPickCard = {
+                                isCardChoiceExpandedState = Triple(isCreateCardChoiceExpandedState.first, true, isCreateCardChoiceExpandedState.third)
+                                isCreateCardChoiceExpandedState = Triple(-1L, false, isCreateCardChoiceExpandedState.third)
+                            }
+                        )
+                    }
+
                     MainPage(
                         viewModel = mainViewModel,
                         layer = layer,
@@ -270,28 +361,7 @@ private fun LayerContent(
                             layersViewModel.openLayer(Layer.AppSettings())
                         },
                         openCreateCardPage = { parentId, carouselType ->
-                            layersViewModel.openLayer(
-                                Layer.CreateCardPage(
-                                    parentId = parentId,
-                                    name = "",
-                                    description = "",
-                                    author = "",
-                                    genreList = emptyList(),
-                                    episodesList = emptyList(),
-                                    cardType = when (carouselType) {
-                                        CarouselType.Anime -> ElementType.AnimeCard
-                                        CarouselType.Manga -> ElementType.MangaCard
-                                        CarouselType.Music -> ElementType.MusicCard
-                                        CarouselType.Playlist -> ElementType.PlaylistCard
-                                        CarouselType.PlaylistNMusic -> ElementType.PlaylistCard
-                                        CarouselType.AnimeNManga -> ElementType.AnimeCard
-                                    },
-                                    chaptersList = emptyList(),
-                                    cardsList = emptyList(),
-                                    carouselType = carouselType,
-                                    playlistType = PlayListType.Music,
-                                )
-                            )
+                            isCreateCardChoiceExpandedState = Triple(parentId, true, carouselType)
                         },
                         openCreateCarouselPage = {
                             layersViewModel.openLayer(
@@ -718,6 +788,172 @@ private fun LayerScreen(
                 resultSenderViewModel = resultSenderViewModel,
                 authViewModel = authViewModel
             )
+        }
+    }
+}
+
+@OptIn(ExperimentalHazeMaterialsApi::class)
+@Composable
+private fun CreateCardChoice(
+    expanded: Boolean,
+    hazeState: HazeState,
+    onDismiss: () -> Unit,
+    onAddCard: () -> Unit,
+    onPickCard: () -> Unit
+) {
+    val density = LocalDensity.current
+    val topInsetPx = WindowInsets.safeDrawing.getTop(density)
+    val rightInsetPx = WindowInsets.safeDrawing.getRight(density, LocalLayoutDirection.current)
+    val leftInsetPx = WindowInsets.safeDrawing.getLeft(density, LocalLayoutDirection.current)
+    val bottomInsetPx = WindowInsets.safeDrawing.getBottom(density)
+
+    val additionalPadding = MaterialTheme.spacing.screenHorizontal
+
+    val topInset = with(density) { topInsetPx.toDp() } + additionalPadding
+    val rightInset = with(density) { rightInsetPx.toDp() } + additionalPadding
+    val leftInset = with(density) { leftInsetPx.toDp() } + additionalPadding
+    val bottomInset = with(density) { bottomInsetPx.toDp() } + additionalPadding
+
+    val transitionState = remember { MutableTransitionState(expanded) }
+
+    LaunchedEffect(expanded) {
+        transitionState.targetState = expanded
+    }
+
+    val transition = rememberTransition(transitionState, label = "enter/out")
+
+    val dialogAlpha by transition.animateFloat(
+        transitionSpec = { tween(durationMillis = 250) },
+        label = "dialogAlpha"
+    ) { state ->
+        if (state) 1f else 0f
+    }
+
+    val contentAlpha by transition.animateFloat(
+        transitionSpec = { tween(durationMillis = 250, delayMillis = 100) },
+        label = "contentAlpha"
+    ) { state ->
+        if (state) 1f else 0f
+    }
+
+    if (expanded || transitionState.currentState) {
+        val isDarkTheme = isSystemInDarkTheme()
+        Dialog(
+            onDismissRequest = onDismiss,
+            properties = DialogProperties(
+                usePlatformDefaultWidth = false,
+                dismissOnBackPress = true,
+                dismissOnClickOutside = false,
+                decorFitsSystemWindows = false
+            )
+        ) {
+            val haptic = LocalHapticFeedback.current
+
+            val dialogWindow = (LocalView.current.parent as? DialogWindowProvider)?.window
+            SideEffect {
+                dialogWindow?.let { window ->
+                    window.setWindowAnimations(0)
+                    window.setDimAmount(0f)
+                    window.setBackgroundBlurRadius(0)
+                    window.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+                    window.clearFlags(WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
+                    val controller = WindowCompat.getInsetsController(window, window.decorView)
+                    controller.isAppearanceLightStatusBars = !isDarkTheme
+                    controller.isAppearanceLightNavigationBars = !isDarkTheme
+                }
+            }
+
+            Box(
+                modifier = Modifier.fillMaxSize()
+                    .clickable(onClick = onDismiss)
+                    .graphicsLayer {
+                        this.alpha = dialogAlpha
+                    }
+                    .hazeEffect(
+                        state = hazeState,
+                        style = HazeMaterials.thin()
+                    )
+                    .padding(
+                        top = topInset,
+                        bottom = bottomInset,
+                        start = leftInset,
+                        end = rightInset
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth()
+                        .graphicsLayer {
+                            this.alpha = contentAlpha
+                        },
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
+                        modifier = Modifier.weight(1f, fill = true)
+                    ) {
+                        Button(
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                                onAddCard()
+                                onDismiss()
+                            },
+                            shape = MaterialTheme.shapes.small,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = LocalCustomColors.current.closeButton,
+                                contentColor = LocalCustomColors.current.onCloseButton
+                            ),
+                            contentPadding = PaddingValues(MaterialTheme.spacing.medium)
+                        ) {
+                            Icon(
+                                imageVector = AddIco,
+                                contentDescription = null,
+                                modifier = Modifier.size(MaterialTheme.dimens.iconLarge)
+                            )
+                        }
+
+                        Text(
+                            text = stringResource(R.string.Create),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                    }
+
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
+                        modifier = Modifier.weight(1f, fill = true)
+                    ) {
+                        Button(
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                                onPickCard()
+                                onDismiss()
+                            },
+                            shape = MaterialTheme.shapes.small,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = MaterialTheme.colorScheme.onPrimary
+                            ),
+                            contentPadding = PaddingValues(MaterialTheme.spacing.medium)
+                        ) {
+                            Icon(
+                                imageVector = FolderIco,
+                                contentDescription = null,
+                                modifier = Modifier.size(MaterialTheme.dimens.iconLarge)
+                            )
+                        }
+
+                        Text(
+                            text = stringResource(R.string.Pick),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                    }
+                }
+            }
         }
     }
 }

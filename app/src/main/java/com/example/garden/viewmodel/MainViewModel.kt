@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.example.garden.database.ElementType
+import com.example.garden.database.LinkData
 import com.example.garden.database.ObjectData
 import com.example.garden.database.ObjectEntity
 import com.example.garden.database.ObjectWithChilds2
@@ -100,6 +101,67 @@ class MainViewModel(
         )
 
         return repository.saveObject(newData, page, parentId)
+    }
+
+    suspend fun insertObjectWithLinkInsert(parentId: Long, targetId: Long) {
+        val obj = repository.getById(targetId) ?: return
+        when (obj.info) {
+            is ObjectData.Card.Anime -> {
+                saveObject(
+                    data = ObjectData.Card.Anime(
+                        id = 0L,
+                        position = -1,
+                        name = obj.info.name,
+                        image = obj.info.image,
+                        link = LinkData.Insert(targetId)
+                    ),
+                    page = PageType.Home,
+                    parentId = parentId
+                )
+            }
+            is ObjectData.Card.Music -> {
+                saveObject(
+                    data = ObjectData.Card.Music(
+                        id = 0L,
+                        position = -1,
+                        name = obj.info.name,
+                        image = obj.info.image,
+                        link = LinkData.Insert(targetId)
+                    ),
+                    page = PageType.Home,
+                    parentId = parentId
+                )
+            }
+            is ObjectData.Card.Manga -> {
+                saveObject(
+                    data = ObjectData.Card.Manga(
+                        id = 0L,
+                        position = -1,
+                        name = obj.info.name,
+                        image = obj.info.image,
+                        link = LinkData.Insert(targetId)
+                    ),
+                    page = PageType.Home,
+                    parentId = parentId
+                )
+            }
+            is ObjectData.Card.Playlist -> {
+                saveObject(
+                    data = ObjectData.Card.Playlist(
+                        id = 0L,
+                        position = -1,
+                        name = obj.info.name,
+                        image = obj.info.image,
+                        link = LinkData.Insert(targetId),
+                        playListType = obj.info.playListType
+                    ),
+                    page = PageType.Home,
+                    parentId = parentId
+                )
+            }
+
+            is ObjectData.Carousel -> {}
+        }
     }
 
     suspend fun deleteObjectById(id: Long) {
