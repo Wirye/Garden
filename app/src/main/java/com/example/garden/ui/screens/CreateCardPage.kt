@@ -52,6 +52,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.windowsizeclass.WindowHeightSizeClass
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -67,6 +68,7 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -75,7 +77,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.max
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.media3.common.MediaItem
+import androidx.media3.exoplayer.ExoPlayer
 import com.example.garden.Layer
 import com.example.garden.LocalCustomColors
 import com.example.garden.R
@@ -165,6 +172,59 @@ fun CreateCardPage(
     }
 
     val focusManager = LocalFocusManager.current
+
+    val context = LocalContext.current
+
+    val player = remember(context) {
+        ExoPlayer.Builder(context).build()
+    }
+
+    var playing by remember { mutableStateOf(false) }
+    LaunchedEffect(playing) {
+        if (playing) {
+            player.play()
+        } else {
+            player.pause()
+        }
+    }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    DisposableEffect(lifecycleOwner, player) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_PAUSE || event == Lifecycle.Event.ON_STOP) {
+                playing = false
+            }
+        }
+
+        lifecycleOwner.lifecycle.addObserver(observer)
+
+        onDispose {
+            player.stop()
+            player.release()
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    val currentSong = stateViewModel.state.song
+
+    LaunchedEffect(currentSong) {
+        playing = false
+        val mediaUri: String? = when (currentSong) {
+            is LinkData.Device -> currentSong.path.takeIf { it.isNotBlank() }
+            is LinkData.Url -> currentSong.url.takeIf { it.isNotBlank() }
+            else -> null
+        }
+
+        if (mediaUri != null) {
+            try {
+                player.setMediaItem(MediaItem.fromUri(mediaUri))
+                player.prepare()
+            } catch (_: Exception) {}
+        } else {
+            player.clearMediaItems()
+        }
+    }
 
     val currentPendingEditEpisodesKey = remember { mutableStateOf("") }
     val currentPendingEditChaptersKey = remember { mutableStateOf("") }
@@ -830,8 +890,6 @@ fun CreateCardPage(
                             mutableStateOf(stateViewModel.state.song != null)
                         }
 
-                        val isSongPlaying = remember { mutableStateOf(false) }
-
                         val backgroundColor by animateColorAsState(
                             targetValue = if (isSelected.value) MaterialTheme.colorScheme.surfaceContainerHigh else Color.Transparent,
                             animationSpec = tween(durationMillis = 300),
@@ -913,7 +971,7 @@ fun CreateCardPage(
                                             onClick = {
                                                 haptic.performHapticFeedback(HapticFeedbackType.VirtualKey)
                                                 focusManager.clearFocus()
-                                                isSongPlaying.value = !isSongPlaying.value
+                                                playing = !playing
                                             },
                                             shape = CircleShape,
                                             colors = ButtonDefaults.buttonColors(
@@ -929,10 +987,10 @@ fun CreateCardPage(
                                                 )
                                             ) {
                                                 AnimatedContent(
-                                                    targetState = isSongPlaying, label = "icon"
+                                                    targetState = playing, label = "icon"
                                                 ) { isSongPlaying ->
                                                     Icon(
-                                                        imageVector = if (isSongPlaying.value) PauseIco else PlayArrowFilledIco,
+                                                        imageVector = if (isSongPlaying) PauseIco else PlayArrowFilledIco,
                                                         contentDescription = null,
                                                         modifier = Modifier.size(MaterialTheme.dimens.iconLarge)
                                                     )
