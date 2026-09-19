@@ -230,6 +230,8 @@ fun FlatGridCarousel(
                     namePosition = parent.childsNamePosition,
                     alreadyWatched = 0L,
                     length = 0L,
+                    isSupportEditing = card.isUserCreated,
+                    isSupportDeleting = card.isUserCreated,
                     onEdit = { onEditCard(card) },
                     onDelete = { onDeleteCard(card.id) },
                     onClick = { onClickCard(card) }
@@ -380,6 +382,8 @@ fun PagedGridCarousel(
                                 namePosition = parent.childsNamePosition,
                                 alreadyWatched = 0L,
                                 length = 0L,
+                                isSupportEditing = card.isUserCreated,
+                                isSupportDeleting = card.isUserCreated,
                                 onEdit = { onEditCard(card) },
                                 onDelete = { onDeleteCard(card.id) },
                                 onClick = { onClickCard(card) }
@@ -494,6 +498,8 @@ fun GridCarousel(
                             namePosition = parent.childsNamePosition,
                             alreadyWatched = 0L,
                             length = 0L,
+                            isSupportEditing = card.isUserCreated,
+                            isSupportDeleting = card.isUserCreated,
                             onEdit = { onEditCard(card) },
                             onDelete = { onDeleteCard(card.id) },
                             onClick = { onClickCard(card) }

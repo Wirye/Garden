@@ -14,7 +14,18 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface ObjectDataDao {
     @Upsert
-    suspend fun upsertObject(entity: ObjectEntity): Long
+    suspend fun justUpsertObject(entity: ObjectEntity): Long
+
+    @Query("""
+        UPDATE objectData SET position = position + 1 WHERE parentId IS :parentId AND position >= :newCardPosition
+    """)
+    suspend fun updatePositions(parentId: Long?, newCardPosition: Int)
+
+    @Transaction
+    suspend fun upsertObject(entity: ObjectEntity) : Long {
+        updatePositions(parentId = entity.parentId, newCardPosition = entity.position)
+        return justUpsertObject(entity)
+    }
 
     @Transaction
     @Query("SELECT * FROM objectData WHERE page = :page AND parentId IS NULL ORDER BY position ASC")
@@ -230,6 +241,6 @@ interface ObjectDataDao {
         shiftPositionsUp(parentId, deletedPosition)
     }
 
-    @Query("SELECT MAX(position) FROM objectData WHERE parentId IS :parentId")
+    @Query("SELECT MAX(position) FROM objectData WHERE parentId IS :parentId AND isUserCreated IS true")
     suspend fun getMaxChildPosition(parentId: Long?) : Int?
 }
