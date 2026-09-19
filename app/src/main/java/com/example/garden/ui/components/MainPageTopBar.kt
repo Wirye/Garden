@@ -51,6 +51,7 @@ import kotlin.math.abs
 @Composable
 fun MainPageTopBar(
     modifier: Modifier = Modifier,
+    isSupportCreatingAndEditing: Boolean = true,
     offsetPx: () -> Float,
     isStrokeVisible: Boolean = true,
     active: Boolean = true,
@@ -174,36 +175,46 @@ fun MainPageTopBar(
                             hazeState = LocalHazeLayers.current.mainScreen,
                             onDismissRequest = { isExpanded.value = false }
                         ) {
-                            PopupMenuItem(
-                                text = stringResource(R.string.edit),
-                                onClick = {
-                                    haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
-                                    onEdit()
-                                    isExpanded.value = false
+                            if (isSupportCreatingAndEditing) {
+                                PopupMenuItem(
+                                    text = stringResource(R.string.edit),
+                                    onClick = {
+                                        haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                                        onEdit()
+                                        isExpanded.value = false
+                                    }
+                                ) {
+                                    Icon(
+                                        imageVector = EditIco,
+                                        modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
+                                        tint = MaterialTheme.colorScheme.onBackground,
+                                        contentDescription = null
+                                    )
                                 }
-                            ) {
-                                Icon(
-                                    imageVector = EditIco,
-                                    modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
-                                    tint = MaterialTheme.colorScheme.onBackground,
-                                    contentDescription = null
-                                )
-                            }
 
-                            PopupMenuItem(
-                                text = stringResource(R.string.addCarousel),
-                                onClick = {
-                                    haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
-                                    onAddCarousel()
-                                    isExpanded.value = false
+                                PopupMenuItem(
+                                    text = stringResource(R.string.addCarousel),
+                                    onClick = {
+                                        haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                                        onAddCarousel()
+                                        isExpanded.value = false
+                                    }
+                                ) {
+                                    Icon(
+                                        imageVector = AddIco,
+                                        modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
+                                        tint = MaterialTheme.colorScheme.onBackground,
+                                        contentDescription = null
+                                    )
                                 }
-                            ) {
-                                Icon(
-                                    imageVector = AddIco,
-                                    modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
-                                    tint = MaterialTheme.colorScheme.onBackground,
-                                    contentDescription = null
-                                )
+                            } else {
+                                PopupMenuItem(
+                                    text = stringResource(R.string.nothingIsHere),
+                                    textColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f),
+                                    onClick = {
+                                        isExpanded.value = false
+                                    }
+                                ) {}
                             }
                         }
                     }

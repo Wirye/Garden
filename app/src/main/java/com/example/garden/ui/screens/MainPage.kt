@@ -97,6 +97,7 @@ import com.example.garden.viewmodel.CarouselState
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun MainPage(
+    isSupportCreating: Boolean = true,
     viewModel: MainViewModel,
     layer: Layer.MainPage,
     isTopLayer: Boolean,
@@ -291,6 +292,7 @@ fun MainPage(
             offsetPx = { topBarState.barOffsetPx },
             modifier = Modifier
                 .align(Alignment.TopCenter),
+            isSupportCreatingAndEditing = isSupportCreating,
             isStrokeVisible = isStrokeVisible,
             onSearch = {},
             onSettings = openSettings,
@@ -377,6 +379,7 @@ fun CarouselPreview(
     LazyColumn(modifier = Modifier.fillMaxWidth()) {
         item("carousel") {
             Carousel(
+                isPreviewMode = true,
                 lineWidth = lineWidth,
                 layer = layer,
                 carouselData = carouselData.value,
@@ -401,6 +404,7 @@ private fun Carousel(
     layer: Layer.MainPage,
     carouselData: ObjectData.Carousel,
     cards: List<ObjectData.Card>,
+    isPreviewMode: Boolean = false,
     onAddCard: (Long, CarouselType) -> Unit,
     onEditCarousel: () -> Unit,
     onEditCarouselSettings: () -> Unit,
@@ -513,77 +517,91 @@ private fun Carousel(
                         )
                     }
 
+                    val isSupportCreating = carouselData.carouselCollectionType.isAddCardEnable
                     DropDownMenuWithBlur(
                         expanded = { isExpanded.value },
                         hazeState = LocalHazeLayers.current.mainScreen,
                         onDismissRequest = { isExpanded.value = false }
                     ) {
-                        PopupMenuItem(
-                            text = stringResource(R.string.edit),
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
-                                onEditCarousel()
-                                isExpanded.value = false
-                            }
-                        ) {
-                            Icon(
-                                imageVector = EditIco,
-                                modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
-                                tint = MaterialTheme.colorScheme.onBackground,
-                                contentDescription = null
-                            )
-                        }
+                        if (!isPreviewMode) {
+                            if (isSupportCreating) {
+                                PopupMenuItem(
+                                    text = stringResource(R.string.edit),
+                                    onClick = {
+                                        haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                                        onEditCarousel()
+                                        isExpanded.value = false
+                                    }
+                                ) {
+                                    Icon(
+                                        imageVector = EditIco,
+                                        modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
+                                        tint = MaterialTheme.colorScheme.onBackground,
+                                        contentDescription = null
+                                    )
+                                }
 
-                        PopupMenuItem(
-                            text = stringResource(R.string.addCard),
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
-                                onAddCard(
-                                    carouselData.id,
-                                    carouselData.carouselType
+                                PopupMenuItem(
+                                    text = stringResource(R.string.addCard),
+                                    onClick = {
+                                        haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                                        onAddCard(
+                                            carouselData.id,
+                                            carouselData.carouselType
+                                        )
+                                        isExpanded.value = false
+                                    }
+                                ) {
+                                    Icon(
+                                        imageVector = AddIco,
+                                        modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
+                                        tint = MaterialTheme.colorScheme.onBackground,
+                                        contentDescription = null
+                                    )
+                                }
+                            }
+
+                            PopupMenuItem(
+                                text = stringResource(R.string.setting),
+                                onClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                                    onEditCarouselSettings()
+                                    isExpanded.value = false
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = SettingsIco,
+                                    modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
+                                    tint = MaterialTheme.colorScheme.onBackground,
+                                    contentDescription = null
                                 )
-                                isExpanded.value = false
                             }
-                        ) {
-                            Icon(
-                                imageVector = AddIco,
-                                modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
-                                tint = MaterialTheme.colorScheme.onBackground,
-                                contentDescription = null
-                            )
-                        }
 
-                        PopupMenuItem(
-                            text = stringResource(R.string.setting),
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
-                                onEditCarouselSettings()
-                                isExpanded.value = false
+                            PopupMenuItem(
+                                text = stringResource(R.string.delete),
+                                textColor = LocalCustomColors.current.closeButton,
+                                onClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                                    onDeleteCarousel(carouselData.id)
+                                    isExpanded.value = false
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = DeleteIco,
+                                    modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
+                                    tint = LocalCustomColors.current.closeButton,
+                                    contentDescription = null
+                                )
                             }
-                        ) {
-                            Icon(
-                                imageVector = SettingsIco,
-                                modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
-                                tint = MaterialTheme.colorScheme.onBackground,
-                                contentDescription = null
-                            )
-                        }
-
-                        PopupMenuItem(
-                            text = stringResource(R.string.delete),
-                            textColor = LocalCustomColors.current.closeButton,
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
-                                onDeleteCarousel(carouselData.id)
-                                isExpanded.value = false
-                            }
-                        ) {
-                            Icon(
-                                imageVector = DeleteIco,
-                                modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
-                                tint = LocalCustomColors.current.closeButton,
-                                contentDescription = null
-                            )
+                        } else {
+                            PopupMenuItem(
+                                text = stringResource(R.string.nothingIsHere),
+                                textColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f),
+                                onClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                                    isExpanded.value = false
+                                }
+                            ) {}
                         }
                     }
                 }

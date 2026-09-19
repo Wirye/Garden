@@ -352,6 +352,7 @@ private fun LayerContent(
                     }
 
                     MainPage(
+                        isSupportCreating = layer.page != PageType.Download,
                         viewModel = mainViewModel,
                         layer = layer,
                         isTopLayer = isTopLayer,
