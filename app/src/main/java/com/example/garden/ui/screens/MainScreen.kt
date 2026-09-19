@@ -69,7 +69,6 @@ import androidx.compose.ui.window.DialogWindowProvider
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.garden.Layer
-import com.example.garden.LocalCustomColors
 import com.example.garden.R
 import com.example.garden.database.CardSize
 import com.example.garden.database.CarouselType
@@ -903,8 +902,8 @@ private fun CreateCardChoice(
                             },
                             shape = MaterialTheme.shapes.small,
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = LocalCustomColors.current.closeButton,
-                                contentColor = LocalCustomColors.current.onCloseButton
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = MaterialTheme.colorScheme.onPrimary
                             ),
                             contentPadding = PaddingValues(MaterialTheme.spacing.medium)
                         ) {
