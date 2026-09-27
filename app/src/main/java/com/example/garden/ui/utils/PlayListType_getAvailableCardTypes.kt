@@ -1,7 +1,7 @@
 package com.example.garden.ui.utils
 
-import com.example.garden.database.ElementType
-import com.example.garden.database.PlayListType
+import com.example.garden.database.entities.ElementType
+import com.example.garden.database.entities.PlayListType
 
 fun PlayListType.availableCardTypes(): List<ElementType> {
     return when(this) {

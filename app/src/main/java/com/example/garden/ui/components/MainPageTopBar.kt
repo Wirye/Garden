@@ -41,6 +41,7 @@ import com.example.garden.R
 import com.example.garden.ui.components.icons.AddIco
 import com.example.garden.ui.components.icons.EditIco
 import com.example.garden.ui.components.icons.MoreVertIco
+import com.example.garden.ui.components.icons.SaveIco
 import com.example.garden.ui.components.icons.SearchIco
 import com.example.garden.ui.components.icons.SettingsIco
 import com.example.garden.ui.screens.LocalHazeLayers
@@ -59,6 +60,7 @@ fun MainPageTopBar(
     onSearch: () -> Unit,
     onSettings: () -> Unit,
     onAddCarousel: () -> Unit,
+    onSavedPage: () -> Unit,
     onEdit: () -> Unit
 ) {
     val haptic = LocalHapticFeedback.current
@@ -186,6 +188,22 @@ fun MainPageTopBar(
                                 ) {
                                     Icon(
                                         imageVector = EditIco,
+                                        modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
+                                        tint = MaterialTheme.colorScheme.onBackground,
+                                        contentDescription = null
+                                    )
+                                }
+
+                                PopupMenuItem(
+                                    text = stringResource(R.string.Saved),
+                                    onClick = {
+                                        haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                                        onSavedPage()
+                                        isExpanded.value = false
+                                    }
+                                ) {
+                                    Icon(
+                                        imageVector = SaveIco,
                                         modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
                                         tint = MaterialTheme.colorScheme.onBackground,
                                         contentDescription = null

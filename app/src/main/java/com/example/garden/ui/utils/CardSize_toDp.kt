@@ -2,8 +2,8 @@ package com.example.garden.ui.utils
 
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.ui.unit.Dp
-import com.example.garden.database.CardSize
-import com.example.garden.database.ElementType
+import com.example.garden.database.entities.CardSize
+import com.example.garden.database.entities.ElementType
 
 data class CardSpecs(
     val width: Dp,

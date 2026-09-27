@@ -25,6 +25,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material3.Button
@@ -58,7 +59,9 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -68,8 +71,8 @@ import com.example.garden.Layer
 import com.example.garden.LocalCustomColors
 import com.example.garden.R
 import com.example.garden.ResultKeys
-import com.example.garden.database.ImageData
-import com.example.garden.database.LinkData
+import com.example.garden.database.entities.ImageData
+import com.example.garden.database.entities.LinkData
 import com.example.garden.ui.components.AsyncImageWithAddPlaceholder
 import com.example.garden.ui.components.DropDownMenuWithBlur
 import com.example.garden.ui.components.PopupMenuItem
@@ -107,6 +110,7 @@ fun PageWithSearch(
     onClose: () -> Unit
 ) {
     val haptic = LocalHapticFeedback.current
+    val keyboardController = LocalSoftwareKeyboardController.current
 
     val input = remember(layer.startsInfo) { layer.startsInfo }
 
@@ -349,6 +353,11 @@ fun PageWithSearch(
                                     modifier = Modifier.size(MaterialTheme.dimens.iconMedium)
                                 )
                             },
+                            onKeyboardAction = { _ ->
+                                keyboardController?.hide()
+                                focusManager.clearFocus()
+                            },
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                             lineLimits = TextFieldLineLimits.SingleLine
                         )
 

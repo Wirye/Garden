@@ -9,7 +9,7 @@ import androidx.compose.ui.platform.LocalContext
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.garden.LocalCustomColors
-import com.example.garden.database.ImageData
+import com.example.garden.database.entities.ImageData
 import com.example.garden.ui.utils.dataForModel
 
 @Composable

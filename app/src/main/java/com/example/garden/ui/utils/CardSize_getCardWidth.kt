@@ -1,7 +1,7 @@
 package com.example.garden.ui.utils
 
 import androidx.compose.ui.unit.Dp
-import com.example.garden.database.CardSize
+import com.example.garden.database.entities.CardSize
 
 fun CardSize.getCardWidth(largeCardWidth: Dp): Dp {
     return when (this) {

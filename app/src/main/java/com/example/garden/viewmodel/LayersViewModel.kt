@@ -5,7 +5,7 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import com.example.garden.Layer
-import com.example.garden.database.PageType
+import com.example.garden.database.entities.PageType
 
 class LayersViewModel(
     private val savedStateHandle: SavedStateHandle
@@ -96,22 +96,5 @@ class LayersViewModel(
             return true
         }
         return false
-    }
-
-    fun updateLayer(updatedLayer: Layer) {
-        val index = backStack.indexOfFirst { it.id == updatedLayer.id }
-        if (index != -1) {
-            backStack[index] = updatedLayer
-        }
-        persistStack()
-    }
-
-    fun updateLayerFirstElementPosition(layerId: Long, position: Int) {
-        val index = backStack.indexOfFirst { it.id == layerId }
-        if (index != -1) {
-            val bs = backStack[index]
-            bs.firstElementPosition = position
-        }
-        persistStack()
     }
 }

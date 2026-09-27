@@ -37,7 +37,8 @@ data class Dimens(
     val shadowElevation: Dp = 16.dp,
     val activeDotWidth: Dp = 18.dp,
     val dotSize: Dp = 7.dp,
-    val flatGridItemHeight: Dp = 100.dp
+    val flatGridItemHeight: Dp = 100.dp,
+    val loadingIndicatorSizeInCarousels: Dp = 64.dp,
 )
 
 private val tabletDimens = Dimens(maxPopupElementWidth = 400.dp)

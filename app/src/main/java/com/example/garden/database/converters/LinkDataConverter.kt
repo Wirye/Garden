@@ -1,7 +1,7 @@
 package com.example.garden.database.converters
 
 import androidx.room.TypeConverter
-import com.example.garden.database.LinkData
+import com.example.garden.database.entities.LinkData
 
 class LinkDataConverter {
 

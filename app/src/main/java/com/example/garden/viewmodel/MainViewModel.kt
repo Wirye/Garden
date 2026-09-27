@@ -4,26 +4,23 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
-import com.example.garden.database.ElementType
-import com.example.garden.database.LinkData
-import com.example.garden.database.ObjectData
-import com.example.garden.database.ObjectEntity
 import com.example.garden.database.ObjectWithChilds2
-import com.example.garden.database.PageType
-import com.example.garden.repository.ObjectRepository
-import com.example.garden.utils.search.buildFuzzyFtsQuery
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.FlowPreview
+import com.example.garden.database.entities.CollectionType
+import com.example.garden.database.entities.EntitySourceType
+import com.example.garden.database.entities.LayoutType
+import com.example.garden.database.entities.LinkData
+import com.example.garden.database.entities.ObjectData
+import com.example.garden.database.entities.ObjectEntity
+import com.example.garden.database.entities.PageType
+import com.example.garden.repository.objects.ObjectRepository
+import com.example.garden.repository.uiRepository.UiRepository
+import com.example.garden.utils.toLongId
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
 import java.util.concurrent.ConcurrentHashMap
-import kotlin.time.Duration.Companion.milliseconds
 
 sealed interface CarouselState {
     data object Success : CarouselState
@@ -31,56 +28,49 @@ sealed interface CarouselState {
     data class Error(val message: String) : CarouselState
 }
 
-private data class SearchCardsState(
-    val query: String = "",
-    val isSearching: Boolean = false,
-    val allowedTypes: List<ElementType> = emptyList()
-)
-
 class MainViewModel(
-    private val repository: ObjectRepository
+    private val repository: ObjectRepository,
+    private val uiRepository: UiRepository
 ) : ViewModel() {
-    private val _carouselStates = MutableStateFlow<Map<Long, CarouselState>>(emptyMap())
-    val carouselStates: StateFlow<Map<Long, CarouselState>> = _carouselStates.asStateFlow()
+    private val _carouselStates = MutableStateFlow<Map<String, CarouselState>>(emptyMap())
+    val carouselStates: StateFlow<Map<String, CarouselState>> = _carouselStates.asStateFlow()
 
     private val pagingFlowsCache =
         ConcurrentHashMap<PageType, Flow<PagingData<ObjectWithChilds2>>>()
 
     fun getPagePagingObjects(page: PageType): Flow<PagingData<ObjectWithChilds2>> {
         return pagingFlowsCache.getOrPut(page) {
-            repository.getPagePagingObjects(page)
+            uiRepository.getPagePagingObjects(page)
                 .cachedIn(viewModelScope)
         }
     }
 
-    private val searchCardsQuery = MutableStateFlow(SearchCardsState("", false, emptyList()))
+    private val unspecifiedPagingFlowCache =
+        ConcurrentHashMap<Int, Flow<PagingData<ObjectData.Card>>>()
 
-    @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
-    fun searchCards(
-        query: String,
-        allowedTypes: List<ElementType>
-    ) {
-        searchCardsQuery.value = SearchCardsState(query, true, allowedTypes)
+    fun getUnspecifiedPageObjects(): Flow<PagingData<ObjectData.Card>> {
+        return unspecifiedPagingFlowCache.getOrPut(0) {
+            repository.getUnspecifiedPageObjects()
+                .cachedIn(viewModelScope)
+        }
     }
 
-    fun clearCardsSearch() {
-        searchCardsQuery.value = SearchCardsState("", false, listOf())
+    fun insertSavedCarousel() {
+        viewModelScope.launch {
+            repository.saveObject(
+                ObjectData.Carousel(
+                    id = "${EntitySourceType.Local.name}_1",
+                    childsShowName = true,
+                    childsShowAuthor = true,
+                    maxLines = null,
+                    objectsInOneLine = 1,
+                    layoutType = LayoutType.CAROUSEL_FROM_FLAT_GRID,
+                    carouselCollectionType = CollectionType.None,
+                ),
+                page = PageType.Unspecified
+            )
+        }
     }
-
-    @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
-    val searchCardsFlow: Flow<PagingData<ObjectEntity>> = searchCardsQuery
-        .debounce{
-            if (it.isSearching) 300.milliseconds else 0.milliseconds
-        }
-        .distinctUntilChanged()
-        .flatMapLatest {
-            if (it.isSearching) {
-                repository.searchCards(buildFuzzyFtsQuery(it.query.replace(" ", "")), it.allowedTypes)
-            } else {
-                flowOf(PagingData.empty())
-            }
-        }
-        .cachedIn(viewModelScope)
 
     suspend fun updatePositions(cards: List<ObjectData.Card>) = repository.updatePositions(cards)
 
@@ -90,7 +80,7 @@ class MainViewModel(
     suspend fun getRootObjectById(id: Long): ObjectData? = repository.getRootObjectById(id)
 
     suspend fun saveObject(data: ObjectData, page: PageType, parentId: Long?): Long {
-        val objPosition = repository.getById(data.id)?.position
+        val objPosition = repository.getById(data.id.toLongId())?.position
 
         val maxPosition = repository.getMaxChildPosition(parentId)
 
@@ -109,7 +99,7 @@ class MainViewModel(
             is ObjectData.Card.Anime -> {
                 saveObject(
                     data = ObjectData.Card.Anime(
-                        id = 0L,
+                        id = "0L",
                         position = -1,
                         name = obj.info.name,
                         image = obj.info.image,
@@ -122,7 +112,7 @@ class MainViewModel(
             is ObjectData.Card.Music -> {
                 saveObject(
                     data = ObjectData.Card.Music(
-                        id = 0L,
+                        id = "0L",
                         position = -1,
                         name = obj.info.name,
                         image = obj.info.image,
@@ -135,7 +125,7 @@ class MainViewModel(
             is ObjectData.Card.Manga -> {
                 saveObject(
                     data = ObjectData.Card.Manga(
-                        id = 0L,
+                        id = "0L",
                         position = -1,
                         name = obj.info.name,
                         image = obj.info.image,
@@ -148,12 +138,54 @@ class MainViewModel(
             is ObjectData.Card.Playlist -> {
                 saveObject(
                     data = ObjectData.Card.Playlist(
-                        id = 0L,
+                        id = "0L",
                         position = -1,
                         name = obj.info.name,
                         image = obj.info.image,
                         link = LinkData.Insert(targetId),
                         playListType = obj.info.playListType
+                    ),
+                    page = PageType.Home,
+                    parentId = parentId
+                )
+            }
+            is ObjectData.Card.AniLibria -> {
+                saveObject(
+                    data = ObjectData.Card.AniLibria(
+                        id = "0L",
+                        position = -1,
+                        name = obj.info.name,
+                        image = obj.info.image,
+                        link = LinkData.Insert(targetId),
+                        anilibriaCardId = obj.info.anilibriaCardId,
+                        data = obj.info.data
+                    ),
+                    page = PageType.Home,
+                    parentId = parentId
+                )
+            }
+            is ObjectData.Card.Artist -> {
+                saveObject(
+                    data = ObjectData.Card.Artist(
+                        id = "0L",
+                        position = -1,
+                        name = obj.info.name,
+                        image = obj.info.image,
+                        link = LinkData.Insert(targetId),
+                        artistType = obj.info.artistType
+                    ),
+                    page = PageType.Home,
+                    parentId = parentId
+                )
+            }
+            is ObjectData.Card.Album -> {
+                saveObject(
+                    data = ObjectData.Card.Album(
+                        id = "0L",
+                        position = -1,
+                        name = obj.info.name,
+                        image = obj.info.image,
+                        link = LinkData.Insert(targetId)
                     ),
                     page = PageType.Home,
                     parentId = parentId
@@ -166,6 +198,6 @@ class MainViewModel(
 
     suspend fun deleteObjectById(id: Long) {
         val obj = repository.getById(id) ?: return
-        repository.deleteObject(id = obj.id, parentId = obj.parentId, position = obj.position)
+        repository.deleteObject(id = obj.id, parentId = obj.parentId, position = obj.position, author = if (obj.info is ObjectData.Card.Artist) obj.name else null)
     }
 }

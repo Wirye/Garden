@@ -1,19 +1,21 @@
 package com.example.garden.ui.utils
 
 import com.example.garden.Layer
-import com.example.garden.database.ElementType
-import com.example.garden.database.ImageData
-import com.example.garden.database.LinkData
-import com.example.garden.database.ObjectData
+import com.example.garden.database.entities.ArtistType
+import com.example.garden.database.entities.ElementType
+import com.example.garden.database.entities.EntitySourceType
+import com.example.garden.database.entities.ImageData
+import com.example.garden.database.entities.LinkData
+import com.example.garden.database.entities.ObjectData
 
 fun Layer.CreateCardPage.toObjectData() : ObjectData {
     return when (cardType) {
         ElementType.AnimeCard -> {
             ObjectData.Card.Anime(
-                id = cardId ?: 0L,
+                id = cardId ?: "${EntitySourceType.Local.name}_0",
                 position = cardPosition,
                 name = name,
-                author = author,
+                author = authorsList.firstOrNull() ?: "",
                 description = description,
                 genre = genreList,
                 image = image ?: ImageData.Url(""),
@@ -23,9 +25,9 @@ fun Layer.CreateCardPage.toObjectData() : ObjectData {
 
         ElementType.MangaCard -> {
             ObjectData.Card.Manga(
-                id = cardId ?: 0L,
+                id = cardId ?: "${EntitySourceType.Local.name}_0",
                 name = name,
-                author = author,
+                author = authorsList.firstOrNull() ?: "",
                 description = description,
                 genre = genreList,
                 image = image ?: ImageData.Url(""),
@@ -36,9 +38,10 @@ fun Layer.CreateCardPage.toObjectData() : ObjectData {
 
         ElementType.MusicCard -> {
             ObjectData.Card.Music(
-                id = cardId ?: 0L,
+                id = cardId ?: "${EntitySourceType.Local.name}_0",
                 name = name,
-                author = author,
+                author = "",
+                authors = authorsList,
                 genre = genreList,
                 image = image ?: ImageData.Url(""),
                 position = cardPosition,
@@ -50,9 +53,9 @@ fun Layer.CreateCardPage.toObjectData() : ObjectData {
 
         ElementType.PlaylistCard -> {
             ObjectData.Card.Playlist(
-                id = cardId ?: 0L,
+                id = cardId ?: "${EntitySourceType.Local.name}_0",
                 name = name,
-                author = author,
+                author = authorsList.firstOrNull() ?: "",
                 genre = genreList,
                 image = image ?: ImageData.Url(""),
                 position = cardPosition,
@@ -62,15 +65,41 @@ fun Layer.CreateCardPage.toObjectData() : ObjectData {
             )
         }
 
-        else -> {
-            ObjectData.Card.Anime(
-                id = cardId ?: 0L,
+        ElementType.AlbumCard -> {
+            ObjectData.Card.Album(
+                id = cardId ?: "${EntitySourceType.Local.name}_0",
                 name = name,
-                author = author,
-                description = description,
+                author = authorsList.firstOrNull() ?: "",
                 genre = genreList,
                 image = image ?: ImageData.Url(""),
                 position = cardPosition,
+                link = LinkData.Self,
+                songs = cardsList
+            )
+        }
+
+        ElementType.ArtistCard -> {
+            ObjectData.Card.Artist(
+                id = cardId ?: "${EntitySourceType.Local.name}_0",
+                name = name,
+                author = authorsList.firstOrNull() ?: "",
+                genre = genreList,
+                image = image ?: ImageData.Url(""),
+                position = cardPosition,
+                link = LinkData.Self,
+                artistType = artistType ?: ArtistType.Music
+            )
+        }
+
+        ElementType.Carousel -> {
+            ObjectData.Card.Anime(
+                id = cardId ?: "${EntitySourceType.Local.name}_0",
+                position = cardPosition,
+                name = name,
+                author = authorsList.firstOrNull() ?: "",
+                description = description,
+                genre = genreList,
+                image = image ?: ImageData.Url(""),
                 link = LinkData.Self
             )
         }

@@ -1,6 +1,6 @@
 package com.example.garden.ui.utils
 
-import com.example.garden.database.ImageData
+import com.example.garden.database.entities.ImageData
 
 fun ImageData.dataForModel() : Any {
     return when(this) {

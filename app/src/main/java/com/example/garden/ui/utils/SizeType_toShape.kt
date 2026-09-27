@@ -2,7 +2,7 @@ package com.example.garden.ui.utils
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import com.example.garden.database.SizeType
+import com.example.garden.database.entities.SizeType
 
 @Composable
 fun SizeType.toShape() = when (this) {

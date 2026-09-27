@@ -6,7 +6,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.example.garden.Layer
-import com.example.garden.database.LayoutType
+import com.example.garden.database.entities.LayoutType
 
 class CreateCarouselViewModel(
     initialLayer: Layer.CreateCarouselPage

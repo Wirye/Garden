@@ -8,9 +8,12 @@ import com.google.crypto.tink.Aead
 import com.google.crypto.tink.KeyTemplates
 import com.google.crypto.tink.aead.AeadConfig
 import com.google.crypto.tink.integration.android.AndroidKeysetManager
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import java.nio.charset.StandardCharsets
 
 class CryptoManager(context: Context) {
@@ -51,140 +54,86 @@ class CryptoManager(context: Context) {
     fun decrypt(encryptedData: String): String {
         if (encryptedData.isBlank()) return ""
         return try {
-            val decodedBytes = android.util.Base64.decode(encryptedData, android.util.Base64.DEFAULT)
+            val decodedBytes =
+                android.util.Base64.decode(encryptedData, android.util.Base64.DEFAULT)
             val decryptedBytes = aead.decrypt(decodedBytes, null)
             String(decryptedBytes, StandardCharsets.UTF_8)
-        } catch (_: Exception) { "" }
+        } catch (_: Exception) {
+            ""
+        }
     }
 }
 
 data class AuthState(
-    val googleEmailOrHandle: String? = null,
-    val googleAvatarUrl: String? = null,
-    val googleNickName: String? = null,
-    val googleToken: String? = null,
-
-    val aniLibertyAvatarUrl: String? = null,
-    val aniLibertyNickName: String? = null,
-    val aniLibertyToken: String? = null
+    val aniLibriaAvatarUrl: String? = null,
+    val aniLibriaNickName: String? = null,
+    val aniLibriaToken: String? = null
 ) {
-    val isGoogleAuthorized: Boolean
-        get() = !googleToken.isNullOrBlank()
-
-    val isAniLibertyAuthorized: Boolean
-        get() = !aniLibertyToken.isNullOrBlank()
+    val isAniLibriaAuthorized: Boolean
+        get() = !aniLibriaToken.isNullOrBlank()
 }
 
 private val Context.dataStore by preferencesDataStore(name = "auth_settings")
 
-class AuthManager(private val context: Context) {
+class AuthManager(private val context: Context, appScope: CoroutineScope) {
 
     private val cryptoManager = CryptoManager(context)
 
     companion object {
-        private val KEY_GOOGLE_EMAIL = stringPreferencesKey("g_email")
-        private val KEY_GOOGLE_AVATAR = stringPreferencesKey("g_avatar")
-        private val KEY_GOOGLE_NICKNAME = stringPreferencesKey("g_nickname")
-        private val KEY_GOOGLE_TOKEN = stringPreferencesKey("g_token")
-        private val KEY_GOOGLE_COOKIES = stringPreferencesKey("g_cookies")
-        private val KEY_ANILIBERTY_AVATAR = stringPreferencesKey("ani_avatar")
-        private val KEY_ANILIBERTY_NICKNAME = stringPreferencesKey("ani_nickname")
-        private val KEY_ANILIBERTY_TOKEN = stringPreferencesKey("ani_token")
-        private val KEY_ANILIBERTY_COOKIES = stringPreferencesKey("ani_cookies")
+        private val KEY_ANILIBRIA_AVATAR = stringPreferencesKey("ani_avatar")
+        private val KEY_ANILIBRIA_NICKNAME = stringPreferencesKey("ani_nickname")
+        private val KEY_ANILIBRIA_TOKEN = stringPreferencesKey("ani_token")
+        private val KEY_ANILIBRIA_COOKIES = stringPreferencesKey("ani_cookies")
     }
 
     val authStateFlow: Flow<AuthState> = context.dataStore.data.map { prefs ->
         AuthState(
-            googleEmailOrHandle = prefs[KEY_GOOGLE_EMAIL]?.let { cryptoManager.decrypt(it) },
-            googleAvatarUrl = prefs[KEY_GOOGLE_AVATAR]?.let { cryptoManager.decrypt(it) },
-            googleNickName = prefs[KEY_GOOGLE_NICKNAME]?.let { cryptoManager.decrypt(it) },
-            googleToken = prefs[KEY_GOOGLE_TOKEN]?.let { cryptoManager.decrypt(it) },
-            aniLibertyAvatarUrl = prefs[KEY_ANILIBERTY_AVATAR]?.let { cryptoManager.decrypt(it) },
-            aniLibertyNickName = prefs[KEY_ANILIBERTY_NICKNAME]?.let { cryptoManager.decrypt(it) },
-            aniLibertyToken = prefs[KEY_ANILIBERTY_TOKEN]?.let { cryptoManager.decrypt(it) }
+            aniLibriaAvatarUrl = prefs[KEY_ANILIBRIA_AVATAR]?.let { cryptoManager.decrypt(it) },
+            aniLibriaNickName = prefs[KEY_ANILIBRIA_NICKNAME]?.let { cryptoManager.decrypt(it) },
+            aniLibriaToken = prefs[KEY_ANILIBRIA_TOKEN]?.let { cryptoManager.decrypt(it) }
         )
     }
 
-    suspend fun saveGoogleSession(
-        email: String?,
-        avatarUrl: String?,
-        nickName: String?,
-        token: String?,
-        cookies: String? = null
-    ) {
-        context.dataStore.edit { prefs ->
-            email?.let { prefs[KEY_GOOGLE_EMAIL] = cryptoManager.encrypt(it) }
-            avatarUrl?.let { prefs[KEY_GOOGLE_AVATAR] = cryptoManager.encrypt(it) }
-            nickName?.let { prefs[KEY_GOOGLE_NICKNAME] = cryptoManager.encrypt(it) }
-            token?.let { prefs[KEY_GOOGLE_TOKEN] = cryptoManager.encrypt(it) }
-            cookies?.let { prefs[KEY_GOOGLE_COOKIES] = cryptoManager.encrypt(it) }
-        }
-    }
+    val tokenState: StateFlow<String> = authStateFlow
+        .map { state -> state.aniLibriaToken ?: "" }
+        .stateIn(
+            scope = appScope,
+            started = SharingStarted.Eagerly,
+            initialValue = ""
+        )
 
-    suspend fun updateGoogleProfile(
-        emailOrHandle: String?,
+    fun getToken(): String = tokenState.value
+
+    suspend fun updateAniLibriaProfile(
         avatarUrl: String?,
         nickName: String?
     ) {
         context.dataStore.edit { prefs ->
-            emailOrHandle?.let { prefs[KEY_GOOGLE_EMAIL] = cryptoManager.encrypt(it) }
-            avatarUrl?.let { prefs[KEY_GOOGLE_AVATAR] = cryptoManager.encrypt(it) }
-            nickName?.let { prefs[KEY_GOOGLE_NICKNAME] = cryptoManager.encrypt(it) }
+            avatarUrl?.let { prefs[KEY_ANILIBRIA_AVATAR] = cryptoManager.encrypt(it) }
+            nickName?.let { prefs[KEY_ANILIBRIA_NICKNAME] = cryptoManager.encrypt(it) }
         }
     }
 
-    suspend fun updateAniLibertyProfile(
-        avatarUrl: String?,
-        nickName: String?
-    ) {
-        context.dataStore.edit { prefs ->
-            avatarUrl?.let { prefs[KEY_ANILIBERTY_AVATAR] = cryptoManager.encrypt(it) }
-            nickName?.let { prefs[KEY_ANILIBERTY_NICKNAME] = cryptoManager.encrypt(it) }
-        }
-    }
-
-    suspend fun clearGoogleSession() {
-        context.dataStore.edit { prefs ->
-            prefs.remove(KEY_GOOGLE_EMAIL)
-            prefs.remove(KEY_GOOGLE_AVATAR)
-            prefs.remove(KEY_GOOGLE_NICKNAME)
-            prefs.remove(KEY_GOOGLE_TOKEN)
-            prefs.remove(KEY_GOOGLE_COOKIES)
-        }
-    }
-
-    suspend fun saveAniLibertySession(
+    suspend fun saveAniLibriaSession(
         token: String?,
         cookies: String? = null,
         nickName: String? = null,
         avatarUrl: String? = null
     ) {
         context.dataStore.edit { prefs ->
-            token?.let { prefs[KEY_ANILIBERTY_TOKEN] = cryptoManager.encrypt(it) }
-            cookies?.let { prefs[KEY_ANILIBERTY_COOKIES] = cryptoManager.encrypt(it) }
-            nickName?.let { prefs[KEY_ANILIBERTY_NICKNAME] = cryptoManager.encrypt(it) }
-            avatarUrl?.let { prefs[KEY_ANILIBERTY_AVATAR] = cryptoManager.encrypt(it) }
+            token?.let { prefs[KEY_ANILIBRIA_TOKEN] = cryptoManager.encrypt(it) }
+            cookies?.let { prefs[KEY_ANILIBRIA_COOKIES] = cryptoManager.encrypt(it) }
+            nickName?.let { prefs[KEY_ANILIBRIA_NICKNAME] = cryptoManager.encrypt(it) }
+            avatarUrl?.let { prefs[KEY_ANILIBRIA_AVATAR] = cryptoManager.encrypt(it) }
         }
     }
 
-    suspend fun clearAniLibertySession() {
+    suspend fun clearAniLibriaSession() {
         context.dataStore.edit { prefs ->
-            prefs.remove(KEY_ANILIBERTY_TOKEN)
-            prefs.remove(KEY_ANILIBERTY_COOKIES)
-            prefs.remove(KEY_ANILIBERTY_NICKNAME)
-            prefs.remove(KEY_ANILIBERTY_AVATAR)
+            prefs.remove(KEY_ANILIBRIA_TOKEN)
+            prefs.remove(KEY_ANILIBRIA_COOKIES)
+            prefs.remove(KEY_ANILIBRIA_NICKNAME)
+            prefs.remove(KEY_ANILIBRIA_AVATAR)
         }
-    }
-
-    suspend fun getGoogleCookies(): String? {
-        return context.dataStore.data.map { prefs ->
-            prefs[KEY_GOOGLE_COOKIES]?.let { cryptoManager.decrypt(it) }
-        }.firstOrNull()
-    }
-
-    suspend fun getAniLibertyToken(): String? {
-        return context.dataStore.data.map { prefs ->
-            prefs[KEY_ANILIBERTY_TOKEN]?.let { cryptoManager.decrypt(it) }
-        }.firstOrNull()
     }
 }

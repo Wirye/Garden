@@ -25,6 +25,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -50,7 +51,6 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.coerceAtMost
 import androidx.compose.ui.unit.dp
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
@@ -58,12 +58,15 @@ import androidx.paging.compose.itemKey
 import com.example.garden.Layer
 import com.example.garden.LocalCustomColors
 import com.example.garden.R
-import com.example.garden.database.CarouselType
-import com.example.garden.database.ElementType
-import com.example.garden.database.ImageData
-import com.example.garden.database.LayoutType
-import com.example.garden.database.ObjectData
 import com.example.garden.database.ObjectWithChilds2
+import com.example.garden.database.entities.ArtistType
+import com.example.garden.database.entities.CarouselType
+import com.example.garden.database.entities.ElementType
+import com.example.garden.database.entities.EntitySourceType
+import com.example.garden.database.entities.ImageData
+import com.example.garden.database.entities.LayoutType
+import com.example.garden.database.entities.ObjectData
+import com.example.garden.database.entities.PlayListType
 import com.example.garden.ui.components.AppAsyncImage
 import com.example.garden.ui.components.CarouselFactory
 import com.example.garden.ui.components.DropDownMenuWithBlur
@@ -85,14 +88,14 @@ import com.example.garden.ui.utils.blockGestures
 import com.example.garden.ui.utils.calculateObjectsInOneLineAndMaxLinesForAdaptiveGridSize
 import com.example.garden.ui.utils.getAspectRatio
 import com.example.garden.ui.utils.toDp
+import com.example.garden.utils.isLocalId
+import com.example.garden.utils.toLongId
+import com.example.garden.viewmodel.CarouselState
 import com.example.garden.viewmodel.MainViewModel
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlin.math.abs
 import kotlin.math.round
-import androidx.compose.runtime.collectAsState
-import com.example.garden.database.PlayListType
-import com.example.garden.viewmodel.CarouselState
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -103,14 +106,16 @@ fun MainPage(
     isTopLayer: Boolean,
     topBarHeight: Dp,
     bottomBarHeight: Dp,
+    openGlobalSearch: () -> Unit,
     openSettings: () -> Unit,
-    openCreateCardPage: (Long, CarouselType) -> Unit,
+    openCreateCardPage: (String, CarouselType) -> Unit,
     openCreateCarouselPage: () -> Unit,
     openEditCarouselPage: (ObjectData.Carousel) -> Unit,
-    openEditCardPage: (ObjectData.Card, Long, CarouselType) -> Unit,
-    openCarouselChildsEdit: (Long) -> Unit,
-    deleteCard: (Long) -> Unit,
-    deleteCarousel: (Long) -> Unit
+    openEditCardPage: (ObjectData.Card, String, CarouselType) -> Unit,
+    openCarouselChildsEdit: (String) -> Unit,
+    deleteCard: (String) -> Unit,
+    deleteCarousel: (String) -> Unit,
+    openSavedPage: () -> Unit
 ) {
     var visibleCardPos by rememberSaveable(layer.id) {
         mutableIntStateOf(layer.firstElementPosition)
@@ -192,6 +197,8 @@ fun MainPage(
                 }
         ) {
             if (pagingItems.itemCount != 0) {
+                val carouselStates by viewModel.carouselStates.collectAsState()
+
                 LazyColumn(
                     state = listState,
                     modifier = Modifier
@@ -209,34 +216,78 @@ fun MainPage(
 
                     items(
                         count = pagingItems.itemCount,
-                        key = pagingItems.itemKey { if (it.parent.id == 0L) "temp_${it.hashCode()}" else it.parent.id },
+                        key = pagingItems.itemKey {
+                            if (it.parent.id.contains("0") || it.parent.id.contains(
+                                    "-1"
+                                )
+                            ) "temp_${it.hashCode()}" else it.parent.id.toLongId()
+                        },
                         contentType = { "carousel" }
                     ) { index ->
                         val item = pagingItems[index]
 
                         if (item != null) {
-                            val carouselState = viewModel.carouselStates.collectAsState().value[item.parent.id] ?: CarouselState.Success
+                            val carouselState =
+                                carouselStates[item.parent.id] ?: CarouselState.Success
 
-                            val cards = if (carouselState is CarouselState.Loading && item.childs.isEmpty()) {
-                                List(15) { index ->
-                                    when (item.parent.carouselType) {
-                                        CarouselType.Anime, CarouselType.AnimeNManga -> ObjectData.Card.Anime(
-                                            id = 0L, position = index, name = "", image = ImageData.Url("")
-                                        )
-                                        CarouselType.Manga -> ObjectData.Card.Manga(
-                                            id = 0L, position = index, name = "", image = ImageData.Url("")
-                                        )
-                                        CarouselType.Music, CarouselType.PlaylistNMusic -> ObjectData.Card.Music(
-                                            id = 0L, position = index, name = "", image = ImageData.Url("")
-                                        )
-                                        CarouselType.Playlist -> ObjectData.Card.Playlist(
-                                            id = 0L, position = index, name = "", image = ImageData.Url(""), playListType = PlayListType.Music
-                                        )
+                            val cards =
+                                if (carouselState is CarouselState.Loading && item.childs.isEmpty()) {
+                                    List(15) { index ->
+                                        when (item.parent.carouselType) {
+                                            CarouselType.Anime, CarouselType.AnimeNManga, CarouselType.All -> ObjectData.Card.Anime(
+                                                id = "${EntitySourceType.Local}_0",
+                                                position = index,
+                                                name = "",
+                                                image = ImageData.Url(""),
+                                                isUserCreated = false
+                                            )
+
+                                            CarouselType.Manga -> ObjectData.Card.Manga(
+                                                id = "${EntitySourceType.Local}_0",
+                                                position = index,
+                                                name = "",
+                                                image = ImageData.Url(""),
+                                                isUserCreated = false
+                                            )
+
+                                            CarouselType.Music, CarouselType.PlaylistNMusic, CarouselType.ArtistNMusic -> ObjectData.Card.Music(
+                                                id = "${EntitySourceType.Local}_0",
+                                                position = index,
+                                                name = "",
+                                                image = ImageData.Url(""),
+                                                isUserCreated = false
+                                            )
+
+                                            CarouselType.Playlist -> ObjectData.Card.Playlist(
+                                                id = "${EntitySourceType.Local}_0",
+                                                position = index,
+                                                name = "",
+                                                image = ImageData.Url(""),
+                                                playListType = PlayListType.Music,
+                                                isUserCreated = false
+                                            )
+
+                                            CarouselType.Artist, CarouselType.ArtistNAlbum -> ObjectData.Card.Artist(
+                                                id = "${EntitySourceType.Local}_0",
+                                                position = index,
+                                                name = "",
+                                                image = ImageData.Url(""),
+                                                isUserCreated = false,
+                                                artistType = ArtistType.Music
+                                            )
+
+                                            CarouselType.Album, CarouselType.AlbumNMusic, CarouselType.ArtistNMusicNAlbum -> ObjectData.Card.Album(
+                                                id = "${EntitySourceType.Local}_0",
+                                                position = index,
+                                                name = "",
+                                                image = ImageData.Url(""),
+                                                isUserCreated = false
+                                            )
+                                        }
                                     }
+                                } else {
+                                    item.childs
                                 }
-                            } else {
-                                item.childs
-                            }
 
                             if (carouselState is CarouselState.Success || carouselState is CarouselState.Loading) {
                                 Carousel(
@@ -245,11 +296,21 @@ fun MainPage(
                                     carouselData = item.parent,
                                     cards = cards,
                                     onAddCard = openCreateCardPage,
-                                    onEditCarousel = { openCarouselChildsEdit(item.parent.id) },
+                                    onEditCarousel = {
+                                        val id = item.parent.id
+                                        if (id.isLocalId()) {
+                                            openCarouselChildsEdit(id)
+                                        }
+                                    },
                                     onEditCarouselSettings = { openEditCarouselPage(item.parent) },
                                     onClickCard = {},
                                     onWatchAllClick = {},
-                                    onEditCard = { openEditCardPage(it, item.parent.id, item.parent.carouselType) },
+                                    onEditCard = {
+                                        val parentId = item.parent.id
+                                        if (it.id.isLocalId() && parentId.isLocalId()) {
+                                            openEditCardPage(it, parentId, item.parent.carouselType)
+                                        }
+                                    },
                                     onDeleteCard = deleteCard,
                                     onDeleteCarousel = deleteCarousel
                                 )
@@ -289,17 +350,21 @@ fun MainPage(
         }
 
         MainPageTopBar(
-            offsetPx = { topBarState.barOffsetPx },
+            offsetPx = {
+                topBarState.barOffsetPx.coerceAtLeast(
+                    -(topBarHeightPx - (topBarHeightPx - listState.firstVisibleItemScrollOffset)).toFloat()
+                        .coerceAtLeast(0f)
+                )
+            },
             modifier = Modifier
                 .align(Alignment.TopCenter),
             isSupportCreatingAndEditing = isSupportCreating,
             isStrokeVisible = isStrokeVisible,
-            onSearch = {},
+            onSearch = openGlobalSearch,
             onSettings = openSettings,
-            onAddCarousel = {
-                openCreateCarouselPage()
-            },
-            onEdit = {}
+            onAddCarousel = openCreateCarouselPage,
+            onEdit = {},
+            onSavedPage = openSavedPage
         )
     }
 }
@@ -307,42 +372,66 @@ fun MainPage(
 @Composable
 fun CarouselPreview(
     lineWidth: Dp,
-    info: Layer.CreateCarouselPage
+    info: Layer.CreateCarouselPage,
+    carouselType: CarouselType
 ) {
     val layer = info.localLayer
 
     val childs = List(20) { index ->
-        when (info.carouselType) {
-            CarouselType.Anime, CarouselType.AnimeNManga -> {
+        when (carouselType) {
+            CarouselType.Anime, CarouselType.AnimeNManga, CarouselType.All -> {
                 ObjectData.Card.Anime(
-                    id = index.toLong() + 1L,
+                    id = "${EntitySourceType.Web.name}_${index.toLong() + 1L}",
                     position = index,
                     name = index.toString(),
                     image = ImageData.Url("")
                 )
             }
+
             CarouselType.Manga -> {
                 ObjectData.Card.Manga(
-                    id = index.toLong() + 1L,
+                    id = "${EntitySourceType.Web.name}_${index.toLong() + 1L}",
                     position = index,
                     name = index.toString(),
                     image = ImageData.Url("")
                 )
             }
-            CarouselType.Music, CarouselType.PlaylistNMusic -> {
+
+            CarouselType.Music, CarouselType.PlaylistNMusic, CarouselType.ArtistNMusic, CarouselType.AlbumNMusic, CarouselType.ArtistNMusicNAlbum -> {
                 ObjectData.Card.Music(
-                    id = index.toLong() + 1L,
+                    id = "${EntitySourceType.Web.name}_${index.toLong() + 1L}",
                     position = index,
                     name = index.toString(),
                     image = ImageData.Url("")
                 )
             }
-            else -> {
-                ObjectData.Card.Anime(
-                    id = index.toLong() + 1L,
+
+            CarouselType.Artist, CarouselType.ArtistNAlbum -> {
+                ObjectData.Card.Artist(
+                    id = "${EntitySourceType.Web.name}_${index.toLong() + 1L}",
+                    position = index,
+                    name = index.toString(),
+                    image = ImageData.Url(""),
+                    artistType = ArtistType.Music
+                )
+            }
+
+            CarouselType.Album -> {
+                ObjectData.Card.Album(
+                    id = "${EntitySourceType.Web.name}_${index.toLong() + 1L}",
                     position = index,
                     name = index.toString(),
                     image = ImageData.Url("")
+                )
+            }
+
+            CarouselType.Playlist -> {
+                ObjectData.Card.Playlist(
+                    id = "${EntitySourceType.Web.name}_${index.toLong() + 1L}",
+                    position = index,
+                    name = index.toString(),
+                    image = ImageData.Url(""),
+                    playListType = PlayListType.Music
                 )
             }
         }
@@ -359,7 +448,7 @@ fun CarouselPreview(
                 childsShowAuthor = info.childsShowAuthor,
                 childsNamePosition = info.childsNamePosition,
                 childsShowAlreadyWatchedLine = info.childsShowAlreadyWatchedLine,
-                carouselType = info.carouselType,
+                carouselType = carouselType,
                 carouselCollectionType = info.carouselCollectionType,
                 layoutType = info.layoutType,
                 maxLines = info.maxLines,
@@ -371,7 +460,7 @@ fun CarouselPreview(
                 ico = info.ico,
                 dovodchik = info.dovodchik,
                 showDovodchikDots = info.showDovodchikDots,
-                id = 21L
+                id = "${EntitySourceType.Web}_21"
             )
         )
     }
@@ -397,7 +486,6 @@ fun CarouselPreview(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun Carousel(
     lineWidth: Dp,
@@ -405,14 +493,14 @@ private fun Carousel(
     carouselData: ObjectData.Carousel,
     cards: List<ObjectData.Card>,
     isPreviewMode: Boolean = false,
-    onAddCard: (Long, CarouselType) -> Unit,
+    onAddCard: (String, CarouselType) -> Unit,
     onEditCarousel: () -> Unit,
     onEditCarouselSettings: () -> Unit,
     onClickCard: (ObjectData) -> Unit,
     onWatchAllClick: (() -> Unit)? = null,
     onEditCard: (ObjectData.Card) -> Unit,
-    onDeleteCard: (Long) -> Unit,
-    onDeleteCarousel: (Long) -> Unit
+    onDeleteCard: (String) -> Unit,
+    onDeleteCarousel: (String) -> Unit
 ) {
     val haptic = LocalHapticFeedback.current
 
@@ -612,10 +700,12 @@ private fun Carousel(
                 val margin = MaterialTheme.spacing.medium
 
                 val cardElType = when (cards[0]) {
-                    is ObjectData.Card.Anime -> ElementType.AnimeCard
+                    is ObjectData.Card.Anime, is ObjectData.Card.AniLibria -> ElementType.AnimeCard
                     is ObjectData.Card.Manga -> ElementType.MangaCard
                     is ObjectData.Card.Music -> ElementType.MusicCard
                     is ObjectData.Card.Playlist -> ElementType.PlaylistCard
+                    is ObjectData.Card.Artist -> ElementType.ArtistCard
+                    is ObjectData.Card.Album -> ElementType.AlbumCard
                 }
 
                 val cardAspRatio = cardElType.getAspectRatio()
@@ -628,9 +718,7 @@ private fun Carousel(
                     }
 
                     LayoutType.CAROUSEL_FROM_FLAT_GRID -> {
-                        (lineWidth.value.dp - paddingHorizontal * 2 - rightInset - leftInset - MaterialTheme.spacing.extraLarge).coerceAtMost(
-                            600.dp
-                        )
+                        (lineWidth.value.dp - paddingHorizontal * 2 - rightInset - leftInset - MaterialTheme.spacing.extraLarge)
                     }
 
                     else -> {
@@ -651,10 +739,14 @@ private fun Carousel(
 
                 val cardsInOneLine = round(lineWidth / oneCardWidth).toInt()
 
-                val res = if (carouselData.adaptiveGridSize) calculateObjectsInOneLineAndMaxLinesForAdaptiveGridSize(
-                    parent = carouselData,
-                    objectsInOneLine = cardsInOneLine
-                ) else Pair(carouselData.objectsInOneLine ?: cardsInOneLine.coerceAtLeast(1), carouselData.maxLines)
+                val res =
+                    if (carouselData.adaptiveGridSize) calculateObjectsInOneLineAndMaxLinesForAdaptiveGridSize(
+                        parent = carouselData,
+                        objectsInOneLine = cardsInOneLine
+                    ) else Pair(
+                        carouselData.objectsInOneLine ?: cardsInOneLine.coerceAtLeast(1),
+                        carouselData.maxLines
+                    )
 
                 val newCarouselData = carouselData.copy(
                     objectsInOneLine = res.first,
@@ -674,8 +766,7 @@ private fun Carousel(
                     onClickCard = onClickCard,
                     onDeleteCard = onDeleteCard
                 )
-            }
-            else {
+            } else {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()

@@ -1,8 +1,8 @@
 package com.example.garden.ui.utils
 
-import com.example.garden.database.ChapterInfo
-import com.example.garden.database.ChapterPageInfo
-import com.example.garden.database.LinkData
+import com.example.garden.database.entities.ChapterInfo
+import com.example.garden.database.entities.ChapterPageInfo
+import com.example.garden.database.entities.LinkData
 import com.example.garden.ui.screens.generateNewChapterId
 
 fun ChapterInfo.toChapterInfo() : com.example.garden.ui.screens.ChapterInfo {

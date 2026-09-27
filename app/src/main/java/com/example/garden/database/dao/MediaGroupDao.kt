@@ -4,8 +4,8 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import com.example.garden.database.MediaGroupEntity
-import com.example.garden.database.ObjectEntity
+import com.example.garden.database.entities.MediaGroupEntity
+import com.example.garden.database.entities.ObjectEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao

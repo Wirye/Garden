@@ -18,7 +18,7 @@ import androidx.compose.ui.platform.LocalContext
 import coil.compose.AsyncImagePainter
 import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
-import com.example.garden.database.ImageData
+import com.example.garden.database.entities.ImageData
 import com.example.garden.ui.components.icons.AddIco
 import com.example.garden.ui.theme.dimens
 

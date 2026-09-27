@@ -1,8 +1,8 @@
 package com.example.garden.ui.utils
 
 import com.example.garden.Layer
-import com.example.garden.database.ObjectData
-import com.example.garden.database.PageType
+import com.example.garden.database.entities.ObjectData
+import com.example.garden.database.entities.PageType
 
 fun ObjectData.Carousel.toLayerCreateCarouselPage(page: PageType) : Layer.CreateCarouselPage {
     return Layer.CreateCarouselPage(

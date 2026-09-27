@@ -1,12 +1,12 @@
 package com.example.garden.database.converters
 
 import androidx.room.TypeConverter
-import com.example.garden.database.CardSize
-import com.example.garden.database.CarouselType
-import com.example.garden.database.ElementType
-import com.example.garden.database.LayoutType
-import com.example.garden.database.PageType
-import com.example.garden.database.SizeType
+import com.example.garden.database.entities.CardSize
+import com.example.garden.database.entities.CarouselType
+import com.example.garden.database.entities.ElementType
+import com.example.garden.database.entities.LayoutType
+import com.example.garden.database.entities.PageType
+import com.example.garden.database.entities.SizeType
 
 class Converters {
     @TypeConverter

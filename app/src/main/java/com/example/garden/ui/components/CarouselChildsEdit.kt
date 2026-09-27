@@ -11,12 +11,12 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -48,13 +48,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.garden.R
-import com.example.garden.database.ElementType
-import com.example.garden.database.ObjectData
+import com.example.garden.database.entities.ElementType
+import com.example.garden.database.entities.ObjectData
 import com.example.garden.ui.components.icons.DragHandleIco
 import com.example.garden.ui.theme.dimens
 import com.example.garden.ui.theme.spacing
 import com.example.garden.ui.utils.bottomSheetAnimateAndDismiss
 import com.example.garden.ui.utils.getAspectRatio
+import com.example.garden.utils.toLongId
 import com.example.garden.viewmodel.MainViewModel
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
@@ -75,10 +76,10 @@ fun CarouselChildsEdit(
 
 
     val newCards = remember(cards) {
-            cards
-                .filter { it.info is ObjectData.Card && it.isUserCreated }
-                .map { it.info.injectObjectEntityData(it) as ObjectData.Card }
-                .toMutableStateList()
+        cards
+            .filter { it.info is ObjectData.Card && it.isUserCreated }
+            .map { it.info.injectLocalObjectEntityData(it) as ObjectData.Card }
+            .toMutableStateList()
     }
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -98,15 +99,23 @@ fun CarouselChildsEdit(
         listState,
         PaddingValues(0.dp)
     ) { from, to ->
-        Log.e("111CarouselChildsEdit", "from: ${from.index}, to: ${to.index}   ${newCards.map { Pair(it.position, it.id) }}")
+        Log.e(
+            "111CarouselChildsEdit",
+            "from: ${from.index}, to: ${to.index}   ${newCards.map { Pair(it.position, it.id) }}"
+        )
 
         newCards.add(to.index - 2, newCards.removeAt(from.index - 2))
         val fromPosition = newCards[from.index - 2].position
         val toPosition = newCards[to.index - 2].position
-        newCards[from.index - 2] = newCards[from.index - 2].copyWithPosition(toPosition) as ObjectData.Card
-        newCards[to.index - 2] = newCards[to.index - 2].copyWithPosition(fromPosition) as ObjectData.Card
+        newCards[from.index - 2] =
+            newCards[from.index - 2].copyWithPosition(toPosition) as ObjectData.Card
+        newCards[to.index - 2] =
+            newCards[to.index - 2].copyWithPosition(fromPosition) as ObjectData.Card
 
-        Log.e("CarouselChildsEdit", "from: ${from.index}, to: ${to.index}   ${newCards.map { Pair(it.position, it.id) }}")
+        Log.e(
+            "CarouselChildsEdit",
+            "from: ${from.index}, to: ${to.index}   ${newCards.map { Pair(it.position, it.id) }}"
+        )
     }
 
     ModalBottomSheet(
@@ -118,7 +127,9 @@ fun CarouselChildsEdit(
             modifier = Modifier.fillMaxSize()
         ) {
             LazyColumn(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = MaterialTheme.spacing.screenHorizontal),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = MaterialTheme.spacing.screenHorizontal),
                 state = listState,
                 contentPadding = PaddingValues(bottom = MaterialTheme.spacing.extraLarge + MaterialTheme.spacing.medium + MaterialTheme.dimens.minButtonHeight)
             ) {
@@ -132,12 +143,16 @@ fun CarouselChildsEdit(
                 }
 
                 item("spacer") {
-                    Spacer(modifier = Modifier.fillMaxWidth().height(MaterialTheme.spacing.medium))
+                    Spacer(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(MaterialTheme.spacing.medium)
+                    )
                 }
 
                 itemsIndexed(
                     items = newCards,
-                    key = { _, item -> if (item.id == 0L) "temp_${item.hashCode()}" else item.id}
+                    key = { _, item -> if (item.id.toLongId() == 0L) "temp_${item.hashCode()}" else item.id }
                 ) { _, item ->
                     ReorderableItem(reorderableState, key = item.id) { isDragging ->
                         Surface(
@@ -164,12 +179,19 @@ fun CarouselChildsEdit(
                             )
                         }
                     }
-                    Spacer(modifier = Modifier.fillMaxWidth().height(MaterialTheme.spacing.small))
+                    Spacer(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(MaterialTheme.spacing.small)
+                    )
                 }
             }
 
             Box(
-                modifier = Modifier.align(Alignment.BottomCenter).padding(MaterialTheme.spacing.screenHorizontal).padding(top = 0.dp)
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(MaterialTheme.spacing.screenHorizontal)
+                    .padding(top = 0.dp)
             ) {
                 Button(
                     onClick = {
@@ -178,7 +200,10 @@ fun CarouselChildsEdit(
                         animateAndDismiss()
                     },
                     shape = CircleShape,
-                    modifier = Modifier.fillMaxWidth().clip(CircleShape).background(MaterialTheme.colorScheme.primary)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary)
                 ) {
                     Text(
                         text = stringResource(R.string.Save),
@@ -198,6 +223,8 @@ fun CardPreview(
     card: ObjectData.Card,
     isSupportDragging: Boolean = true
 ) {
+    val isCircleBanner = card is ObjectData.Card.Artist
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -212,22 +239,25 @@ fun CardPreview(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             val cardElType = when (card) {
-                is ObjectData.Card.Anime -> ElementType.AnimeCard
+                is ObjectData.Card.Anime, is ObjectData.Card.AniLibria -> ElementType.AnimeCard
                 is ObjectData.Card.Manga -> ElementType.MangaCard
                 is ObjectData.Card.Music -> ElementType.MusicCard
-                else -> ElementType.AnimeCard
+                is ObjectData.Card.Artist -> ElementType.ArtistCard
+                is ObjectData.Card.Album -> ElementType.AlbumCard
+                is ObjectData.Card.Playlist -> ElementType.PlaylistCard
             }
 
             val cardAspRatio = cardElType.getAspectRatio()
+            val width = (MaterialTheme.dimens.flatGridItemHeight - MaterialTheme.spacing.screenHorizontal) * ElementType.AnimeCard.getAspectRatio()
 
             AppAsyncImage(
                 imageData = card.image,
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
-                    .fillMaxHeight()
+                    .width(width)
                     .aspectRatio(cardAspRatio)
-                    .clip(MaterialTheme.shapes.small)
+                    .clip(if (isCircleBanner) CircleShape else MaterialTheme.shapes.small)
             )
 
             Column(
@@ -241,17 +271,19 @@ fun CardPreview(
                     overflow = TextOverflow.Ellipsis
                 )
 
-                Text(
-                    text = card.author.ifEmpty {
-                        stringResource(
-                            R.string.withoutAuthor
-                        )
-                    },
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                if (cardElType != ElementType.ArtistCard) {
+                    Text(
+                        text = card.author.ifEmpty {
+                            stringResource(
+                                R.string.withoutAuthor
+                            )
+                        },
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
         }
 

@@ -3,8 +3,8 @@ package com.example.garden.database.dao
 import androidx.room.Dao
 import androidx.room.Query
 import androidx.room.Upsert
-import com.example.garden.database.EpisodeProgressEntity
-import com.example.garden.database.LinkData
+import com.example.garden.database.entities.EpisodeProgressEntity
+import com.example.garden.database.entities.LinkData
 import kotlinx.coroutines.flow.Flow
 
 @Dao

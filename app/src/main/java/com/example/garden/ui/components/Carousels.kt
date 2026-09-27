@@ -39,11 +39,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.garden.Layer
-import com.example.garden.database.LayoutType
-import com.example.garden.database.ObjectData
+import com.example.garden.database.entities.ElementType
+import com.example.garden.database.entities.LayoutType
+import com.example.garden.database.entities.ObjectData
 import com.example.garden.ui.theme.dimens
 import com.example.garden.ui.theme.spacing
+import com.example.garden.ui.utils.getAspectRatio
 import com.example.garden.ui.utils.toDp
+import com.example.garden.utils.isWebId
 import kotlinx.coroutines.launch
 import kotlin.math.ceil
 
@@ -59,7 +62,7 @@ fun StandardCarousel(
     marginBetweenElements: Dp,
     onEditCard: (ObjectData.Card) -> Unit,
     onClickCard: (ObjectData.Card) -> Unit,
-    onDeleteCard: (Long) -> Unit
+    onDeleteCard: (String) -> Unit
 ) {
     val savedCardIndex = layer.scrollPositionCarousels[parent.id] ?: 0
 
@@ -124,16 +127,18 @@ fun StandardCarousel(
     ) {
         items(
             count = childs.size,
-            key = { if (childs[it].id == 0L) "temp_${childs[it].hashCode()}" else childs[it].id }
+            key = { if (childs[it].id.contains("0") || childs[it].id.contains("-1")) "temp_${childs[it].hashCode()}" else childs[it].id }
         ) { index ->
             childs[index].let { card ->
                 Card(
                     modifier = Modifier.width(cardWidth),
                     aspectRatio = cardAspectRatio,
+                    isCircleBanner = card is ObjectData.Card.Artist,
                     showName = parent.childsShowName,
                     showAuthor = parent.childsShowAuthor,
                     showAlreadyWatchedLine = parent.childsShowAlreadyWatchedLine,
-                    author = card.author,
+                    authors = if (card is ObjectData.Card.Music) card.authors else listOf(card.author),
+                    isAnimeCard = card is ObjectData.Card.Anime,
                     name = card.name,
                     image = card.image,
                     cornerRadius = parent.childsCornerRadius,
@@ -141,8 +146,9 @@ fun StandardCarousel(
                     namePosition = parent.childsNamePosition,
                     alreadyWatched = 0L,
                     length = 0L,
-                    isSupportEditing = card.isUserCreated,
-                    isSupportDeleting = card.isUserCreated,
+                    isAuthorExists = card !is ObjectData.Card.Artist,
+                    isSupportEditing = card.isUserCreated && !card.id.isWebId() && card !is ObjectData.Card.AniLibria,
+                    isSupportDeleting = card.isUserCreated && !card.id.isWebId(),
                     onEdit = { onEditCard(card) },
                     onDelete = { onDeleteCard(card.id) },
                     onClick = { onClickCard(card) }
@@ -164,9 +170,10 @@ fun FlatGridCarousel(
     paddingStart: Dp,
     paddingEnd: Dp,
     marginBetweenElements: Dp,
+    isSearchSelectionMode: Boolean = false,
     onEditCard: (ObjectData.Card) -> Unit,
     onClickCard: (ObjectData.Card) -> Unit,
-    onDeleteCard: (Long) -> Unit
+    onDeleteCard: (String) -> Unit
 ) {
     val savedCardIndex = layer.scrollPositionCarousels[parent.id] ?: 0
 
@@ -200,6 +207,12 @@ fun FlatGridCarousel(
 
     val snapFlingBehavior = rememberSinglePageGridSnapFlingBehavior(gridState = gridState)
 
+    val cardWidth = if (allCardAmount <= maxLines) {
+        cardWidth + MaterialTheme.spacing.extraLarge + MaterialTheme.spacing.screenHorizontal
+    } else {
+        cardWidth.coerceAtMost(600.dp)
+    }
+
     LazyHorizontalGrid(
         rows = GridCells.Fixed(maxLines.coerceAtMost(allCardAmount)),
         state = gridState,
@@ -213,25 +226,39 @@ fun FlatGridCarousel(
     ) {
         items(
             count = childs.size,
-            key = { if (childs[it].id == 0L) "temp_${childs[it].hashCode()}" else childs[it].id }
+            key = { if (childs[it].id.contains("0") || childs[it].id.contains("-1")) "temp_${childs[it].hashCode()}" else childs[it].id }
         ) { index ->
             childs[index].let { card ->
+                val cardAspRatio = if (!isSearchSelectionMode) cardAspectRatio else {
+                    when (card) {
+                        is ObjectData.Card.Anime, is ObjectData.Card.AniLibria -> ElementType.AnimeCard
+                        is ObjectData.Card.Manga -> ElementType.MangaCard
+                        is ObjectData.Card.Music -> ElementType.MusicCard
+                        is ObjectData.Card.Playlist -> ElementType.PlaylistCard
+                        is ObjectData.Card.Album -> ElementType.AlbumCard
+                        is ObjectData.Card.Artist -> ElementType.ArtistCard
+                    }.getAspectRatio()
+                }
+
                 Card(
                     modifier = Modifier.width(cardWidth),
-                    aspectRatio = cardAspectRatio,
+                    aspectRatio = cardAspRatio,
+                    isCircleBanner = card is ObjectData.Card.Artist,
                     showName = parent.childsShowName,
                     showAuthor = parent.childsShowAuthor,
                     showAlreadyWatchedLine = parent.childsShowAlreadyWatchedLine,
-                    author = card.author,
+                    authors = if (card is ObjectData.Card.Music) card.authors else listOf(card.author),
+                    isAnimeCard = card is ObjectData.Card.Anime,
                     name = card.name,
                     image = card.image,
+                    isAuthorExists = card !is ObjectData.Card.Artist,
                     cornerRadius = parent.childsCornerRadius,
                     layoutType = LayoutType.FLAT_GRID_ITEM,
                     namePosition = parent.childsNamePosition,
                     alreadyWatched = 0L,
                     length = 0L,
-                    isSupportEditing = card.isUserCreated,
-                    isSupportDeleting = card.isUserCreated,
+                    isSupportEditing = card.isUserCreated && !card.id.isWebId() && card !is ObjectData.Card.AniLibria,
+                    isSupportDeleting = card.isUserCreated && !card.id.isWebId(),
                     onEdit = { onEditCard(card) },
                     onDelete = { onDeleteCard(card.id) },
                     onClick = { onClickCard(card) }
@@ -268,7 +295,7 @@ fun PagedGridCarousel(
     marginBetweenElements: Dp,
     onEditCard: (ObjectData.Card) -> Unit,
     onClickCard: (ObjectData.Card) -> Unit,
-    onDeleteCard: (Long) -> Unit
+    onDeleteCard: (String) -> Unit
 ) {
     val itemsPerPage = (objectsInLine * maxLines).coerceAtLeast(1)
     val savedCardIndex = layer.scrollPositionCarousels[parent.id] ?: 0
@@ -371,19 +398,22 @@ fun PagedGridCarousel(
                             Card(
                                 modifier = Modifier.width(cardWidth),
                                 aspectRatio = cardAspectRatio,
+                                isCircleBanner = card is ObjectData.Card.Artist,
                                 showName = parent.childsShowName,
                                 showAuthor = parent.childsShowAuthor,
                                 showAlreadyWatchedLine = parent.childsShowAlreadyWatchedLine,
-                                author = card.author,
+                                authors = if (card is ObjectData.Card.Music) card.authors else listOf(card.author),
+                                isAnimeCard = card is ObjectData.Card.Anime,
                                 name = card.name,
                                 image = card.image,
                                 cornerRadius = parent.childsCornerRadius,
                                 layoutType = LayoutType.DEFAULT,
                                 namePosition = parent.childsNamePosition,
+                                isAuthorExists = card !is ObjectData.Card.Artist,
                                 alreadyWatched = 0L,
                                 length = 0L,
-                                isSupportEditing = card.isUserCreated,
-                                isSupportDeleting = card.isUserCreated,
+                                isSupportEditing = card.isUserCreated && !card.id.isWebId() && card !is ObjectData.Card.AniLibria,
+                                isSupportDeleting = card.isUserCreated && !card.id.isWebId(),
                                 onEdit = { onEditCard(card) },
                                 onDelete = { onDeleteCard(card.id) },
                                 onClick = { onClickCard(card) }
@@ -457,7 +487,7 @@ fun GridCarousel(
     marginBetweenElements: Dp,
     onEditCard: (ObjectData.Card) -> Unit,
     onClickCard: (ObjectData.Card) -> Unit,
-    onDeleteCard: (Long) -> Unit
+    onDeleteCard: (String) -> Unit
 ) {
     val totalRows = (childs.size + objectsInLine - 1) / objectsInLine
 
@@ -487,19 +517,22 @@ fun GridCarousel(
                         Card(
                             modifier = Modifier.weight(1f),
                             aspectRatio = cardAspectRatio,
+                            isCircleBanner = card is ObjectData.Card.Artist,
                             showName = parent.childsShowName,
                             showAuthor = parent.childsShowAuthor,
                             showAlreadyWatchedLine = parent.childsShowAlreadyWatchedLine,
-                            author = card.author,
+                            authors = if (card is ObjectData.Card.Music) card.authors else listOf(card.author),
+                            isAnimeCard = card is ObjectData.Card.Anime,
                             name = card.name,
                             image = card.image,
                             cornerRadius = parent.childsCornerRadius,
                             layoutType = parent.layoutType,
                             namePosition = parent.childsNamePosition,
+                            isAuthorExists = card !is ObjectData.Card.Artist,
                             alreadyWatched = 0L,
                             length = 0L,
-                            isSupportEditing = card.isUserCreated,
-                            isSupportDeleting = card.isUserCreated,
+                            isSupportEditing = card.isUserCreated && !card.id.isWebId() && card !is ObjectData.Card.AniLibria,
+                            isSupportDeleting = card.isUserCreated && !card.id.isWebId(),
                             onEdit = { onEditCard(card) },
                             onDelete = { onDeleteCard(card.id) },
                             onClick = { onClickCard(card) }
@@ -525,7 +558,7 @@ fun CarouselFactory(
     marginBetweenElements: Dp,
     onEditCard: (ObjectData.Card) -> Unit,
     onClickCard: (ObjectData.Card) -> Unit,
-    onDeleteCard: (Long) -> Unit
+    onDeleteCard: (String) -> Unit
 ) {
     when (carousel.layoutType) {
         LayoutType.CAROUSEL_GRID -> {

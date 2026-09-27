@@ -1,8 +1,7 @@
 package com.example.garden.database.converters
 
 import androidx.room.TypeConverter
-import com.example.garden.database.ObjectData
-import kotlinx.serialization.encodeToString
+import com.example.garden.database.entities.ObjectData
 import kotlinx.serialization.json.Json
 
 class ObjectDataConverter {

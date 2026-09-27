@@ -22,18 +22,29 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.example.garden.appsettings.AuthManager
 import com.example.garden.database.AppDatabase
-import com.example.garden.database.CardSize
-import com.example.garden.database.CarouselType
-import com.example.garden.database.CollectionType
-import com.example.garden.database.ElementType
-import com.example.garden.database.GridGenreItem
-import com.example.garden.database.ImageData
-import com.example.garden.database.LayoutType
-import com.example.garden.database.LinkData
-import com.example.garden.database.PageType
-import com.example.garden.database.PlayListType
-import com.example.garden.database.SizeType
-import com.example.garden.repository.ObjectRepositoryImpl
+import com.example.garden.database.entities.ArtistType
+import com.example.garden.database.entities.CardSize
+import com.example.garden.database.entities.CarouselType
+import com.example.garden.database.entities.ChapterInfo
+import com.example.garden.database.entities.CollectionType
+import com.example.garden.database.entities.ElementType
+import com.example.garden.database.entities.EpisodeInfo
+import com.example.garden.database.entities.GridGenreItem
+import com.example.garden.database.entities.ImageData
+import com.example.garden.database.entities.LayoutType
+import com.example.garden.database.entities.LinkData
+import com.example.garden.database.entities.PageType
+import com.example.garden.database.entities.PlayListType
+import com.example.garden.database.entities.SizeType
+import com.example.garden.repository.aniLibriaSearch.AniLibriaSearchRepository
+import com.example.garden.repository.aniLibriaSearch.AniLibriaSearchRepositoryImpl
+import com.example.garden.repository.artists.ArtistsRepository
+import com.example.garden.repository.artists.ArtistsRepositoryImpl
+import com.example.garden.repository.auth.AuthRepositoryImpl
+import com.example.garden.repository.objects.ObjectRepositoryImpl
+import com.example.garden.repository.recentQueries.RecentQueriesRepositoryImpl
+import com.example.garden.repository.uiRepository.UiRepositoryImpl
+import com.example.garden.repository.webObjects.WebObjectsRepositoryImpl
 import com.example.garden.ui.screens.MainScreen
 import com.example.garden.ui.screens.PageWithSearchInput
 import com.example.garden.ui.theme.GardenTheme
@@ -41,8 +52,10 @@ import com.example.garden.utils.getValidLayerId
 import com.example.garden.viewmodel.AuthViewModel
 import com.example.garden.viewmodel.LayersViewModel
 import com.example.garden.viewmodel.MainViewModel
+import com.example.garden.viewmodel.RecentQueriesViewModel
 import com.example.garden.viewmodel.ResultSenderViewModel
-import com.example.garden.viewmodel.utils.viewModelFactory
+import com.example.garden.viewmodel.SearchViewModel
+import com.example.garden.viewmodel.utils.customViewModelFactory
 import kotlinx.parcelize.Parcelize
 
 sealed class Layer (
@@ -59,7 +72,7 @@ sealed class Layer (
     @Parcelize
     data class MainPage(
         val page: PageType,
-        val scrollPositionCarousels: MutableMap<Long, Int>,
+        val scrollPositionCarousels: MutableMap<String, Int>,
         var mainRecyclerScrollPosition: Int
     ) : Layer()
     @Parcelize
@@ -75,16 +88,17 @@ sealed class Layer (
     @Parcelize
     data class CreateCardPage(
         val parentId: Long,
-        val cardId: Long? = null,
+        val cardId: String? = null,
         val cardPosition: Int = -1,
         var name: String,
         var image: ImageData? = null,
         var description: String,
-        var author: String,
+        var authorsList: List<String>,
+        var artistType: ArtistType? = null,
         var genreList: List<GridGenreItem>,
-        var episodesList: List<com.example.garden.database.EpisodeInfo>,
+        var episodesList: List<EpisodeInfo>,
         var cardType: ElementType,
-        var chaptersList: List<com.example.garden.database.ChapterInfo>,
+        var chaptersList: List<ChapterInfo>,
         var cardsList: List<Long>,
         var horizontalVideo: LinkData? = null,
         var song: LinkData? = null,
@@ -114,7 +128,7 @@ sealed class Layer (
         var maxLinesForAdaptiveSize: Int? = null,
         var childsSize: CardSize = CardSize.MEDIUM,
         var childsShowAuthor: Boolean = false,
-        val carouselId: Long? = null,
+        val carouselId: String? = null,
         val carouselPosition: Int = -1
     ) : Layer()
     @Parcelize
@@ -122,6 +136,11 @@ sealed class Layer (
         var startsInfo: PageWithSearchInput,
         val key: String
     ): Layer()
+
+    @Parcelize
+    data class UnspecifiedPage(
+        val nothing: Int = 0
+    ) : Layer()
 
     @Parcelize
     data class AppSettings(
@@ -132,19 +151,17 @@ sealed class Layer (
     data class AniLibertyLoginPage(
         val nothing: Int = 0
     ) : Layer()
-
-    @Parcelize
-    data class GoogleLoginPage(
-        val nothing: Int = 0
-    ) : Layer()
+}
+@Parcelize
+enum class GlobalSearchState : Parcelable {
+    Searching, Found
 }
 
 @Parcelize
 sealed class OverLayLayer : Parcelable {
     @Parcelize
-    data class GenreChoice(
-        var genreList: List<Pair<Boolean, GridGenreItem>>,
-        val key: String
+    data class GlobalSearch(
+        var state: GlobalSearchState
     ) : OverLayLayer()
 }
 object ResultKeys {
@@ -161,6 +178,10 @@ object ResultKeys {
         lastPageWithSearchEditId += 1L
         return "PAGE_WITH_SEARCH_EDIT_${res}"
     }
+
+    const val NO_DATA = "NO_DATA"
+
+    const val GLOBAL_SEARCH_STATE_CHANGED_TO_SEARCHING = "GLOBAL_SEARCH_STATE_CHANGED_TO_SEARCHING"
 }
 
 @Immutable
@@ -181,11 +202,33 @@ class MainActivity : ComponentActivity() {
         ObjectRepositoryImpl(db, db.objectDataDao())
     }
 
+    private val recentQueriesRepository by lazy {
+        RecentQueriesRepositoryImpl(db.resentQueriesDao())
+    }
+
+    private val authManager by lazy {
+        AuthManager(context = applicationContext,
+            appScope = (applicationContext as App).applicationScope
+        )
+    }
+
+    private val authRepository by lazy {
+        AuthRepositoryImpl(authManager = authManager)
+    }
+
+    private val webObjectsRepository by lazy {
+        WebObjectsRepositoryImpl(db.webObjectDataDao())
+    }
+
+    private val uiRepository by lazy {
+        UiRepositoryImpl(objectRepository = repository, webObjectsRepository = webObjectsRepository)
+    }
+
     private val viewModel: MainViewModel by viewModels {
         object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                return MainViewModel(repository) as T
+                return MainViewModel(repository = repository, uiRepository = uiRepository) as T
             }
         }
     }
@@ -193,15 +236,35 @@ class MainActivity : ComponentActivity() {
     private val resultSenderViewModel: ResultSenderViewModel by viewModels()
 
     private val authViewModel: AuthViewModel by viewModels {
-        viewModelFactory {
-            AuthViewModel(AuthManager(applicationContext))
+        customViewModelFactory {
+            AuthViewModel(authRepository = authRepository)
         }
+    }
+
+    private val recentQueriesViewModel: RecentQueriesViewModel by viewModels {
+        customViewModelFactory {
+            RecentQueriesViewModel(repository = recentQueriesRepository)
+        }
+    }
+
+    private val aniLibriaSearchRepository: AniLibriaSearchRepository by lazy {
+        AniLibriaSearchRepositoryImpl(authManager = authManager)
+    }
+
+    private val artistRepository: ArtistsRepository by lazy {
+        ArtistsRepositoryImpl(dao = db.objectDataDao())
+    }
+
+    private val searchViewModel: SearchViewModel by lazy {
+        SearchViewModel(objectRepository = repository, aniLibriaSearchRepository = aniLibriaSearchRepository, artistsRepository = artistRepository)
     }
 
     @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        viewModel
+
+        viewModel.insertSavedCarousel() // IT'S VERY IMPORTANT THING
+
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.auto(
                 lightScrim = android.graphics.Color.TRANSPARENT,
@@ -222,7 +285,13 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.fillMaxSize(),
                         color = MaterialTheme.colorScheme.background
                     ) {
-                        MainScreen(layersViewModel, resultSenderViewModel, authViewModel)
+                        MainScreen(
+                            layersViewModel = layersViewModel,
+                            resultSenderViewModel = resultSenderViewModel,
+                            authViewModel = authViewModel,
+                            recentQueriesViewModel = recentQueriesViewModel,
+                            searchViewModel = searchViewModel
+                        )
                     }
                 }
             }

@@ -1,5 +1,6 @@
 package com.example.garden.ui.screens
 
+import android.util.Log
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
@@ -13,6 +14,7 @@ import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,9 +35,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -47,6 +51,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.SuggestionChip
+import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.windowsizeclass.WindowHeightSizeClass
@@ -55,6 +61,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -80,6 +87,7 @@ import androidx.compose.ui.unit.max
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
@@ -87,12 +95,13 @@ import com.example.garden.Layer
 import com.example.garden.LocalCustomColors
 import com.example.garden.R
 import com.example.garden.ResultKeys
-import com.example.garden.database.CardSize
-import com.example.garden.database.ElementType
-import com.example.garden.database.ImageData
-import com.example.garden.database.LinkData
-import com.example.garden.database.ObjectData
-import com.example.garden.database.PlayListType
+import com.example.garden.database.entities.ArtistType
+import com.example.garden.database.entities.CardSize
+import com.example.garden.database.entities.ElementType
+import com.example.garden.database.entities.ImageData
+import com.example.garden.database.entities.LinkData
+import com.example.garden.database.entities.ObjectData
+import com.example.garden.database.entities.PlayListType
 import com.example.garden.ui.components.AsyncImageWithAddPlaceholder
 import com.example.garden.ui.components.CardChoice
 import com.example.garden.ui.components.DropDownMenuWithBlur
@@ -126,19 +135,19 @@ import com.example.garden.ui.utils.hazeSourcesForUpperLayers
 import com.example.garden.ui.utils.toChapterInfo
 import com.example.garden.ui.utils.toEpisodeInfo
 import com.example.garden.ui.utils.toObjectData
+import com.example.garden.utils.getArtistType
 import com.example.garden.viewmodel.CreateCardViewModel
 import com.example.garden.viewmodel.LayersViewModel
-import com.example.garden.viewmodel.MainViewModel
 import com.example.garden.viewmodel.PageWithSearchSaveOutput
 import com.example.garden.viewmodel.ResultSenderViewModel
+import com.example.garden.viewmodel.SearchViewModel
 import dev.chrisbanes.haze.hazeSource
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 
-@Suppress("UNCHECKED_CAST")
 @Composable
 fun CreateCardPage(
-    mainViewModel: MainViewModel,
+    searchViewModel: SearchViewModel,
     layer: Layer.CreateCardPage,
     layersViewModel: LayersViewModel,
     resultSenderViewModel: ResultSenderViewModel,
@@ -156,7 +165,7 @@ fun CreateCardPage(
     LaunchedEffect(stateViewModel, layer) {
         stateViewModel.onUpdate = { updated ->
             layer.name = updated.name
-            layer.author = updated.author
+            layer.authorsList = updated.authorsList
             layer.description = updated.description
             layer.image = updated.image
             layer.genreList = updated.genreList
@@ -168,6 +177,7 @@ fun CreateCardPage(
             layer.carouselType = updated.carouselType
             layer.cardsList = updated.cardsList
             layer.playlistType = updated.playlistType
+            layer.artistType = updated.artistType
         }
     }
 
@@ -203,6 +213,7 @@ fun CreateCardPage(
             player.stop()
             player.release()
             lifecycleOwner.lifecycle.removeObserver(observer)
+            searchViewModel.clearArtistsSearch()
         }
     }
 
@@ -220,11 +231,25 @@ fun CreateCardPage(
             try {
                 player.setMediaItem(MediaItem.fromUri(mediaUri))
                 player.prepare()
-            } catch (_: Exception) {}
+            } catch (_: Exception) {
+            }
         } else {
             player.clearMediaItems()
         }
     }
+
+    LaunchedEffect(stateViewModel.state.artistType) {
+        if (stateViewModel.state.artistType == null && stateViewModel.state.cardType.getArtistType() != null) {
+            stateViewModel.update {
+                copy(
+                    artistType = stateViewModel.state.cardType.getArtistType()
+                )
+            }
+        }
+    }
+
+    val artistSearchFlow = searchViewModel.searchArtistsFlow.collectAsStateWithLifecycle(initialValue = emptyList())
+    Log.e("ARTISTSEARCH", "$artistSearchFlow")
 
     val currentPendingEditEpisodesKey = remember { mutableStateOf("") }
     val currentPendingEditChaptersKey = remember { mutableStateOf("") }
@@ -317,7 +342,8 @@ fun CreateCardPage(
         }
 
         val nameState = rememberTextFieldState(initialText = stateViewModel.state.name)
-        val authorState = rememberTextFieldState(initialText = stateViewModel.state.author)
+        val authorState =
+            rememberTextFieldState(initialText = stateViewModel.state.authorsList.joinToString(", "))
         val descriptionState =
             rememberTextFieldState(initialText = stateViewModel.state.description)
 
@@ -336,9 +362,10 @@ fun CreateCardPage(
             snapshotFlow {
                 authorState.text.toString()
             }.distinctUntilChanged()
-                .collect { text ->
+                .collect {
+                    val text = it.replace(";", ",")
                     stateViewModel.update {
-                        copy(author = text)
+                        copy(authorsList = text.split(",").map { text -> text.trim() })
                     }
                 }
         }
@@ -400,7 +427,8 @@ fun CreateCardPage(
             hazeState = LocalHazeLayers.current.mainScreen
         )
 
-        val bannerShape = MaterialTheme.shapes.medium
+        val bannerShape =
+            if (stateViewModel.state.cardType != ElementType.ArtistCard) MaterialTheme.shapes.medium else CircleShape
 
         LazyColumn(
             state = listState,
@@ -471,12 +499,10 @@ fun CreateCardPage(
 
                         val selectedIndex =
                             remember(stateViewModel.state.cardType, availableCardTypes) {
-                                {
-                                    if (availableCardTypes.value.indexOf(stateViewModel.state.cardType) != -1) {
-                                        availableCardTypes.value.indexOf(stateViewModel.state.cardType)
-                                    } else {
-                                        0
-                                    }
+                                if (availableCardTypes.value.indexOf(stateViewModel.state.cardType) != -1) {
+                                    availableCardTypes.value.indexOf(stateViewModel.state.cardType)
+                                } else {
+                                    0
                                 }
                             }
 
@@ -484,7 +510,7 @@ fun CreateCardPage(
                             expanded = { isCardTypeSelectMenuOpened.value },
                             onDismissRequest = { isCardTypeSelectMenuOpened.value = false },
                             hazeState = LocalHazeLayers.current.mainScreen,
-                            selectedIndex = selectedIndex(),
+                            selectedIndex = selectedIndex,
                             onSelect = {
                                 haptic.performHapticFeedback(HapticFeedbackType.VirtualKey)
                                 stateViewModel.update { copy(cardType = availableCardTypes.value[it]) }
@@ -566,7 +592,15 @@ fun CreateCardPage(
                             ),
                             placeholder = {
                                 Text(
-                                    text = stringResource(R.string.title),
+                                    text = stringResource(
+                                        if (stateViewModel.state.cardType != ElementType.ArtistCard &&
+                                            stateViewModel.state.artistType != ArtistType.Music &&
+                                            stateViewModel.state.artistType != ArtistType.Manga) {
+                                            R.string.title
+                                        } else {
+                                            R.string.name
+                                        }
+                                    ),
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -575,29 +609,97 @@ fun CreateCardPage(
                             lineLimits = TextFieldLineLimits.SingleLine
                         )
 
-                        OutlinedTextField(
-                            modifier = Modifier.fillMaxWidth(),
-                            state = authorState,
-                            shape = MaterialTheme.shapes.medium,
-                            colors = OutlinedTextFieldDefaults.colors(
-                                unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                                focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-                            ),
-                            textStyle = MaterialTheme.typography.bodyLarge.copy(
-                                color = MaterialTheme.colorScheme.onSurface
-                            ),
-                            placeholder = {
-                                Text(
-                                    text = stringResource(R.string.author),
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                        if (stateViewModel.state.cardType != ElementType.ArtistCard) {
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                OutlinedTextField(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    state = authorState,
+                                    shape = MaterialTheme.shapes.medium,
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                                    ),
+                                    textStyle = MaterialTheme.typography.bodyLarge.copy(
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    ),
+                                    placeholder = {
+                                        Text(
+                                            text = stringResource(
+                                                when (stateViewModel.state.cardType) {
+                                                    ElementType.MusicCard -> R.string.authors
+                                                    ElementType.AnimeCard -> R.string.studio
+                                                    else -> R.string.author
+                                                }
+                                            ),
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    },
+                                    contentPadding = PaddingValues(MaterialTheme.spacing.small),
+                                    lineLimits = TextFieldLineLimits.SingleLine
                                 )
-                            },
-                            contentPadding = PaddingValues(MaterialTheme.spacing.small),
-                            lineLimits = TextFieldLineLimits.SingleLine
-                        )
+
+                                if (stateViewModel.state.cardType == ElementType.MusicCard) {
+                                    Text(
+                                        text = stringResource(R.string.ListTheAuthorsSeparatedByCommas),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+
+                                var currentAuthorId by remember { mutableIntStateOf(0) }
+                                LaunchedEffect(
+                                    stateViewModel.state.authorsList,
+                                    authorState.selection
+                                ) {
+                                    if (stateViewModel.state.authorsList.isNotEmpty()) {
+                                        val cursor = authorState.selection.start
+                                        val authors = stateViewModel.state.authorsList
+
+                                        Log.e("SADA", "$cursor  $authors")
+
+                                        var currentCursor = authors[0].length + 1
+                                        var currentAuthor = authors[0]
+                                        for (i in 0 until authors.size - 1) {
+                                            if (cursor < currentCursor) {
+                                                break
+                                            } else {
+                                                currentCursor += currentAuthor.length + 1
+                                                currentAuthor = authors[i + 1]
+                                            }
+                                        }
+
+                                        currentAuthorId = authors.indexOf(currentAuthor)
+
+                                        Log.e("SADA", "$currentAuthorId  $currentAuthor")
+                                        searchViewModel.searchArtists(
+                                            currentAuthor,
+                                            listOf(stateViewModel.state.artistType ?: ArtistType.Music)
+                                        )
+                                    }
+                                }
+
+                                ArtistSearch(
+                                    artistsFlow = artistSearchFlow.value.map { it.name },
+                                    onArtistChange = { newAuthor ->
+                                        Log.e("WHATS","")
+                                        stateViewModel.update {
+                                            copy(
+                                                authorsList = authorsList.mapIndexed { index, string ->
+                                                    if (index == currentAuthorId) newAuthor else string
+                                                }
+                                            )
+                                        }
+                                        authorState.setTextAndPlaceCursorAtEnd(stateViewModel.state.authorsList.joinToString(", "))
+                                    }
+                                )
+                            }
+                        }
 
                         val isSelected = remember(
                             stateViewModel,
@@ -636,44 +738,49 @@ fun CreateCardPage(
                             )
                         }
 
-                        Button(
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
-                                isBottomSheetOpen = true
-                                focusManager.clearFocus()
-                            },
-                            shape = CircleShape,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = containerColor, contentColor = contentColor
-                            ),
-                            modifier = Modifier.fillMaxWidth(),
-                            contentPadding = PaddingValues(MaterialTheme.spacing.medium)
+                        if (stateViewModel.state.cardType != ElementType.ArtistCard &&
+                            stateViewModel.state.cardType != ElementType.PlaylistCard &&
+                            stateViewModel.state.cardType != ElementType.AlbumCard
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(
-                                    MaterialTheme.spacing.small
-                                )
+                            Button(
+                                onClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                                    isBottomSheetOpen = true
+                                    focusManager.clearFocus()
+                                },
+                                shape = CircleShape,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = containerColor, contentColor = contentColor
+                                ),
+                                modifier = Modifier.fillMaxWidth(),
+                                contentPadding = PaddingValues(MaterialTheme.spacing.medium)
                             ) {
-                                AnimatedContent(
-                                    targetState = isSelected, label = "icon"
-                                ) { isSelected ->
-                                    Icon(
-                                        imageVector = if (isSelected) EditIco else AddIco,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(MaterialTheme.dimens.iconLarge)
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(
+                                        MaterialTheme.spacing.small
+                                    )
+                                ) {
+                                    AnimatedContent(
+                                        targetState = isSelected, label = "icon"
+                                    ) { isSelected ->
+                                        Icon(
+                                            imageVector = if (isSelected) EditIco else AddIco,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(MaterialTheme.dimens.iconLarge)
+                                        )
+                                    }
+
+                                    Text(
+                                        text = if (isSelected) stringResource(R.string.editGenres) else stringResource(
+                                            R.string.selectGenres
+                                        ),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        style = MaterialTheme.typography.labelLarge,
+                                        modifier = Modifier.weight(1f, fill = false)
                                     )
                                 }
-
-                                Text(
-                                    text = if (isSelected) stringResource(R.string.editGenres) else stringResource(
-                                        R.string.selectGenres
-                                    ),
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    style = MaterialTheme.typography.labelLarge,
-                                    modifier = Modifier.weight(1f, fill = false)
-                                )
                             }
                         }
                     }
@@ -1057,7 +1164,7 @@ fun CreateCardPage(
                         var isCardsChoiceOpen by rememberSaveable { mutableStateOf(false) }
                         if (isCardsChoiceOpen) {
                             CardChoice(
-                                mainViewModel = mainViewModel,
+                                searchViewModel = searchViewModel,
                                 isSingleChoice = false,
                                 onDismiss = { isCardsChoiceOpen = false },
                                 cardTypes = stateViewModel.state.playlistType.availableCardTypes(),
@@ -1168,7 +1275,126 @@ fun CreateCardPage(
                         }
                     }
 
-                    else -> {}
+                    ElementType.ArtistCard -> {
+                        var isChangeArtistTypeOpen by rememberSaveable { mutableStateOf(false) }
+                        if (isChangeArtistTypeOpen) {
+                            ArtistTypeChoice(
+                                onDismiss = { isChangeArtistTypeOpen = false },
+                                initType = stateViewModel.state.artistType ?: ArtistType.Music,
+                                onApply = {
+                                    stateViewModel.update { copy(artistType = it) }
+                                }
+                            )
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .clip(MaterialTheme.shapes.medium)
+                                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(MaterialTheme.spacing.medium),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)
+                            ) {
+                                Button(
+                                    onClick = {
+                                        haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                                        focusManager.clearFocus()
+                                        isChangeArtistTypeOpen = true
+                                    },
+                                    shape = CircleShape,
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                                    ),
+                                    contentPadding = PaddingValues(MaterialTheme.spacing.medium)
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(
+                                            MaterialTheme.spacing.small
+                                        )
+                                    ) {
+                                        Icon(
+                                            imageVector = EditIco,
+                                            modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
+                                            contentDescription = null
+                                        )
+                                        Text(
+                                            text = stringResource(R.string.changeArtistType),
+                                            style = MaterialTheme.typography.labelLarge,
+                                            modifier = Modifier.weight(1f, fill = false)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    ElementType.AlbumCard -> {
+                        var isCardsChoiceOpen by rememberSaveable { mutableStateOf(false) }
+                        if (isCardsChoiceOpen) {
+                            CardChoice(
+                                searchViewModel = searchViewModel,
+                                isSingleChoice = false,
+                                onDismiss = { isCardsChoiceOpen = false },
+                                cardTypes = listOf(ElementType.MusicCard),
+                                initCardsList = stateViewModel.state.cardsList,
+                                onApply = {
+                                    stateViewModel.update {
+                                        copy(cardsList = it)
+                                    }
+                                }
+                            )
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .clip(MaterialTheme.shapes.medium)
+                                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(MaterialTheme.spacing.medium),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)
+                            ) {
+                                Button(
+                                    onClick = {
+                                        haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                                        focusManager.clearFocus()
+                                        isCardsChoiceOpen = true
+                                    },
+                                    shape = CircleShape,
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                                    ),
+                                    contentPadding = PaddingValues(MaterialTheme.spacing.medium)
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(
+                                            MaterialTheme.spacing.small
+                                        )
+                                    ) {
+                                        Icon(
+                                            imageVector = EditIco,
+                                            modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
+                                            contentDescription = null
+                                        )
+                                        Text(
+                                            text = stringResource(R.string.editContent),
+                                            style = MaterialTheme.typography.labelLarge,
+                                            modifier = Modifier.weight(1f, fill = false)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    ElementType.Carousel -> {}
                 }
             }
         }
@@ -1453,6 +1679,140 @@ private fun PlayListTypeChoice(
                     )
                 }
             }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ArtistTypeChoice(
+    onDismiss: () -> Unit,
+    initType: ArtistType,
+    onApply: (ArtistType) -> Unit
+) {
+    val haptic = LocalHapticFeedback.current
+
+    val focusManager = LocalFocusManager.current
+
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
+    val coroutineScope = rememberCoroutineScope()
+
+    val animateAndDismiss: () -> Unit = {
+        bottomSheetAnimateAndDismiss(
+            coroutineScope = coroutineScope,
+            sheetState = sheetState,
+            onDismiss = onDismiss
+        )
+    }
+
+    val artistTypes by remember { mutableStateOf(ArtistType.entries.toList()) }
+
+    var selectedType by remember { mutableStateOf(initType) }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+    ) {
+        Box {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = MaterialTheme.spacing.screenHorizontal),
+                contentPadding = PaddingValues(bottom = MaterialTheme.spacing.large + MaterialTheme.dimens.minButtonHeight),
+                verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
+            ) {
+                items(
+                    count = artistTypes.size,
+                    key = { it.toString() },
+                    contentType = { "ArtistTypeChoiceItem" }
+                ) { index ->
+                    val itemText = stringResource(artistTypes[index].displayNameId)
+                    val isSelected = selectedType == artistTypes[index]
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(MaterialTheme.shapes.medium)
+                            .background(
+                                if (isSelected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh
+                            )
+                            .clickable {
+                                haptic.performHapticFeedback(HapticFeedbackType.VirtualKey)
+                                selectedType = artistTypes[index]
+                            }
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(MaterialTheme.spacing.medium)
+                        ) {
+                            Text(
+                                text = itemText,
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = if (isSelected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .padding(horizontal = MaterialTheme.spacing.screenHorizontal),
+                contentAlignment = Alignment.Center
+            ) {
+                Button(
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                        focusManager.clearFocus()
+                        onApply(selectedType)
+                        animateAndDismiss()
+                    }
+                ) {
+                    Text(
+                        text = stringResource(R.string.apply),
+                        style = MaterialTheme.typography.labelLarge
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ArtistSearch(
+    artistsFlow: List<String>,
+    onArtistChange: (String) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState()),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
+    ) {
+        artistsFlow.forEach { artist ->
+            SuggestionChip(
+                label = {
+                    Text(
+                        text = artist,
+                        style = MaterialTheme.typography.labelLarge,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                },
+                onClick = {
+                    onArtistChange(artist)
+                },
+                shape = MaterialTheme.shapes.small,
+                colors = SuggestionChipDefaults.suggestionChipColors(
+                    containerColor = MaterialTheme.colorScheme.secondary,
+                    labelColor = MaterialTheme.colorScheme.onSecondary,
+                )
+            )
         }
     }
 }

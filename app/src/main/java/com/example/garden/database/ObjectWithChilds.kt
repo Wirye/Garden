@@ -2,6 +2,9 @@ package com.example.garden.database
 
 import androidx.room.Embedded
 import androidx.room.Relation
+import com.example.garden.database.entities.ObjectData
+import com.example.garden.database.entities.ObjectEntity
+import com.example.garden.database.entities.ResolvedObjectEntity
 
 data class ObjectWithChilds(
     @Embedded

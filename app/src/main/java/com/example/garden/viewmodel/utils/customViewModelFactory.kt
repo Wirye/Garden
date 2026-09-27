@@ -3,7 +3,7 @@ package com.example.garden.viewmodel.utils
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 
-inline fun <reified VM : ViewModel> viewModelFactory(
+inline fun <reified VM : ViewModel> customViewModelFactory(
     crossinline initializer: () -> VM
 ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")

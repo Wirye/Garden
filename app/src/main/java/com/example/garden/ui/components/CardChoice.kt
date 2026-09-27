@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material3.BottomSheetDefaults
@@ -35,34 +36,35 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
 import com.example.garden.R
-import com.example.garden.database.ElementType
-import com.example.garden.database.ObjectData
+import com.example.garden.database.entities.ElementType
+import com.example.garden.database.entities.ObjectData
 import com.example.garden.ui.components.icons.SearchIco
 import com.example.garden.ui.theme.dimens
 import com.example.garden.ui.theme.spacing
 import com.example.garden.ui.utils.blockGestures
 import com.example.garden.ui.utils.bottomSheetAnimateAndDismiss
-import com.example.garden.viewmodel.MainViewModel
+import com.example.garden.viewmodel.SearchViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CardChoice(
-    mainViewModel: MainViewModel,
+    searchViewModel: SearchViewModel,
     isSingleChoice: Boolean,
     cardTypes: List<ElementType>,
     initCardsList: List<Long>,
     onDismiss: () -> Unit,
     onApply: (List<Long>) -> Unit
 ) {
-    val haptic = LocalHapticFeedback.current
-
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     val selectedCardIds = rememberSaveable { initCardsList.toMutableStateList() }
@@ -71,11 +73,11 @@ fun CardChoice(
 
     val searchState = rememberTextFieldState(initialText = "")
 
-    val pagingCards = mainViewModel.searchCardsFlow.collectAsLazyPagingItems()
+    val pagingCards = searchViewModel.searchCardsFlow.collectAsLazyPagingItems()
 
     LaunchedEffect(searchState.text.toString()) {
         val text = searchState.text.toString()
-        mainViewModel.searchCards(text, cardTypes)
+        searchViewModel.searchCards(text, cardTypes)
     }
 
     val animateAndDismiss: () -> Unit = {
@@ -83,7 +85,7 @@ fun CardChoice(
             coroutineScope = coroutineScope,
             sheetState = sheetState,
             onDismiss = {
-                mainViewModel.clearCardsSearch()
+                searchViewModel.clearCardsSearch()
                 onDismiss()
             }
         )
@@ -91,7 +93,7 @@ fun CardChoice(
 
     ModalBottomSheet(
         onDismissRequest = {
-            mainViewModel.clearCardsSearch()
+            searchViewModel.clearCardsSearch()
             onDismiss()
         },
         sheetState = sheetState,
@@ -99,6 +101,10 @@ fun CardChoice(
         contentColor = MaterialTheme.colorScheme.onBackground,
         dragHandle = { BottomSheetDefaults.DragHandle() }
     ) {
+        val haptic = LocalHapticFeedback.current
+        val focusManager = LocalFocusManager.current
+        val keyboardController = LocalSoftwareKeyboardController.current
+
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -145,6 +151,11 @@ fun CardChoice(
                             modifier = Modifier.size(MaterialTheme.dimens.iconMedium)
                         )
                     },
+                    onKeyboardAction = { _ ->
+                        keyboardController?.hide()
+                        focusManager.clearFocus()
+                    },
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                     lineLimits = TextFieldLineLimits.SingleLine
                 )
 
@@ -166,7 +177,7 @@ fun CardChoice(
                             val entity = pagingCards[index]
                             if (entity != null) {
                                 val card =
-                                    entity.info.injectObjectEntityData(entity) as ObjectData.Card
+                                    entity.info.injectLocalObjectEntityData(entity) as ObjectData.Card
                                 val isSelected = entity.id in selectedCardIds
 
                                 Box(

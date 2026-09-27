@@ -1,4 +1,4 @@
-package com.example.garden.repository
+package com.example.garden.repository.objects
 
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
@@ -7,13 +7,17 @@ import androidx.paging.filter
 import androidx.paging.map
 import androidx.room.withTransaction
 import com.example.garden.database.AppDatabase
-import com.example.garden.database.ElementType
-import com.example.garden.database.LinkData
-import com.example.garden.database.ObjectData
-import com.example.garden.database.ObjectEntity
 import com.example.garden.database.ObjectWithChilds2
-import com.example.garden.database.PageType
 import com.example.garden.database.dao.ObjectDataDao
+import com.example.garden.database.entities.ElementType
+import com.example.garden.database.entities.EntitySourceType
+import com.example.garden.database.entities.ImageData
+import com.example.garden.database.entities.LinkData
+import com.example.garden.database.entities.ObjectData
+import com.example.garden.database.entities.ObjectEntity
+import com.example.garden.database.entities.PageType
+import com.example.garden.utils.getArtistType
+import com.example.garden.utils.toLongId
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -30,10 +34,20 @@ class ObjectRepositoryImpl(
             pagingData
                 .filter { it.info is ObjectData.Carousel }
                 .map {
-                    it.info.injectObjectEntityData(
+                    it.info.injectLocalObjectEntityData(
                         it
                     ) as ObjectData.Carousel
                 }
+        }
+    }
+
+    override fun getUnspecifiedPageObjects(): Flow<PagingData<ObjectData.Card>> {
+        return Pager(
+            config = PagingConfig(pageSize = 50, enablePlaceholders = false, prefetchDistance = 10),
+            pagingSourceFactory = { dao.getUnspecifiedPageObjects() }
+        ).flow.map { pagingData ->
+            pagingData.map { it.info.injectLocalObjectEntityData(it) }
+                .filter { it is ObjectData.Card }.map { it as ObjectData.Card }
         }
     }
 
@@ -52,14 +66,14 @@ class ObjectRepositoryImpl(
                     .filter { it.parent.info is ObjectData.Carousel }
                     .map {
                         ObjectWithChilds2(
-                            parent = it.parent.info.injectObjectEntityData(
+                            parent = it.parent.info.injectLocalObjectEntityData(
                                 it.parent
                             ) as ObjectData.Carousel,
                             childs = it.childs
                                 .filter { child -> child.info is ObjectData.Card }
                                 .take(30)
                                 .map { child ->
-                                    child.info.injectObjectEntityData(
+                                    child.info.injectLocalObjectEntityData(
                                         child
                                     ) as ObjectData.Card
                                 }
@@ -76,7 +90,7 @@ class ObjectRepositoryImpl(
             pagingData
                 .filter { it.info is ObjectData.Card }
                 .map {
-                    it.info.injectObjectEntityData(
+                    it.info.injectLocalObjectEntityData(
                         it
                     ) as ObjectData.Card
                 }
@@ -91,7 +105,7 @@ class ObjectRepositoryImpl(
             pagingData
                 .filter { it.info is ObjectData.Card }
                 .map {
-                    it.info.injectObjectEntityData(
+                    it.info.injectLocalObjectEntityData(
                         it
                     ) as ObjectData.Card
                 }
@@ -116,26 +130,90 @@ class ObjectRepositoryImpl(
         ).flow
     }
 
-    override fun getCardsByParentId(parentId: Long): Flow<List<ObjectEntity>> = dao.getCardsByParentId(parentId)
+    override fun globalSearch(query: String): Flow<List<ObjectEntity>> = dao.globalSearch(query)
 
-    override suspend fun saveObject(data: ObjectData, page: PageType, parentId: Long?, isUserCreated: Boolean): Long {
+    override fun getCardsByParentId(parentId: Long): Flow<List<ObjectEntity>> =
+        dao.getCardsByParentId(parentId)
+
+    override suspend fun saveObject(
+        data: ObjectData,
+        page: PageType,
+        parentId: Long?,
+        isUserCreated: Boolean
+    ): Long = db.withTransaction {
         val elementType = resolveElementType(data)
+
+        suspend fun processAuthor(author: String, card: ObjectData.Card): String {
+            val trimmed = author.trim()
+            if (trimmed.isEmpty()) return ""
+
+            val existingId = dao.isAuthorExist(trimmed.lowercase())
+            return if (existingId != null) {
+                dao.getObjectById(existingId)?.name ?: trimmed
+            } else {
+                val maxPosition = getMaxChildPosition(1L) ?: -1
+                val artistType = card.getArtistType()
+
+                if (artistType != null) {
+                    dao.upsertObject(
+                        entity = ObjectEntity(
+                            parentId = 1L,
+                            page = PageType.Unspecified,
+                            position = maxPosition + 1,
+                            source = EntitySourceType.Local,
+                            link = LinkData.Self,
+                            isUserCreated = true,
+                            name = trimmed,
+                            elementType = ElementType.ArtistCard,
+                            info = ObjectData.Card.Artist(
+                                name = trimmed,
+                                image = ImageData.Url(""),
+                                artistType = artistType
+                            )
+                        )
+                    )
+                }
+                trimmed
+            }
+        }
+
+        val newData = if (data is ObjectData.Card) {
+            if (data is ObjectData.Card.Music) {
+                val updatedAuthors = data.authors
+                    .map { processAuthor(it, data) }
+                    .filter { it.isNotEmpty() }
+
+                if (updatedAuthors.isNotEmpty()) data.copyWithAuthors(updatedAuthors) else data
+            } else {
+                if (data.author.isNotBlank()) {
+                    val updatedAuthor = processAuthor(data.author, data)
+                    data.copyWithAuthors(listOf(updatedAuthor))
+                } else {
+                    data
+                }
+            }
+        } else {
+            data
+        }
+
         val entity = ObjectEntity(
-            id = data.id,
+            id = newData.id.toLongId(),
             parentId = parentId,
             page = page,
-            position = data.position,
+            position = newData.position,
             elementType = elementType,
-            link = data.link ?: LinkData.None,
-            info = data,
+            link = newData.link ?: LinkData.None,
+            info = newData,
             isUserCreated = isUserCreated,
-            name = data.name
+            name = newData.name,
+            source = EntitySourceType.Local
         )
-        return dao.upsertObject(entity)
+
+        dao.upsertObject(entity)
     }
 
-    override suspend fun deleteObject(id: Long, parentId: Long?, position: Int) =
-        dao.deleteObject(id, parentId, position)
+    override suspend fun deleteObject(id: Long, parentId: Long?, position: Int, author: String?) =
+        dao.deleteObject(id, parentId, position, author)
 
     override suspend fun getRootObjectById(id: Long): ObjectData? {
         var currentId: Long? = id
@@ -152,7 +230,7 @@ class ObjectRepositoryImpl(
                 }
 
                 else -> {
-                    return entity.info.injectObjectEntityData(
+                    return entity.info.injectLocalObjectEntityData(
                         entity = entity
                     )
                 }
@@ -165,7 +243,7 @@ class ObjectRepositoryImpl(
     override suspend fun updatePositions(cards: List<ObjectData.Card>) {
         db.withTransaction {
             cards.forEach { card ->
-                dao.updatePosition(id = card.id, newPosition = card.position)
+                dao.updatePosition(id = card.id.toLongId(), newPosition = card.position)
             }
         }
     }
@@ -181,13 +259,15 @@ class ObjectRepositoryImpl(
         return carouselId
     }
 
-    private fun resolveElementType(domain: ObjectData): ElementType {
-        return when (domain) {
+    private fun resolveElementType(data: ObjectData): ElementType {
+        return when (data) {
             is ObjectData.Carousel -> ElementType.Carousel
-            is ObjectData.Card.Anime -> ElementType.AnimeCard
+            is ObjectData.Card.Anime, is ObjectData.Card.AniLibria -> ElementType.AnimeCard
             is ObjectData.Card.Manga -> ElementType.MangaCard
             is ObjectData.Card.Music -> ElementType.MusicCard
             is ObjectData.Card.Playlist -> ElementType.PlaylistCard
+            is ObjectData.Card.Album -> ElementType.AlbumCard
+            is ObjectData.Card.Artist -> ElementType.ArtistCard
         }
     }
 

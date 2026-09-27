@@ -1,4 +1,4 @@
-package com.example.garden.database
+package com.example.garden.database.entities
 
 import android.os.Parcelable
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -11,6 +11,7 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.example.garden.R
 import com.example.garden.ui.components.icons.CloseIco
+import com.github.wirye.anilibriakt.model.Title
 import kotlinx.parcelize.IgnoredOnParcel
 import kotlinx.parcelize.Parcelize
 import kotlinx.serialization.SerialName
@@ -68,39 +69,12 @@ enum class CollectionType : CollectionTypeInterface {
         override val overrideShowIco: Boolean = false
         override val overrideIco: ImageData? = null
     },
-    FastChoiceMusic {
-        override val displayNameId: Int = R.string.fastChoiceYouTubeMusic
-        override val displayIco: ImageData =
-            ImageData.Url("https://www.google.com/s2/favicons?domain=music.youtube.com&sz=128")
-        override val overrideEnabled: Boolean = true
-        override val isAddCardEnable: Boolean = true
-        override val forCarouselType: List<CarouselType> =
-            listOf(CarouselType.Music, CarouselType.PlaylistNMusic)
-        override val overrideNameId: Int = R.string.fastChoiceYouTubeMusic
-        override val overrideChildsCornerRadius: SizeType = SizeType.SMALL
-        override val overrideChildsShowName: Boolean = true
-        override val overrideChildsNamePosition: Int = 1
-        override val overrideChildsShowAlreadyWatchedLine: Boolean = false
-        override val overrideLayoutType: LayoutType = LayoutType.CAROUSEL_FROM_GRID
-        override val overrideObjectsInOneLine: Int = 3
-        override val overrideMaxLines: Int = 3
-        override val overrideDovodchik: Boolean = true
-        override val overrideShowDovodchikDots: Boolean = true
-        override val overrideAdaptiveGridSize: Boolean = true
-        override val overrideMaxObjectsInOneLineForAdaptiveSize: Int = 4
-        override val overrideMaxLinesForAdaptiveSize: Int = 2
-        override val overrideChildsSize: CardSize = CardSize.SMALL
-        override val overrideChildsShowAuthor: Boolean = false
-        override val overrideShowIco: Boolean = true
-        override val overrideIco: ImageData =
-            ImageData.Url("https://www.google.com/s2/favicons?domain=music.youtube.com&sz=256")
-    }
 }
 
 @Parcelize
 @Serializable
 enum class PageType : Parcelable {
-    Home, Anime, Manga, Music, Playlist, Download
+    Home, Anime, Manga, Music, Unspecified
 }
 
 @Parcelize
@@ -129,11 +103,32 @@ enum class CarouselType : CarouselTypeInterface {
     Playlist {
         override val displayNameId: Int = R.string.Playlist
     },
+    Album {
+        override val displayNameId: Int = R.string.Album
+    },
+    Artist {
+        override val displayNameId: Int = R.string.Artist
+    },
+    ArtistNAlbum {
+        override val displayNameId: Int = R.string.ArtistNAlbum
+    },
+    ArtistNMusic {
+        override val displayNameId: Int = R.string.ArtistNMusic
+    },
+    ArtistNMusicNAlbum {
+        override val displayNameId: Int = R.string.ArtistNMusicNAlbum
+    },
+    AlbumNMusic {
+        override val displayNameId: Int = R.string.AlbumNMusic
+    },
     AnimeNManga {
         override val displayNameId: Int = R.string.AnimeNManga
     },
     PlaylistNMusic {
         override val displayNameId: Int = R.string.PlaylistNMusic
+    },
+    All {
+        override val displayNameId: Int = R.string.All
     }
 }
 
@@ -615,29 +610,14 @@ enum class ElementType : ElementTypeInterface {
     PlaylistCard {
         override val displayNameId = R.string.Playlist
     },
-    PlaceholderCard {
-        override val displayNameId = R.string.Placeholder
+    ArtistCard {
+        override val displayNameId = R.string.Artist
+    },
+    AlbumCard {
+        override val displayNameId = R.string.Album
     },
     Carousel {
         override val displayNameId = R.string.Carousel
-    },
-    Episode {
-        override val displayNameId = R.string.Episode
-    },
-    Chapter {
-        override val displayNameId = R.string.Chapter
-    },
-    ChapterPage {
-        override val displayNameId = R.string.ChapterPage
-    },
-    Song {
-        override val displayNameId = R.string.Song
-    },
-    SongVerticalVideo {
-        override val displayNameId = R.string.SongVerticalVideo
-    },
-    SongHorizontalVideo {
-        override val displayNameId = R.string.SongHorizontalVideo
     },
 }
 
@@ -713,6 +693,11 @@ sealed interface LinkData : Parcelable {
 }
 
 
+@Serializable
+enum class EntitySourceType {
+    Local, Web
+}
+
 @Entity(
     tableName = "objectData",
     indices = [
@@ -724,6 +709,8 @@ data class ObjectEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
     val parentId: Long? = null,
+
+    val source: EntitySourceType,
 
     val page: PageType,
     val position: Int,
@@ -759,6 +746,7 @@ data class ObjectFtsEntity(
             child.elementType AS elementType,
             child.link AS link,
             child.isUserCreated AS isUserCreated,
+            child.source AS source,
             
             CASE 
                 WHEN child.link LIKE 'insert:%' AND parent.id IS NOT NULL 
@@ -781,6 +769,7 @@ data class ObjectFtsEntity(
 data class ResolvedObjectEntity(
     val id: Long = 0,
     val parentId: Long? = null,
+    val source: EntitySourceType,
     val page: PageType,
     val position: Int,
     val elementType: ElementType,
@@ -788,32 +777,6 @@ data class ResolvedObjectEntity(
     val isUserCreated: Boolean,
     val name: String,
     val info: ObjectData
-)
-
-@Entity(
-    tableName = "episode_progress",
-)
-data class EpisodeProgressEntity(
-    @PrimaryKey(autoGenerate = false) val link: LinkData,
-    val positionMs: Long = 0,
-    val durationMs: Long = 0,
-    val isCompleted: Boolean = false,
-    val lastWatchedAt: Long = System.currentTimeMillis()
-)
-
-@Entity(
-    tableName = "media_groups",
-    indices = [
-        Index(value = ["groupId"]),
-        Index(value = ["objectId"])
-    ]
-)
-data class MediaGroupEntity(
-    @PrimaryKey(autoGenerate = true)
-    val id: Long = 0,
-    val groupId: Long,
-    val objectId: Long,
-    val positionInGroup: Int
 )
 
 @Serializable
@@ -861,22 +824,40 @@ enum class PlayListType: PlayListTypeInterface {
     }
 }
 
+interface ArtistTypeInterface : Parcelable {
+    val displayNameId: Int
+}
+
+@Parcelize
+@Serializable
+enum class ArtistType : ArtistTypeInterface {
+    Music {
+        override val displayNameId: Int = R.string.Music
+    },
+    Anime {
+        override val displayNameId: Int = R.string.Anime
+    },
+    Manga {
+        override val displayNameId: Int = R.string.Manga
+    }
+}
+
 @Serializable
 sealed interface ObjectData {
-    val id: Long
+    val id: String
     val position: Int
     val link: LinkData?
     val isUserCreated: Boolean
     val name: String
 
-    fun injectObjectEntityData(entity: ObjectEntity): ObjectData
-
+    fun injectLocalObjectEntityData(entity: ObjectEntity): ObjectData
+    fun injectWebObjectEntityData(entity: WebObjectEntity): ObjectData
     fun copyWithPosition(position: Int): ObjectData
 
     @Serializable
     @SerialName("carousel")
     data class Carousel(
-        override val id: Long = -1,
+        override val id: String = "-1",
         override val position: Int = 0,
         override val link: LinkData? = null,
         override val isUserCreated: Boolean = false,
@@ -900,12 +881,22 @@ sealed interface ObjectData {
         val maxObjectsInOneLineForAdaptiveSize: Int? = null,
         val maxLinesForAdaptiveSize: Int? = null
     ) : ObjectData {
-        override fun injectObjectEntityData(entity: ObjectEntity): ObjectData {
+        override fun injectLocalObjectEntityData(entity: ObjectEntity): ObjectData {
             return copy(
-                id = entity.id,
+                id = "${entity.source.name}_${entity.id}",
                 position = entity.position,
                 link = entity.link,
                 isUserCreated = entity.isUserCreated,
+                name = entity.name
+            )
+        }
+
+        override fun injectWebObjectEntityData(entity: WebObjectEntity): ObjectData {
+            return copy(
+                id = "${EntitySourceType.Web.name}_${entity.id}",
+                position = entity.position,
+                link = LinkData.Self,
+                isUserCreated = false,
                 name = entity.name
             )
         }
@@ -921,10 +912,12 @@ sealed interface ObjectData {
         val image: ImageData
         val genre: List<GridGenreItem>
 
+        fun copyWithAuthors(authors: List<String>): Card
+
         @Serializable
         @SerialName("card_anime")
         data class Anime(
-            override val id: Long = -1,
+            override val id: String = "-1",
             override val position: Int = 0,
             override val link: LinkData? = null,
             override val isUserCreated: Boolean = false,
@@ -935,9 +928,9 @@ sealed interface ObjectData {
             val description: String = "",
             val episodesList: List<EpisodeInfo> = emptyList(),
         ) : Card {
-            override fun injectObjectEntityData(entity: ObjectEntity): ObjectData {
+            override fun injectLocalObjectEntityData(entity: ObjectEntity): ObjectData {
                 return copy(
-                    id = entity.id,
+                    id = "${entity.source.name}_${entity.id}",
                     position = entity.position,
                     link = entity.link,
                     isUserCreated = entity.isUserCreated,
@@ -945,15 +938,29 @@ sealed interface ObjectData {
                 )
             }
 
+            override fun injectWebObjectEntityData(entity: WebObjectEntity): ObjectData {
+                return copy(
+                    id = "${EntitySourceType.Web.name}_${entity.id}",
+                    position = entity.position,
+                    link = LinkData.Self,
+                    isUserCreated = false,
+                    name = entity.name
+                )
+            }
+
             override fun copyWithPosition(position: Int): ObjectData {
                 return copy(position = position)
+            }
+
+            override fun copyWithAuthors(authors: List<String>): Card {
+                return copy(author = authors.firstOrNull() ?: "")
             }
         }
 
         @Serializable
         @SerialName("card_manga")
         data class Manga(
-            override val id: Long = -1,
+            override val id: String = "-1",
             override val position: Int = 0,
             override val link: LinkData? = null,
             override val isUserCreated: Boolean = false,
@@ -964,9 +971,9 @@ sealed interface ObjectData {
             val description: String = "",
             val chaptersList: List<ChapterInfo> = emptyList(),
         ) : Card {
-            override fun injectObjectEntityData(entity: ObjectEntity): ObjectData {
+            override fun injectLocalObjectEntityData(entity: ObjectEntity): ObjectData {
                 return copy(
-                    id = entity.id,
+                    id = "${entity.source.name}_${entity.id}",
                     position = entity.position,
                     link = entity.link,
                     isUserCreated = entity.isUserCreated,
@@ -974,15 +981,29 @@ sealed interface ObjectData {
                 )
             }
 
+            override fun injectWebObjectEntityData(entity: WebObjectEntity): ObjectData {
+                return copy(
+                    id = "${EntitySourceType.Web.name}_${entity.id}",
+                    position = entity.position,
+                    link = LinkData.Self,
+                    isUserCreated = false,
+                    name = entity.name
+                )
+            }
+
             override fun copyWithPosition(position: Int): ObjectData {
                 return copy(position = position)
+            }
+
+            override fun copyWithAuthors(authors: List<String>): Card {
+                return copy(author = authors.firstOrNull() ?: "")
             }
         }
 
         @Serializable
         @SerialName("card_music")
         data class Music(
-            override val id: Long = -1,
+            override val id: String = "-1",
             override val position: Int = 0,
             override val link: LinkData? = null,
             override val isUserCreated: Boolean = false,
@@ -990,12 +1011,13 @@ sealed interface ObjectData {
             override val author: String = "",
             override val image: ImageData,
             override val genre: List<GridGenreItem> = emptyList(),
+            val authors: List<String> = emptyList(),
             val song: LinkData? = null,
             val horizontalVideo: LinkData? = null
         ) : Card {
-            override fun injectObjectEntityData(entity: ObjectEntity): ObjectData {
+            override fun injectLocalObjectEntityData(entity: ObjectEntity): ObjectData {
                 return copy(
-                    id = entity.id,
+                    id = "${entity.source.name}_${entity.id}",
                     position = entity.position,
                     link = entity.link,
                     isUserCreated = entity.isUserCreated,
@@ -1003,15 +1025,114 @@ sealed interface ObjectData {
                 )
             }
 
+            override fun injectWebObjectEntityData(entity: WebObjectEntity): ObjectData {
+                return copy(
+                    id = "${EntitySourceType.Web.name}_${entity.id}",
+                    position = entity.position,
+                    link = LinkData.Self,
+                    isUserCreated = false,
+                    name = entity.name
+                )
+            }
+
             override fun copyWithPosition(position: Int): ObjectData {
                 return copy(position = position)
+            }
+
+            override fun copyWithAuthors(authors: List<String>): Card {
+                return copy(authors = authors)
+            }
+        }
+
+        @Serializable
+        @SerialName("card_artist")
+        data class Artist(
+            override val id: String = "-1",
+            override val position: Int = 0,
+            override val link: LinkData? = null,
+            override val isUserCreated: Boolean = false,
+            override val name: String = "",
+            override val author: String = "",
+            override val image: ImageData,
+            override val genre: List<GridGenreItem> = emptyList(),
+            val artistType: ArtistType
+        ) : Card {
+            override fun injectLocalObjectEntityData(entity: ObjectEntity): ObjectData {
+                return copy(
+                    id = "${entity.source.name}_${entity.id}",
+                    position = entity.position,
+                    link = entity.link,
+                    isUserCreated = entity.isUserCreated,
+                    name = entity.name
+                )
+            }
+
+            override fun injectWebObjectEntityData(entity: WebObjectEntity): ObjectData {
+                return copy(
+                    id = "${EntitySourceType.Web.name}_${entity.id}",
+                    position = entity.position,
+                    link = LinkData.Self,
+                    isUserCreated = false,
+                    name = entity.name
+                )
+            }
+
+            override fun copyWithPosition(position: Int): ObjectData {
+                return copy(position = position)
+            }
+
+            override fun copyWithAuthors(authors: List<String>): Card {
+                return copy(author = authors.firstOrNull() ?: "")
+            }
+        }
+
+        @Serializable
+        @SerialName("card_album")
+        data class Album(
+            override val id: String = "-1",
+            override val position: Int = 0,
+            override val link: LinkData? = null,
+            override val isUserCreated: Boolean = false,
+            override val name: String = "",
+            override val author: String = "",
+            override val image: ImageData,
+            override val genre: List<GridGenreItem> = emptyList(),
+            val isSingle: Boolean = false,
+            val songs: List<Long> = emptyList()
+        ) : Card {
+            override fun injectLocalObjectEntityData(entity: ObjectEntity): ObjectData {
+                return copy(
+                    id = "${entity.source.name}_${entity.id}",
+                    position = entity.position,
+                    link = entity.link,
+                    isUserCreated = entity.isUserCreated,
+                    name = entity.name
+                )
+            }
+
+            override fun injectWebObjectEntityData(entity: WebObjectEntity): ObjectData {
+                return copy(
+                    id = "${EntitySourceType.Web.name}_${entity.id}",
+                    position = entity.position,
+                    link = LinkData.Self,
+                    isUserCreated = false,
+                    name = entity.name
+                )
+            }
+
+            override fun copyWithPosition(position: Int): ObjectData {
+                return copy(position = position)
+            }
+
+            override fun copyWithAuthors(authors: List<String>): Card {
+                return copy(author = authors.firstOrNull() ?: "")
             }
         }
 
         @Serializable
         @SerialName("card_playlist")
         data class Playlist(
-            override val id: Long = -1,
+            override val id: String = "-1",
             override val position: Int = 0,
             override val link: LinkData? = null,
             override val isUserCreated: Boolean = false,
@@ -1022,9 +1143,9 @@ sealed interface ObjectData {
             val playListType: PlayListType,
             val cardsList: List<Long> = emptyList()
         ) : Card {
-            override fun injectObjectEntityData(entity: ObjectEntity): ObjectData {
+            override fun injectLocalObjectEntityData(entity: ObjectEntity): ObjectData {
                 return copy(
-                    id = entity.id,
+                    id = "${entity.source.name}_${entity.id}",
                     position = entity.position,
                     link = entity.link,
                     isUserCreated = entity.isUserCreated,
@@ -1032,8 +1153,65 @@ sealed interface ObjectData {
                 )
             }
 
+            override fun injectWebObjectEntityData(entity: WebObjectEntity): ObjectData {
+                return copy(
+                    id = "${EntitySourceType.Web.name}_${entity.id}",
+                    position = entity.position,
+                    link = LinkData.Self,
+                    isUserCreated = false,
+                    name = entity.name
+                )
+            }
+
             override fun copyWithPosition(position: Int): ObjectData {
                 return copy(position = position)
+            }
+
+            override fun copyWithAuthors(authors: List<String>): Card {
+                return copy(author = authors.firstOrNull() ?: "")
+            }
+        }
+
+        @Serializable
+        @SerialName("card_anilibria")
+        data class AniLibria(
+            override val id: String = "-1",
+            override val position: Int = 0,
+            override val link: LinkData? = null,
+            override val isUserCreated: Boolean = false,
+            override val name: String = "",
+            override val author: String = "",
+            override val image: ImageData,
+            override val genre: List<GridGenreItem> = emptyList(),
+            val anilibriaCardId: Long,
+            val data: Title
+        ) : Card {
+            override fun injectLocalObjectEntityData(entity: ObjectEntity): ObjectData {
+                return copy(
+                    id = "${entity.source.name}_${entity.id}",
+                    position = entity.position,
+                    link = entity.link,
+                    isUserCreated = entity.isUserCreated,
+                    name = entity.name
+                )
+            }
+
+            override fun injectWebObjectEntityData(entity: WebObjectEntity): ObjectData {
+                return copy(
+                    id = "${EntitySourceType.Web.name}_${entity.id}",
+                    position = entity.position,
+                    link = LinkData.Self,
+                    isUserCreated = false,
+                    name = entity.name
+                )
+            }
+
+            override fun copyWithPosition(position: Int): ObjectData {
+                return copy(position = position)
+            }
+
+            override fun copyWithAuthors(authors: List<String>): Card {
+                return copy(author = authors.firstOrNull() ?: "")
             }
         }
     }

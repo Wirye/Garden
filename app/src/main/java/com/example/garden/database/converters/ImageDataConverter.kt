@@ -1,8 +1,8 @@
 package com.example.garden.database.converters
 
 import androidx.room.TypeConverter
-import com.example.garden.database.ImageData
-import com.example.garden.database.SavedIcons
+import com.example.garden.database.entities.ImageData
+import com.example.garden.database.entities.SavedIcons
 
 class ImageDataConverter {
 

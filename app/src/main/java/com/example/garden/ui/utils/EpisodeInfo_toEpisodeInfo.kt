@@ -1,7 +1,7 @@
 package com.example.garden.ui.utils
 
-import com.example.garden.database.EpisodeInfo
-import com.example.garden.database.ImageData
+import com.example.garden.database.entities.EpisodeInfo
+import com.example.garden.database.entities.ImageData
 import com.example.garden.ui.screens.generateNewChapterId
 
 fun EpisodeInfo.toEpisodeInfo() : com.example.garden.ui.screens.EpisodeInfo {

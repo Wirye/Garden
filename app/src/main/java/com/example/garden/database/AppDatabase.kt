@@ -13,6 +13,15 @@ import com.example.garden.database.converters.ObjectDataConverter
 import com.example.garden.database.dao.EpisodeProgressDao
 import com.example.garden.database.dao.MediaGroupDao
 import com.example.garden.database.dao.ObjectDataDao
+import com.example.garden.database.dao.RecentQueriesDao
+import com.example.garden.database.dao.WebObjectDataDao
+import com.example.garden.database.entities.EpisodeProgressEntity
+import com.example.garden.database.entities.MediaGroupEntity
+import com.example.garden.database.entities.ObjectEntity
+import com.example.garden.database.entities.ObjectFtsEntity
+import com.example.garden.database.entities.RecentQueriesEntity
+import com.example.garden.database.entities.ResolvedObjectEntity
+import com.example.garden.database.entities.WebObjectEntity
 
 @Database(
     entities = [
@@ -20,9 +29,11 @@ import com.example.garden.database.dao.ObjectDataDao
         EpisodeProgressEntity::class,
         MediaGroupEntity::class,
         ObjectFtsEntity::class,
+        RecentQueriesEntity::class,
+        WebObjectEntity::class,
     ],
     views = [ResolvedObjectEntity::class],
-    version = 20,
+    version = 28,
     exportSchema = false
 )
 @TypeConverters(
@@ -37,6 +48,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun objectDataDao(): ObjectDataDao
     abstract fun episodeProgressDao(): EpisodeProgressDao
     abstract fun mediaGroupDao(): MediaGroupDao
+    abstract fun resentQueriesDao(): RecentQueriesDao
+    abstract fun webObjectDataDao(): WebObjectDataDao
 
     companion object {
         @Volatile

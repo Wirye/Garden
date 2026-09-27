@@ -69,7 +69,6 @@ import kotlinx.coroutines.withContext
 fun AniLibertyLoginPage(
     modifier: Modifier = Modifier,
     authViewModel: AuthViewModel,
-    onSuccessAuth: (sessionId: String) -> Unit,
     onClose: () -> Unit
 ) {
     val focusManager = LocalFocusManager.current
@@ -93,7 +92,6 @@ fun AniLibertyLoginPage(
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
     val fillInAllFieldsErrorText = stringResource(R.string.FillInAllFields)
-    val authorizationError = stringResource(R.string.AuthorizationError)
 
     val performLogin = {
         if (loginText.isBlank() || passwordText.isBlank()) {
@@ -104,14 +102,10 @@ fun AniLibertyLoginPage(
             errorMessage = null
 
             coroutineScope.launch(Dispatchers.IO) {
-                val result = authViewModel.executeAniLibertyLogin(loginText.trim(), passwordText)
+                authViewModel.login(loginText.trim(), passwordText)
                 withContext(Dispatchers.Main) {
                     isLoading = false
-                    result.onSuccess { sessionKey ->
-                        onSuccessAuth(sessionKey)
-                    }.onFailure { error ->
-                        errorMessage = error.localizedMessage ?: authorizationError
-                    }
+                    onClose()
                 }
             }
         }
@@ -160,7 +154,7 @@ fun AniLibertyLoginPage(
 
                 Text(
                     modifier = Modifier.weight(1f, fill = false),
-                    text = stringResource(R.string.aniLibertyLogin),
+                    text = stringResource(R.string.aniLibriaLogin),
                     style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.onBackground,
                     maxLines = 2,
@@ -171,7 +165,7 @@ fun AniLibertyLoginPage(
                 var isHelpDialogExpanded by rememberSaveable { mutableStateOf(false) }
                 if (isHelpDialogExpanded) {
                     HelpDialog(
-                        title = stringResource(R.string.AboutAniLibertyLogin),
+                        title = stringResource(R.string.AboutAniLibriaLogin),
                         message = stringResource(R.string.IJustAddItForBeauty),
                     ) { isHelpDialogExpanded = false }
                 }

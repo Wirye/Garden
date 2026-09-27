@@ -57,7 +57,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.garden.Layer
 import com.example.garden.LocalCustomColors
 import com.example.garden.R
-import com.example.garden.database.ImageData
+import com.example.garden.database.entities.ImageData
 import com.example.garden.ui.components.AppAsyncImage
 import com.example.garden.ui.components.icons.CloseIco
 import com.example.garden.ui.components.icons.LoginIco
@@ -98,25 +98,20 @@ fun AppSettings(
     val rightInset = with(density) { rightInsetPx.toDp() }
     val leftInset = with(density) { leftInsetPx.toDp() }
 
-    val isGoogleAuthorized = uiState.isGoogleAuthorized
-    val googleUserName = uiState.googleNickName
-    val linkToGoogleAvatar = uiState.googleAvatarUrl
-    val googleEmailOrHandle = uiState.googleEmailOrHandle
-
-    val isAniLibertyAuthorized = uiState.isAniLibertyAuthorized
-    val aniLibertyUserName = uiState.aniLibertyNickName
-    val linkToAniLibertyAvatar = uiState.aniLibertyAvatarUrl
+    val isAniLibertyAuthorized = uiState.isAniLibriaAuthorized
+    val aniLibertyUserName = uiState.aniLibriaNickName
+    val linkToAniLibertyAvatar = uiState.aniLibriaAvatarUrl
 
     val searchState = rememberTextFieldState(initialText = "")
 
-    LaunchedEffect(Unit) {
-        authViewModel.refreshGoogleUserProfile()
-        authViewModel.refreshAniLibertyUserProfile()
+    LaunchedEffect(Unit, isAniLibertyAuthorized) {
+        if (isAniLibertyAuthorized) {
+            authViewModel.refreshAniLibertyUserProfile()
+        }
     }
 
     val settings = listOf(
-        stringResource(R.string.GoogleAccount),
-        stringResource(R.string.AniLibertyAccount)
+        stringResource(R.string.AniLibriaAccount)
     )
 
     val searchedSettings by remember(settings) {
@@ -213,159 +208,7 @@ fun AppSettings(
                     contentType = { "settings" }
                 ) { index ->
                     when (searchedSettings[index]) {
-                        stringResource(R.string.GoogleAccount) -> {
-                            Column(
-                                modifier = Modifier
-                                    .clip(MaterialTheme.shapes.extraLarge)
-                                    .background(MaterialTheme.colorScheme.surfaceVariant),
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .clickable {
-                                            if (!isGoogleAuthorized) {
-                                                haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
-                                                layersViewModel.openLayer(
-                                                    Layer.GoogleLoginPage()
-                                                )
-                                            }
-                                        }
-                                ) {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(MaterialTheme.spacing.medium),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
-                                        ) {
-                                            AppAsyncImage(
-                                                imageData = ImageData.Url("https://www.google.com/s2/favicons?domain=google.com&sz=128"),
-                                                contentDescription = null,
-                                                contentScale = ContentScale.Crop,
-                                                modifier = Modifier
-                                                    .size(MaterialTheme.dimens.minButtonHeight)
-                                                    .clip(CircleShape)
-                                            )
-
-                                            Text(
-                                                text = stringResource(R.string.Account),
-                                                style = MaterialTheme.typography.titleMedium,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                        }
-
-                                        if (!isGoogleAuthorized) {
-                                            Icon(
-                                                imageVector = LoginIco,
-                                                contentDescription = null,
-                                                modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
-                                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(
-                                                    alpha = 0.3f
-                                                )
-                                            )
-                                        }
-                                    }
-                                }
-
-                                val googleProfileVisibleState =
-                                    remember { MutableTransitionState(isGoogleAuthorized) }.apply {
-                                        targetState = isGoogleAuthorized
-                                    }
-
-                                AnimatedVisibility(
-                                    visibleState = googleProfileVisibleState,
-                                    enter = expandVertically() + fadeIn(),
-                                    exit = shrinkVertically() + fadeOut(),
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    var isLogoutAskExpanded by remember { mutableStateOf(false) }
-                                    if (isLogoutAskExpanded) {
-                                        ConfirmLogoutDialog(
-                                            title = stringResource(R.string.LogoutFromGoogle),
-                                            message = stringResource(R.string.PersonalizedContentWillBecomeUnavailable),
-                                            onConfirm = {
-                                                authViewModel.logoutGoogle()
-                                                isLogoutAskExpanded = false
-                                            },
-                                            onDismiss = { isLogoutAskExpanded = false }
-                                        )
-                                    }
-
-                                    Box(
-                                        modifier = Modifier
-                                            .clip(
-                                                MaterialTheme.shapes.extraLarge.copy(
-                                                    topStart = CornerSize(0.dp),
-                                                    topEnd = CornerSize(0.dp)
-                                                )
-                                            )
-                                            .background(MaterialTheme.colorScheme.surfaceVariant)
-                                            .clickable {
-                                                haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
-                                                isLogoutAskExpanded = true
-                                            }
-                                    ) {
-                                        Row(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(MaterialTheme.spacing.medium),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.SpaceBetween
-                                        ) {
-                                            Row(
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(
-                                                    MaterialTheme.spacing.small
-                                                )
-                                            ) {
-                                                AppAsyncImage(
-                                                    imageData = if (linkToGoogleAvatar != null) ImageData.Url(
-                                                        linkToGoogleAvatar
-                                                    ) else null,
-                                                    contentDescription = null,
-                                                    contentScale = ContentScale.Crop,
-                                                    modifier = Modifier
-                                                        .size(MaterialTheme.dimens.minButtonHeight)
-                                                        .clip(CircleShape)
-                                                )
-
-                                                Column {
-                                                    Text(
-                                                        text = googleUserName
-                                                            ?: stringResource(R.string.withoutName),
-                                                        style = MaterialTheme.typography.titleMedium,
-                                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(
-                                                            alpha = 0.8f
-                                                        )
-                                                    )
-
-                                                    Text(
-                                                        text = googleEmailOrHandle
-                                                            ?: stringResource(R.string.withoutEmail),
-                                                        style = MaterialTheme.typography.titleMedium,
-                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                    )
-                                                }
-                                            }
-
-                                            Icon(
-                                                imageVector = LogoutIco,
-                                                contentDescription = null,
-                                                modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
-                                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(
-                                                    alpha = 0.3f
-                                                )
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        stringResource(R.string.AniLibertyAccount) -> {
+                        stringResource(R.string.AniLibriaAccount) -> {
                             Column(
                                 modifier = Modifier
                                     .clip(MaterialTheme.shapes.extraLarge)
@@ -436,7 +279,7 @@ fun AppSettings(
                                     var isLogoutAskExpanded by remember { mutableStateOf(false) }
                                     if (isLogoutAskExpanded) {
                                         ConfirmLogoutDialog(
-                                            title = stringResource(R.string.LogoutFromAniLiberty),
+                                            title = stringResource(R.string.LogoutFromAniLibria),
                                             message = stringResource(R.string.PersonalizedContentWillBecomeUnavailable),
                                             onConfirm = {
                                                 isLogoutAskExpanded = false
@@ -542,7 +385,7 @@ fun ConfirmLogoutDialog(
                     onConfirm()
                 }
             ) {
-                Text(text = "Выйти")
+                Text(text = stringResource(R.string.Logout))
             }
         },
         dismissButton = {
@@ -552,7 +395,7 @@ fun ConfirmLogoutDialog(
                     onDismiss()
                 }
             ) {
-                Text(text = "Отмена")
+                Text(text = stringResource(R.string.Cancel))
             }
         }
     )

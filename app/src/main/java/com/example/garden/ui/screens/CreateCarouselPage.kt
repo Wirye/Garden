@@ -84,12 +84,12 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.garden.Layer
 import com.example.garden.LocalCustomColors
 import com.example.garden.R
-import com.example.garden.database.CardSize
-import com.example.garden.database.CarouselType
-import com.example.garden.database.CollectionType
-import com.example.garden.database.ImageData
-import com.example.garden.database.LayoutType
-import com.example.garden.database.SizeType
+import com.example.garden.database.entities.CardSize
+import com.example.garden.database.entities.CarouselType
+import com.example.garden.database.entities.CollectionType
+import com.example.garden.database.entities.ImageData
+import com.example.garden.database.entities.LayoutType
+import com.example.garden.database.entities.SizeType
 import com.example.garden.ui.components.AppAsyncImage
 import com.example.garden.ui.components.AsyncImageWithAddPlaceholder
 import com.example.garden.ui.components.HelpDialog
@@ -334,7 +334,7 @@ fun CreateCarouselPage(
                                         val availableCarouselTypes =
                                             remember(stateViewModel.state.carouselType) {
                                                 mutableStateOf(
-                                                    if(stateViewModel.state.carouselId != null) {
+                                                    if (stateViewModel.state.carouselId != null) {
                                                         listOf(stateViewModel.state.carouselType)
                                                     } else {
                                                         CarouselType.entries.toList()
@@ -347,17 +347,15 @@ fun CreateCarouselPage(
                                                 stateViewModel.state.carouselType,
                                                 availableCarouselTypes
                                             ) {
-                                                {
-                                                    if (availableCarouselTypes.value.indexOf(
-                                                            stateViewModel.state.carouselType
-                                                        ) != -1
-                                                    ) {
-                                                        availableCarouselTypes.value.indexOf(
-                                                            stateViewModel.state.carouselType
-                                                        )
-                                                    } else {
-                                                        0
-                                                    }
+                                                if (availableCarouselTypes.value.indexOf(
+                                                        stateViewModel.state.carouselType
+                                                    ) != -1
+                                                ) {
+                                                    availableCarouselTypes.value.indexOf(
+                                                        stateViewModel.state.carouselType
+                                                    )
+                                                } else {
+                                                    0
                                                 }
                                             }
 
@@ -368,7 +366,7 @@ fun CreateCarouselPage(
                                                 isCarouselTypeSelectMenuOpened.value = false
                                             },
                                             hazeState = LocalHazeLayers.current.mainScreen,
-                                            selectedIndex = selectedIndex(),
+                                            selectedIndex = selectedIndex,
                                             onSelect = {
                                                 haptic.performHapticFeedback(HapticFeedbackType.VirtualKey)
                                                 stateViewModel.update {
@@ -408,7 +406,8 @@ fun CreateCarouselPage(
                                     ) {
                                         CarouselPreview(
                                             lineWidth = MaterialTheme.windowInfo.widthDp - MaterialTheme.spacing.screenHorizontal * 2 - leftInset - rightInset - MaterialTheme.spacing.medium,
-                                            info = stateViewModel.state
+                                            info = stateViewModel.state,
+                                            carouselType = stateViewModel.state.carouselType
                                         )
                                     } else {
                                         Text(
@@ -513,17 +512,15 @@ fun CreateCarouselPage(
                                                                 stateViewModel.state.carouselType,
                                                                 availableCarouselTypes
                                                             ) {
-                                                                {
-                                                                    if (availableCarouselTypes.value.indexOf(
-                                                                            stateViewModel.state.carouselType
-                                                                        ) != -1
-                                                                    ) {
-                                                                        availableCarouselTypes.value.indexOf(
-                                                                            stateViewModel.state.carouselType
-                                                                        )
-                                                                    } else {
-                                                                        0
-                                                                    }
+                                                                if (availableCarouselTypes.value.indexOf(
+                                                                        stateViewModel.state.carouselType
+                                                                    ) != -1
+                                                                ) {
+                                                                    availableCarouselTypes.value.indexOf(
+                                                                        stateViewModel.state.carouselType
+                                                                    )
+                                                                } else {
+                                                                    0
                                                                 }
                                                             }
 
@@ -535,7 +532,7 @@ fun CreateCarouselPage(
                                                                     false
                                                             },
                                                             hazeState = LocalHazeLayers.current.mainScreen,
-                                                            selectedIndex = selectedIndex(),
+                                                            selectedIndex = selectedIndex,
                                                             onSelect = {
                                                                 haptic.performHapticFeedback(
                                                                     HapticFeedbackType.VirtualKey
@@ -1025,10 +1022,12 @@ fun CreateCarouselPage(
                                                                             OutlinedTextField(
                                                                                 value = maxLines,
                                                                                 onValueChange = {
-                                                                                    maxLines = it.filter { char ->  char.isDigit() }
+                                                                                    maxLines =
+                                                                                        it.filter { char -> char.isDigit() }
                                                                                     stateViewModel.update {
                                                                                         copy(
-                                                                                            maxLines = if (maxLines.isEmpty()) null else maxLines.filter { char ->  char.isDigit() }.toInt()
+                                                                                            maxLines = if (maxLines.isEmpty()) null else maxLines.filter { char -> char.isDigit() }
+                                                                                                .toInt()
                                                                                         )
                                                                                     }
                                                                                 },
@@ -1084,10 +1083,11 @@ fun CreateCarouselPage(
                                                                                 value = objectsInOneLine,
                                                                                 onValueChange = {
                                                                                     objectsInOneLine =
-                                                                                        it.filter { char ->  char.isDigit() }
+                                                                                        it.filter { char -> char.isDigit() }
                                                                                     stateViewModel.update {
                                                                                         copy(
-                                                                                            objectsInOneLine = if (objectsInOneLine.isEmpty()) null else objectsInOneLine.filter { char ->  char.isDigit() }.toInt()
+                                                                                            objectsInOneLine = if (objectsInOneLine.isEmpty()) null else objectsInOneLine.filter { char -> char.isDigit() }
+                                                                                                .toInt()
                                                                                         )
                                                                                     }
                                                                                 },
@@ -1251,10 +1251,11 @@ fun CreateCarouselPage(
                                                                                     value = maxLinesForAdaptiveGridSize,
                                                                                     onValueChange = {
                                                                                         maxLinesForAdaptiveGridSize =
-                                                                                            it.filter { char ->  char.isDigit() }
+                                                                                            it.filter { char -> char.isDigit() }
                                                                                         stateViewModel.update {
                                                                                             copy(
-                                                                                                maxLinesForAdaptiveSize = if (maxLinesForAdaptiveGridSize.isEmpty()) null else maxLinesForAdaptiveGridSize.filter { char ->  char.isDigit() }.toInt()
+                                                                                                maxLinesForAdaptiveSize = if (maxLinesForAdaptiveGridSize.isEmpty()) null else maxLinesForAdaptiveGridSize.filter { char -> char.isDigit() }
+                                                                                                    .toInt()
                                                                                             )
                                                                                         }
                                                                                     },
@@ -1310,10 +1311,11 @@ fun CreateCarouselPage(
                                                                                     value = maxObjectsInOneLineForAdaptiveSize,
                                                                                     onValueChange = {
                                                                                         maxObjectsInOneLineForAdaptiveSize =
-                                                                                            it.filter { char ->  char.isDigit() }
+                                                                                            it.filter { char -> char.isDigit() }
                                                                                         stateViewModel.update {
                                                                                             copy(
-                                                                                                maxObjectsInOneLineForAdaptiveSize = if (maxObjectsInOneLineForAdaptiveSize.isEmpty()) null else maxObjectsInOneLineForAdaptiveSize.filter { char ->  char.isDigit() }.toInt()
+                                                                                                maxObjectsInOneLineForAdaptiveSize = if (maxObjectsInOneLineForAdaptiveSize.isEmpty()) null else maxObjectsInOneLineForAdaptiveSize.filter { char -> char.isDigit() }
+                                                                                                    .toInt()
                                                                                             )
                                                                                         }
                                                                                     },

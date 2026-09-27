@@ -12,12 +12,13 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -47,15 +48,18 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import com.example.garden.LocalCustomColors
 import com.example.garden.R
-import com.example.garden.database.ImageData
-import com.example.garden.database.LayoutType
-import com.example.garden.database.SizeType
+import com.example.garden.database.entities.ElementType
+import com.example.garden.database.entities.ImageData
+import com.example.garden.database.entities.LayoutType
+import com.example.garden.database.entities.SizeType
 import com.example.garden.ui.components.icons.DeleteIco
 import com.example.garden.ui.components.icons.EditIco
 import com.example.garden.ui.components.icons.MoreVertIco
 import com.example.garden.ui.theme.dimens
 import com.example.garden.ui.theme.spacing
 import com.example.garden.ui.utils.bottomSheetAnimateAndDismiss
+import com.example.garden.ui.utils.formatAuthors
+import com.example.garden.ui.utils.getAspectRatio
 import com.example.garden.ui.utils.toDp
 import com.example.garden.ui.utils.toShape
 
@@ -63,11 +67,14 @@ import com.example.garden.ui.utils.toShape
 fun Card(
     modifier: Modifier = Modifier,
     aspectRatio: Float, // Final height may be changed due to showName and showAuthor
+    isCircleBanner: Boolean = false,
     showName: Boolean,
     showAuthor: Boolean,
+    isAuthorExists: Boolean = true,
     namePosition: Int,
     name: String? = null,
-    author: String? = null,
+    authors: List<String>,
+    isAnimeCard: Boolean,
     image: ImageData? = null,
     alreadyWatched: Long,
     length: Long,
@@ -115,14 +122,16 @@ fun Card(
                     horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
+                    val width =
+                        (MaterialTheme.dimens.flatGridItemHeight - MaterialTheme.spacing.screenHorizontal) * ElementType.AnimeCard.getAspectRatio()
                     AppAsyncImage(
                         imageData = image,
                         contentDescription = null,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier
-                            .fillMaxHeight()
+                            .width(width)
                             .aspectRatio(aspectRatio)
-                            .clip(cornerRadius.toShape())
+                            .clip(if (isCircleBanner) CircleShape else cornerRadius.toShape())
                     )
 
                     Column(
@@ -131,7 +140,11 @@ fun Card(
                         if (showName) {
                             Text(
                                 text = (name
-                                    ?: stringResource(R.string.withoutName)).ifEmpty { stringResource(R.string.withoutName) },
+                                    ?: stringResource(R.string.withoutName)).ifEmpty {
+                                    stringResource(
+                                        R.string.withoutName
+                                    )
+                                },
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.onBackground,
                                 maxLines = 1,
@@ -139,14 +152,13 @@ fun Card(
                             )
                         }
 
-                        if (showAuthor) {
+                        if (showAuthor && isAuthorExists) {
                             Text(
-                                text = (author
-                                    ?: stringResource(R.string.withoutAuthor)).ifEmpty {
+                                text = (authors.formatAuthors().ifEmpty {
                                     stringResource(
-                                        R.string.withoutAuthor
+                                        if (isAnimeCard) R.string.studioIsUnknown else R.string.withoutAuthor
                                     )
-                                },
+                                }),
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 maxLines = 1,
@@ -209,7 +221,7 @@ fun Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(aspectRatio)
-                    .clip(cornerRadius.toShape())
+                    .clip(if (isCircleBanner) CircleShape else cornerRadius.toShape())
             ) {
                 AppAsyncImage(
                     imageData = image,
@@ -217,7 +229,7 @@ fun Card(
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
                         .fillMaxSize()
-                        .clip(cornerRadius.toShape())
+                        .clip(if (isCircleBanner) CircleShape else cornerRadius.toShape())
                 )
 
                 if (showName && namePosition == 1) {
@@ -294,8 +306,13 @@ fun Card(
 
             if (showAuthor) {
                 Text(
-                    text = (author
-                        ?: stringResource(R.string.withoutAuthor)).ifEmpty { stringResource(R.string.withoutAuthor) },
+                    text = if (isAuthorExists) {
+                        (authors.formatAuthors().ifEmpty {
+                            stringResource(
+                                if (isAnimeCard) R.string.studioIsUnknown else R.string.withoutAuthor
+                            )
+                        })
+                    } else " ",
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,

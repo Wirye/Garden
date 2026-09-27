@@ -1,10 +1,10 @@
 package com.example.garden.ui.utils
 
 import com.example.garden.Layer
-import com.example.garden.database.CarouselType
-import com.example.garden.database.ElementType
-import com.example.garden.database.ObjectData
-import com.example.garden.database.PlayListType
+import com.example.garden.database.entities.CarouselType
+import com.example.garden.database.entities.ElementType
+import com.example.garden.database.entities.ObjectData
+import com.example.garden.database.entities.PlayListType
 
 fun ObjectData.Card.toLayerCreateCardPage(parentId: Long, carouselType: CarouselType) : Layer.CreateCardPage {
     return Layer.CreateCardPage(
@@ -16,16 +16,21 @@ fun ObjectData.Card.toLayerCreateCardPage(parentId: Long, carouselType: Carousel
         description = when(this) {
             is ObjectData.Card.Anime -> this.description
             is ObjectData.Card.Manga -> this.description
+            is ObjectData.Card.AniLibria -> this.data.description ?: ""
             is ObjectData.Card.Music -> ""
             is ObjectData.Card.Playlist -> ""
+            is ObjectData.Card.Artist -> ""
+            is ObjectData.Card.Album -> ""
         },
-        author = this.author,
+        authorsList = if (this !is ObjectData.Card.Music) listOf(this.author) else this.authors,
         image = this.image,
         cardType = when(this) {
-            is ObjectData.Card.Anime -> ElementType.AnimeCard
+            is ObjectData.Card.Anime, is ObjectData.Card.AniLibria -> ElementType.AnimeCard
             is ObjectData.Card.Manga -> ElementType.MangaCard
             is ObjectData.Card.Music -> ElementType.MusicCard
             is ObjectData.Card.Playlist -> ElementType.PlaylistCard
+            is ObjectData.Card.Album -> ElementType.AlbumCard
+            is ObjectData.Card.Artist -> ElementType.ArtistCard
         },
         genreList = this.genre,
         episodesList = if (this is ObjectData.Card.Anime) episodesList else emptyList(),

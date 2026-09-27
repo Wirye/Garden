@@ -1,6 +1,6 @@
 package com.example.garden.ui.utils
 
-import com.example.garden.database.ObjectData
+import com.example.garden.database.entities.ObjectData
 import kotlin.math.round
 
 fun calculateObjectsInOneLineAndMaxLinesForAdaptiveGridSize(

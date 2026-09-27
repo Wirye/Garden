@@ -72,6 +72,9 @@
     <string name="addCarousel">Добавить карусель</string>
     <string name="setting">Настройки</string>
     <string name="edit">Редактировать</string>
+    <string name="Saved">Сохранённое</string>
+    <string name="All">Всё</string>
+    <string name="LearnMore">Узнать больше</string>
     <string name="home">Главная</string>
     <string name="anime">Аниме</string>
     <string name="music">Музыка</string>
@@ -80,14 +83,23 @@
     <string name="creatingCard">Создание карточки</string>
     <string name="creatingCarousel">Создание карусели</string>
     <string name="title">Название</string>
+    <string name="name">Имя</string>
     <string name="author">Автор</string>
     <string name="selectGenres">Выбрать жанры</string>
     <string name="editEpisodes">Редактировать эпизоды</string>
     <string name="editChapters">Редактировать главы</string>
     <string name="editContent">Редактировать содержимое</string>
     <string name="changePlayListType">Изменить тип плейлиста</string>
+    <string name="changeArtistType">Изменить тип исполнителя</string>
     <string name="Close">Закрыть</string>
     <string name="AboutCreateCarousel">О создании карусели</string>
+    <string name="AboutSavedPage">О сохранённых</string>
+    <string name="AboutSavedPageText">"Что это такое?
+Страница Сохранённое является такой каруселью, как и другие
+
+Зачем она нужна?
+Сюда будут сохраняться все карточки, которые создаются автоматически, например ты создаёшь карточку и пишешь в графе Автор, автора, чей карточки ты не создавал, приложение автоматически создаст карточку этого автора и сохранит её сюда
+Вы также можете создавать здесь и свои карточки, если боитесь, что можете случайно удалить её, удалив какую-то карусель"</string>
     <string name="description">Описание</string>
     <string name="delete">Удалить</string>
     <string name="change">Изменить</string>
@@ -104,8 +116,12 @@
     <string name="importFromAniLiberty">Импортировать из АниЛиберти</string>
     <string name="Anime">Аниме</string>
     <string name="Manga">Манга</string>
-    <string name="Music">Музыка</string>
+    <string name="Music">Треки</string>
     <string name="Playlist">Плейлист</string>
+    <string name="DeleteAuthor">Удалить автора</string>
+    <string name="DeleteAuthorWarning">"ЭТО ПРИВЕДЁТ К УДАЛЕНИЮ ВСЕХ КАРТОЧЕК С ЕГО УПОМИНАНИЕМ!"</string>
+    <string name="Cancel">Отмена</string>
+    <string name="studioIsUnknown">Студия неизвестна</string>
     <string name="Chapter">Глава</string>
     <string name="Carousel">Карусель</string>
     <string name="Episode">Эпизод</string>
@@ -137,7 +153,7 @@
     <string name="lowerThenLimit">Меньше лимита!</string>
     <string name="mustBeUpperThenZero">Должно быть больше 0</string>
     <string name="AnimeNManga">Аниме и манга</string>
-    <string name="PlaylistNMusic">Плейлисты и музыка</string>
+    <string name="PlaylistNMusic">Плейлисты и треки</string>
     <string name="flatGrid">Плоская сетка</string>
     <string name="absent">Отсутствует</string>
     <string name="fastChoiceYouTubeMusic">Быстрый выбор: YouTube Music</string>
@@ -148,29 +164,38 @@
     <string name="Placeholder">Заглушка</string>
     <string name="Account">Аккаунт</string>
     <string name="Logout">Выйти</string>
-    <string name="aniLibertyLogin">Вход в АниЛиберти</string>
+    <string name="aniLibriaLogin">Вход в АниЛибрию</string>
     <string name="FailedToLoadProfilePleaseTryLoggingInAgain">Не удалось загрузить профиль, пожалуйста попробуйте авторизоваться снова</string>
     <string name="PersonalizedContentWillBecomeUnavailable">Персонализированный контент станет недоступен</string>
-    <string name="LogoutFromAniLiberty">Выйти из АниЛиберти?</string>
-    <string name="LogoutFromGoogle">Выйти из google?</string>
+    <string name="LogoutFromAniLibria">Выйти из АниЛибрии?</string>
     <string name="TheProductOfColumnsAndRowsCannotExceedThirty">Произведение столбцов и строк не может превышать 30</string>
     <string name="CarouselChildsEdit">Редактирование карточек карусели</string>
     <string name="SelectCard_action">Выберите карточку</string>
     <string name="SelectCards_action">Выберите карточки</string>
     <string name="Choice">Выбрать</string>
-    <string name="GoogleLogin">Вход в Google</string>
-    <string name="AboutGoogleLogin">О входе в гугл</string>
-    <string name="AboutAniLibertyLogin">О входе в АниЛиберти</string>
+    <string name="AboutAniLibriaLogin">О входе в АниЛибрию</string>
     <string name="IJustAddItForBeauty">Я просто добавил это для красоты</string>
     <string name="FillInAllFields">Заполните все поля</string>
     <string name="LoginOrEmail">Логин или Email</string>
     <string name="Password">Пароль</string>
     <string name="LogIn">Войти</string>
     <string name="AuthorizationError">Ошибка авторизации</string>
-    <string name="GoogleAccount">Гугл аккаунт</string>
-    <string name="AniLibertyAccount">АниЛиберти аккаунт</string>
+    <string name="NoResults">Нет результатов</string>
+    <string name="AniLibriaAccount">АниЛибрия аккаунт</string>
+    <string name="AniLibria">АниЛибрия</string>
+    <string name="Artist">Исполнитель</string>
+    <string name="Album">Альбом</string>
+    <string name="ArtistNAlbum">Исполнители и альбомы</string>
+    <string name="ArtistNMusic">Исполнители и треки</string>
+    <string name="ArtistNMusicNAlbum">Исполнители, треки и альбомы</string>
+    <string name="AlbumNMusic">Альбомы и треки</string>
+    <string name="authors">Авторы</string>
+    <string name="studio">Студия</string>
+    <string name="OnDevice">На устройстве</string>
+    <string name="RecentQueries">Недавние запросы</string>
+    <string name="ListTheAuthorsSeparatedByCommas">Указывайте авторов через запятую</string>
     <string name="CreateCarouselHelpPageText">"Что такое пресеты и зачем они нужны?
-Пресеты - это не только определённые настройки карусели, но и их функции, например пресет "Быстрый выбор: YouTube Music" добавляет в карусель карточки реального быстрого выбора из YouTube Music
+Пресеты - это не только определённые настройки карусели, но и их функции, например пресет "Последние релизы: АниЛибрия" добавляет в карусель карточки последних релизов с АниЛибрии
 
 Как работает адаптивный размер?
 Адаптивный размер подстраивает сетку в зависимости от того, сколько карточек по ширине в неё помещается, например, если у нас стоит 3 на 3 обычный размер и 4 на 2 адаптивный, то если в карусель физически может поместиться 4 карточки, то сетка изменится на 4 на 2, если же например стоит 3 на 3 обычный и 6 на 1 - адаптивный, то при 4 будет 2, а при 5 - тоже 2. Подробный алгоритм вы можете найти в коде на гитхабе, файл - calculateObjectsInOneLineAndMaxLinesForAdaptiveGridSize.kt

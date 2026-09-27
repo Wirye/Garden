@@ -47,7 +47,28 @@ android {
         compose = true
     }
 }
+
+//configurations.all {
+//    resolutionStrategy {
+//        force("org.jetbrains.kotlin:kotlin-stdlib:2.0.21")
+//        force("org.jetbrains.kotlin:kotlin-stdlib-jdk8:2.0.21")
+//        force("org.jetbrains.kotlin:kotlin-reflect:2.0.21")
+//    }
+//}
+
 dependencies {
+    constraints {
+        implementation("org.jetbrains.kotlin:kotlin-stdlib:2.1.0") {
+            because("Замена kotlin-stdlib 2.3.21 на версию, совместимую с KSP 2.1.0")
+        }
+        implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.7.3") {
+            because("Замена serialization-core 1.11.0 на версию под Kotlin 2.1.0")
+        }
+        implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3") {
+            because("Замена serialization-json 1.11.0 на версию под Kotlin 2.1.0")
+        }
+    }
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.window)
@@ -96,4 +117,5 @@ dependencies {
     implementation(libs.androidx.pagging.compose)
     implementation(libs.org.jetbrains.kotlinx.serialization.json)
     implementation(libs.androidx.room.paging)
+    implementation(libs.anilibria.kt)
 }

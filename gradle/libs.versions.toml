@@ -31,6 +31,7 @@ cryptoVersion = "1.12.0"
 profileinstallerVersion = "1.4.1"
 pagingVersion = "3.5.1"
 serializationVersion = "1.7.3"
+anilibriaKtVersion = "1.0.9"
 
 [libraries]
 junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -80,6 +81,7 @@ reorderable = { module = "sh.calvin.reorderable:reorderable", version.ref = "reo
 crypto = { module = "com.google.crypto.tink:tink-android", version.ref = "cryptoVersion" }
 org-jetbrains-kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serializationVersion" }
 androidx-room-paging = { group = "androidx.room", name = "room-paging", version.ref = "room" }
+anilibria-kt = { module = "com.github.Wirye.anilibria-kt:anilibria-kt", version.ref = "anilibriaKtVersion" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
