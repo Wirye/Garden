@@ -282,6 +282,7 @@ private fun LayerContent(
     CompositionLocalProvider(LocalLayerIndex provides layerIndex) {
         Box(modifier = modifier.fillMaxSize()) {
             val haptic = LocalHapticFeedback.current
+
             var deleteAuthorState by rememberSaveable { mutableStateOf(Triple(false, "", -1L)) }
             if (deleteAuthorState.first && deleteAuthorState.third != -1L) {
                 AlertDialog(

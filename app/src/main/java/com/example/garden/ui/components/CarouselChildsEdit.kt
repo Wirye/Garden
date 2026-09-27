@@ -54,11 +54,13 @@ import com.example.garden.ui.components.icons.DragHandleIco
 import com.example.garden.ui.theme.dimens
 import com.example.garden.ui.theme.spacing
 import com.example.garden.ui.utils.bottomSheetAnimateAndDismiss
+import com.example.garden.ui.utils.formatAuthors
 import com.example.garden.ui.utils.getAspectRatio
 import com.example.garden.utils.toLongId
 import com.example.garden.viewmodel.MainViewModel
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
+import kotlin.text.ifEmpty
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -271,13 +273,15 @@ fun CardPreview(
                     overflow = TextOverflow.Ellipsis
                 )
 
+                val authors = if (card is ObjectData.Card.Music) card.authors else listOf(card.author)
+                val isAnimeCard = card is ObjectData.Card.Anime || card is ObjectData.Card.AniLibria
                 if (cardElType != ElementType.ArtistCard) {
                     Text(
-                        text = card.author.ifEmpty {
+                        text = (authors.formatAuthors().ifEmpty {
                             stringResource(
-                                R.string.withoutAuthor
+                                if (isAnimeCard) R.string.studioIsUnknown else R.string.withoutAuthor
                             )
-                        },
+                        }),
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
