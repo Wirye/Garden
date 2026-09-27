@@ -1809,8 +1809,8 @@ private fun ArtistSearch(
                 },
                 shape = MaterialTheme.shapes.small,
                 colors = SuggestionChipDefaults.suggestionChipColors(
-                    containerColor = MaterialTheme.colorScheme.secondary,
-                    labelColor = MaterialTheme.colorScheme.onSecondary,
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    labelColor = MaterialTheme.colorScheme.onSecondaryContainer,
                 )
             )
         }
