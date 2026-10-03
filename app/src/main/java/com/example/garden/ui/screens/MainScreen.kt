@@ -11,10 +11,10 @@ import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.rememberTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -206,8 +206,14 @@ fun MainScreen(
                 ) {
                     AnimatedVisibility(
                         visible = backStack.last() is Layer.MainPage,
-                        enter = fadeIn(tween(300)) + expandVertically(tween(300)),
-                        exit = fadeOut(tween(300)) + shrinkVertically(tween(300))
+                        enter = fadeIn(tween(300)) + slideInVertically(
+                            animationSpec = tween(300),
+                            initialOffsetY = { it / 2 }
+                        ),
+                        exit = fadeOut(tween(300)) + slideOutVertically(
+                            animationSpec = tween(300),
+                            targetOffsetY = { it / 2 }
+                        )
                     ) {
                         MainPageBottomBar(
                             active = backStack.last() is Layer.MainPage,
