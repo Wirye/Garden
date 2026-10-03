@@ -12,11 +12,14 @@ class AuthRepositoryImpl(private val authManager: AuthManager) : AuthRepository 
 
     private val anilibriaApi = AniLibriaClient(tokenProvider = { authManager.getToken() })
 
-    override suspend fun login(login: String, password: String): Result<String> = anilibriaApi.auth.login(login, password)
+    override suspend fun login(login: String, password: String): Result<String> = anilibriaApi.account.auth.login(login, password)
 
-    override suspend fun getProfile(requestedData: List<UserProfileFields>): Result<UserProfile> = anilibriaApi.auth.getProfile(requestedData)
+    override suspend fun getProfile(requestedData: List<UserProfileFields>): Result<UserProfile> = anilibriaApi.account.auth.getProfile(requestedData)
 
-    override suspend fun clearAniLibriaSession() = authManager.clearAniLibriaSession()
+    override suspend fun clearAniLibriaSession() {
+        anilibriaApi.account.auth.logout()
+        authManager.clearAniLibriaSession()
+    }
 
     override suspend fun saveAniLibriaSession(
         token: String?,

@@ -17,6 +17,6 @@ fun CarouselType.availableCardTypes(): List<ElementType> {
         CarouselType.AlbumNMusic -> listOf(ElementType.AlbumCard, ElementType.MusicCard)
         CarouselType.AnimeNManga -> listOf(ElementType.AnimeCard, ElementType.MangaCard)
         CarouselType.PlaylistNMusic -> listOf(ElementType.PlaylistCard, ElementType.MusicCard)
-        CarouselType.All -> ElementType.entries.toList()
+        CarouselType.All -> ElementType.entries.toList() - listOf(ElementType.Carousel).toSet()
     }
 }

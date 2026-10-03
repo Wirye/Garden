@@ -31,7 +31,7 @@ cryptoVersion = "1.12.0"
 profileinstallerVersion = "1.4.1"
 pagingVersion = "3.5.1"
 serializationVersion = "1.7.3"
-anilibriaKtVersion = "1.0.9"
+anilibriaKtVersion = "1.1.0"
 
 [libraries]
 junit = { group = "junit", name = "junit", version.ref = "junit" }

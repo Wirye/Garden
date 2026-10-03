@@ -90,7 +90,9 @@ class AuthManager(private val context: Context, appScope: CoroutineScope) {
         AuthState(
             aniLibriaAvatarUrl = prefs[KEY_ANILIBRIA_AVATAR]?.let { cryptoManager.decrypt(it) },
             aniLibriaNickName = prefs[KEY_ANILIBRIA_NICKNAME]?.let { cryptoManager.decrypt(it) },
-            aniLibriaToken = prefs[KEY_ANILIBRIA_TOKEN]?.let { cryptoManager.decrypt(it) }
+            aniLibriaToken = prefs[KEY_ANILIBRIA_TOKEN]?.let { cryptoManager.decrypt(it) }?.take(
+                prefs[KEY_ANILIBRIA_TOKEN]!!.let { cryptoManager.decrypt(it) }.length / 2
+            )
         )
     }
 

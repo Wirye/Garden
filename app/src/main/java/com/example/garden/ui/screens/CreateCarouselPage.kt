@@ -337,7 +337,9 @@ fun CreateCarouselPage(
                                                     if (stateViewModel.state.carouselId != null) {
                                                         listOf(stateViewModel.state.carouselType)
                                                     } else {
-                                                        CarouselType.entries.toList()
+                                                        CarouselType.entries.toList() - listOf(
+                                                            CarouselType.All
+                                                        ).toSet()
                                                     }
                                                 )
                                             }
