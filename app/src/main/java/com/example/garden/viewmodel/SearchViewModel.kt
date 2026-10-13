@@ -4,12 +4,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
+import com.example.garden.AniLibriaClient
 import com.example.garden.database.entities.ArtistType
 import com.example.garden.database.entities.ElementType
 import com.example.garden.database.entities.EntitySourceType
 import com.example.garden.database.entities.ObjectData
 import com.example.garden.database.entities.ObjectEntity
-import com.example.garden.repository.aniLibriaSearch.AniLibriaSearchRepository
 import com.example.garden.repository.artists.ArtistsRepository
 import com.example.garden.repository.objects.ObjectRepository
 import com.example.garden.utils.search.buildFuzzyFtsQuery
@@ -49,7 +49,6 @@ private data class SearchArtistsState(
 
 class SearchViewModel(
     private val objectRepository: ObjectRepository,
-    private val aniLibriaSearchRepository: AniLibriaSearchRepository,
     private val artistsRepository: ArtistsRepository
 ) : ViewModel() {
 
@@ -144,7 +143,7 @@ class SearchViewModel(
 
                     try {
                         val response = withTimeoutOrNull(10.seconds) {
-                            aniLibriaSearchRepository.search(cleanQuery, 15)
+                            AniLibriaClient.search.search(cleanQuery, 15)
                         }
 
                         if (response != null) {

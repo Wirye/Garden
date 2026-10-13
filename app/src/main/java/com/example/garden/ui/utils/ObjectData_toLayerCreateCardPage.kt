@@ -16,7 +16,6 @@ fun ObjectData.Card.toLayerCreateCardPage(parentId: Long, carouselType: Carousel
         description = when(this) {
             is ObjectData.Card.Anime -> this.description
             is ObjectData.Card.Manga -> this.description
-            is ObjectData.Card.AniLibria -> this.data.description ?: ""
             is ObjectData.Card.Music -> ""
             is ObjectData.Card.Playlist -> ""
             is ObjectData.Card.Artist -> ""
@@ -25,7 +24,7 @@ fun ObjectData.Card.toLayerCreateCardPage(parentId: Long, carouselType: Carousel
         authorsList = if (this !is ObjectData.Card.Music) listOf(this.author) else this.authors,
         image = this.image,
         cardType = when(this) {
-            is ObjectData.Card.Anime, is ObjectData.Card.AniLibria -> ElementType.AnimeCard
+            is ObjectData.Card.Anime -> ElementType.AnimeCard
             is ObjectData.Card.Manga -> ElementType.MangaCard
             is ObjectData.Card.Music -> ElementType.MusicCard
             is ObjectData.Card.Playlist -> ElementType.PlaylistCard

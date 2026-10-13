@@ -237,11 +237,12 @@ fun CardPreview(
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Row(
+            modifier = Modifier.weight(1f, fill = false),
             horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             val cardElType = when (card) {
-                is ObjectData.Card.Anime, is ObjectData.Card.AniLibria -> ElementType.AnimeCard
+                is ObjectData.Card.Anime -> ElementType.AnimeCard
                 is ObjectData.Card.Manga -> ElementType.MangaCard
                 is ObjectData.Card.Music -> ElementType.MusicCard
                 is ObjectData.Card.Artist -> ElementType.ArtistCard
@@ -274,7 +275,7 @@ fun CardPreview(
                 )
 
                 val authors = if (card is ObjectData.Card.Music) card.authors else listOf(card.author)
-                val isAnimeCard = card is ObjectData.Card.Anime || card is ObjectData.Card.AniLibria
+                val isAnimeCard = card is ObjectData.Card.Anime
                 if (cardElType != ElementType.ArtistCard) {
                     Text(
                         text = (authors.formatAuthors().ifEmpty {

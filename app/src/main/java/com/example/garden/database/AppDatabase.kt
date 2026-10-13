@@ -33,7 +33,7 @@ import com.example.garden.database.entities.WebObjectEntity
         WebObjectEntity::class,
     ],
     views = [ResolvedObjectEntity::class],
-    version = 28,
+    version = 30,
     exportSchema = false
 )
 @TypeConverters(

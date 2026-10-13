@@ -19,7 +19,7 @@ fun Title.toObjectEntity(position: Int, sourceType: EntitySourceType): ObjectEnt
         link = LinkData.Self,
         isUserCreated = false,
         name = (this.name?.russian) ?: "",
-        info = ObjectData.Card.AniLibria(
+        info = ObjectData.Card.Anime(
             id = "${sourceType.name}_-1",
             position = position,
             link = LinkData.Self,
@@ -28,7 +28,6 @@ fun Title.toObjectEntity(position: Int, sourceType: EntitySourceType): ObjectEnt
             author = "",
             image = ImageData.Url((this.poster?.fullPreviewUrl) ?: ""),
             anilibriaCardId = this.id,
-            data = this,
         ),
         source = sourceType
     )

@@ -6,6 +6,7 @@ import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.example.garden.database.ObjectWithChilds2
 import com.example.garden.database.entities.CollectionType
+import com.example.garden.database.entities.ElementType
 import com.example.garden.database.entities.EntitySourceType
 import com.example.garden.database.entities.LayoutType
 import com.example.garden.database.entities.LinkData
@@ -57,25 +58,39 @@ class MainViewModel(
 
     fun insertSavedCarousel() {
         viewModelScope.launch {
-            repository.saveObject(
-                ObjectData.Carousel(
-                    id = "${EntitySourceType.Local.name}_1",
-                    childsShowName = true,
-                    childsShowAuthor = true,
-                    maxLines = null,
-                    objectsInOneLine = 1,
-                    layoutType = LayoutType.CAROUSEL_FROM_FLAT_GRID,
-                    carouselCollectionType = CollectionType.None,
-                ),
-                page = PageType.Unspecified
+            repository.insertSavedCarousel(
+                ObjectEntity(
+                    id = 1L,
+                    parentId = null,
+                    position = 0,
+                    elementType = ElementType.Carousel,
+                    source = EntitySourceType.Local,
+                    link = LinkData.None,
+                    isUserCreated = false,
+                    name = "Saved",
+                    info = ObjectData.Carousel(
+                        id = "${EntitySourceType.Local.name}_1",
+                        childsShowName = true,
+                        childsShowAuthor = true,
+                        maxLines = null,
+                        objectsInOneLine = 1,
+                        layoutType = LayoutType.CAROUSEL_FROM_FLAT_GRID,
+                        carouselCollectionType = CollectionType.None,
+                    ),
+                    page = PageType.Unspecified
+                )
             )
         }
     }
 
-    suspend fun updatePositions(cards: List<ObjectData.Card>) = repository.updatePositions(cards)
+    suspend fun updateCardsPositions(cards: List<ObjectData.Card>) = repository.updateCardsPositions(cards)
+    suspend fun updateCarouselsPosition(carousels: List<ObjectData.Carousel>) = repository.updateCarouselsPosition(carousels)
 
     fun getCardsByParentId(parentId: Long): Flow<List<ObjectEntity>> =
         repository.getCardsByParentId(parentId)
+
+    fun getCarouselsByPage(page: PageType): Flow<List<ObjectEntity>> =
+        repository.getCarouselsByPage(page)
 
     suspend fun getRootObjectById(id: Long): ObjectData? = repository.getRootObjectById(id)
 
@@ -103,12 +118,14 @@ class MainViewModel(
                         position = -1,
                         name = obj.info.name,
                         image = obj.info.image,
-                        link = LinkData.Insert(targetId)
+                        link = LinkData.Insert(targetId),
+                        anilibriaCardId = obj.info.anilibriaCardId
                     ),
                     page = PageType.Home,
                     parentId = parentId
                 )
             }
+
             is ObjectData.Card.Music -> {
                 saveObject(
                     data = ObjectData.Card.Music(
@@ -122,6 +139,7 @@ class MainViewModel(
                     parentId = parentId
                 )
             }
+
             is ObjectData.Card.Manga -> {
                 saveObject(
                     data = ObjectData.Card.Manga(
@@ -135,6 +153,7 @@ class MainViewModel(
                     parentId = parentId
                 )
             }
+
             is ObjectData.Card.Playlist -> {
                 saveObject(
                     data = ObjectData.Card.Playlist(
@@ -149,21 +168,7 @@ class MainViewModel(
                     parentId = parentId
                 )
             }
-            is ObjectData.Card.AniLibria -> {
-                saveObject(
-                    data = ObjectData.Card.AniLibria(
-                        id = "0L",
-                        position = -1,
-                        name = obj.info.name,
-                        image = obj.info.image,
-                        link = LinkData.Insert(targetId),
-                        anilibriaCardId = obj.info.anilibriaCardId,
-                        data = obj.info.data
-                    ),
-                    page = PageType.Home,
-                    parentId = parentId
-                )
-            }
+
             is ObjectData.Card.Artist -> {
                 saveObject(
                     data = ObjectData.Card.Artist(
@@ -178,6 +183,7 @@ class MainViewModel(
                     parentId = parentId
                 )
             }
+
             is ObjectData.Card.Album -> {
                 saveObject(
                     data = ObjectData.Card.Album(
@@ -198,6 +204,11 @@ class MainViewModel(
 
     suspend fun deleteObjectById(id: Long) {
         val obj = repository.getById(id) ?: return
-        repository.deleteObject(id = obj.id, parentId = obj.parentId, position = obj.position, author = if (obj.info is ObjectData.Card.Artist) obj.name else null)
+        repository.deleteObject(
+            id = obj.id,
+            parentId = obj.parentId,
+            position = obj.position,
+            author = if (obj.info is ObjectData.Card.Artist) obj.name else null
+        )
     }
 }

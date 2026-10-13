@@ -15,13 +15,16 @@ interface ObjectRepository {
     fun getCarouselChildrenPaging(parentId: Long): Flow<PagingData<ObjectData.Card>>
     fun getCardsPaging(elementType: ElementType): Flow<PagingData<ObjectData.Card>>
     suspend fun saveObject(data: ObjectData, page: PageType, parentId: Long? = null, isUserCreated: Boolean = true): Long
+    suspend fun insertSavedCarousel(entity: ObjectEntity)
     suspend fun saveCarouselWithChilds(carousel: ObjectData.Carousel, page: PageType, isUserCreated: Boolean = true): Long
     suspend fun getRootObjectById(id: Long): ObjectData?
     suspend fun getMaxChildPosition(parentId: Long?) : Int?
     suspend fun deleteObject(id: Long, parentId: Long?, position: Int, author: String? = null)
     suspend fun getById(id: Long) : ObjectEntity?
-    suspend fun updatePositions(cards: List<ObjectData.Card>)
+    suspend fun updateCardsPositions(cards: List<ObjectData.Card>)
+    suspend fun updateCarouselsPosition(carousels: List<ObjectData.Carousel>)
     fun searchCards(query: String, allowedTypes: List<ElementType>): Flow<PagingData<ObjectEntity>>
     fun globalSearch(query: String): Flow<List<ObjectEntity>>
     fun getCardsByParentId(parentId: Long) : Flow<List<ObjectEntity>>
+    fun getCarouselsByPage(page: PageType): Flow<List<ObjectEntity>>
 }

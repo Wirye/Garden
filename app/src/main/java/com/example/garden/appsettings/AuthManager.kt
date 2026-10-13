@@ -8,12 +8,9 @@ import com.google.crypto.tink.Aead
 import com.google.crypto.tink.KeyTemplates
 import com.google.crypto.tink.aead.AeadConfig
 import com.google.crypto.tink.integration.android.AndroidKeysetManager
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
 import java.nio.charset.StandardCharsets
 
 class CryptoManager(context: Context) {
@@ -75,7 +72,7 @@ data class AuthState(
 
 private val Context.dataStore by preferencesDataStore(name = "auth_settings")
 
-class AuthManager(private val context: Context, appScope: CoroutineScope) {
+class AuthManager(private val context: Context) {
 
     private val cryptoManager = CryptoManager(context)
 
@@ -90,21 +87,15 @@ class AuthManager(private val context: Context, appScope: CoroutineScope) {
         AuthState(
             aniLibriaAvatarUrl = prefs[KEY_ANILIBRIA_AVATAR]?.let { cryptoManager.decrypt(it) },
             aniLibriaNickName = prefs[KEY_ANILIBRIA_NICKNAME]?.let { cryptoManager.decrypt(it) },
-            aniLibriaToken = prefs[KEY_ANILIBRIA_TOKEN]?.let { cryptoManager.decrypt(it) }?.take(
-                prefs[KEY_ANILIBRIA_TOKEN]!!.let { cryptoManager.decrypt(it) }.length / 2
-            )
+            aniLibriaToken = if (prefs[KEY_ANILIBRIA_TOKEN] != null) "true" else null
         )
     }
 
-    val tokenState: StateFlow<String> = authStateFlow
-        .map { state -> state.aniLibriaToken ?: "" }
-        .stateIn(
-            scope = appScope,
-            started = SharingStarted.Eagerly,
-            initialValue = ""
-        )
-
-    fun getToken(): String = tokenState.value
+    suspend fun getToken(): String = context.dataStore.data.map { preferences ->
+        preferences[KEY_ANILIBRIA_TOKEN]?.let {
+            cryptoManager.decrypt(it)
+        } ?: ""
+    }.first()
 
     suspend fun updateAniLibriaProfile(
         avatarUrl: String?,

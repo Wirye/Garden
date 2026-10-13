@@ -1,8 +1,8 @@
 package com.example.garden.repository.auth
 
+import com.example.garden.AniLibriaClient
 import com.example.garden.appsettings.AuthManager
 import com.example.garden.appsettings.AuthState
-import com.github.wirye.anilibriakt.AniLibriaClient
 import com.github.wirye.anilibriakt.model.UserProfile
 import com.github.wirye.anilibriakt.model.UserProfileFields
 import kotlinx.coroutines.flow.Flow
@@ -10,14 +10,12 @@ import kotlinx.coroutines.flow.Flow
 class AuthRepositoryImpl(private val authManager: AuthManager) : AuthRepository {
     val authStateFlow: Flow<AuthState> = authManager.authStateFlow
 
-    private val anilibriaApi = AniLibriaClient(tokenProvider = { authManager.getToken() })
+    override suspend fun login(login: String, password: String): Result<String> = AniLibriaClient.account.auth.login(login, password)
 
-    override suspend fun login(login: String, password: String): Result<String> = anilibriaApi.account.auth.login(login, password)
-
-    override suspend fun getProfile(requestedData: List<UserProfileFields>): Result<UserProfile> = anilibriaApi.account.auth.getProfile(requestedData)
+    override suspend fun getProfile(requestedData: List<UserProfileFields>): Result<UserProfile> = AniLibriaClient.account.auth.getProfile(requestedData)
 
     override suspend fun clearAniLibriaSession() {
-        anilibriaApi.account.auth.logout()
+        AniLibriaClient.account.auth.logout()
         authManager.clearAniLibriaSession()
     }
 

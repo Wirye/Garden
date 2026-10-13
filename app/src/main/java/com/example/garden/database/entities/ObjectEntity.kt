@@ -11,7 +11,6 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.example.garden.R
 import com.example.garden.ui.components.icons.CloseIco
-import com.github.wirye.anilibriakt.model.Title
 import kotlinx.parcelize.IgnoredOnParcel
 import kotlinx.parcelize.Parcelize
 import kotlinx.serialization.SerialName
@@ -926,7 +925,8 @@ sealed interface ObjectData {
             override val image: ImageData,
             override val genre: List<GridGenreItem> = emptyList(),
             val description: String = "",
-            val episodesList: List<EpisodeInfo> = emptyList(),
+            val episodesList: List<EpisodeInfo> = emptyList(), // Local episodes
+            val anilibriaCardId: Long? = null
         ) : Card {
             override fun injectLocalObjectEntityData(entity: ObjectEntity): ObjectData {
                 return copy(
@@ -1142,49 +1142,6 @@ sealed interface ObjectData {
             override val genre: List<GridGenreItem> = emptyList(),
             val playListType: PlayListType,
             val cardsList: List<Long> = emptyList()
-        ) : Card {
-            override fun injectLocalObjectEntityData(entity: ObjectEntity): ObjectData {
-                return copy(
-                    id = "${entity.source.name}_${entity.id}",
-                    position = entity.position,
-                    link = entity.link,
-                    isUserCreated = entity.isUserCreated,
-                    name = entity.name
-                )
-            }
-
-            override fun injectWebObjectEntityData(entity: WebObjectEntity): ObjectData {
-                return copy(
-                    id = "${EntitySourceType.Web.name}_${entity.id}",
-                    position = entity.position,
-                    link = LinkData.Self,
-                    isUserCreated = false,
-                    name = entity.name
-                )
-            }
-
-            override fun copyWithPosition(position: Int): ObjectData {
-                return copy(position = position)
-            }
-
-            override fun copyWithAuthors(authors: List<String>): Card {
-                return copy(author = authors.firstOrNull() ?: "")
-            }
-        }
-
-        @Serializable
-        @SerialName("card_anilibria")
-        data class AniLibria(
-            override val id: String = "-1",
-            override val position: Int = 0,
-            override val link: LinkData? = null,
-            override val isUserCreated: Boolean = false,
-            override val name: String = "",
-            override val author: String = "",
-            override val image: ImageData,
-            override val genre: List<GridGenreItem> = emptyList(),
-            val anilibriaCardId: Long,
-            val data: Title
         ) : Card {
             override fun injectLocalObjectEntityData(entity: ObjectEntity): ObjectData {
                 return copy(

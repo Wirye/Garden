@@ -86,6 +86,7 @@ import com.example.garden.ui.components.CardChoice
 import com.example.garden.ui.components.CarouselChildsEdit
 import com.example.garden.ui.components.MainPageBottomBar
 import com.example.garden.ui.components.MainPageTopBar
+import com.example.garden.ui.components.PageChildsEdit
 import com.example.garden.ui.components.icons.AddIco
 import com.example.garden.ui.components.icons.FolderIco
 import com.example.garden.ui.theme.LocalWindowInfo
@@ -339,7 +340,21 @@ private fun LayerContent(
                             onDismiss = { isEditCarouselChildsExpanded = false },
                             onSave = {
                                 coroutineScope.launch {
-                                    mainViewModel.updatePositions(it)
+                                    mainViewModel.updateCardsPositions(it)
+                                }
+                            }
+                        )
+                    }
+
+                    var isEditPageChildsExpanded by rememberSaveable { mutableStateOf(false) }
+                    if (isEditPageChildsExpanded) {
+                        PageChildsEdit(
+                            page = layer.page,
+                            mainViewModel = mainViewModel,
+                            onDismiss = { isEditPageChildsExpanded = false },
+                            onSave = {
+                                coroutineScope.launch {
+                                    mainViewModel.updateCarouselsPosition(it)
                                 }
                             }
                         )
@@ -499,6 +514,9 @@ private fun LayerContent(
                                     )
                                 )
                             }
+                        },
+                        openEditPage = {
+                            isEditPageChildsExpanded = true
                         },
                         openCarouselChildsEdit = {
                             editingCarouselId = it.toLongId()

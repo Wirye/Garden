@@ -36,8 +36,6 @@ import com.example.garden.database.entities.LinkData
 import com.example.garden.database.entities.PageType
 import com.example.garden.database.entities.PlayListType
 import com.example.garden.database.entities.SizeType
-import com.example.garden.repository.aniLibriaSearch.AniLibriaSearchRepository
-import com.example.garden.repository.aniLibriaSearch.AniLibriaSearchRepositoryImpl
 import com.example.garden.repository.artists.ArtistsRepository
 import com.example.garden.repository.artists.ArtistsRepositoryImpl
 import com.example.garden.repository.auth.AuthRepositoryImpl
@@ -56,9 +54,10 @@ import com.example.garden.viewmodel.RecentQueriesViewModel
 import com.example.garden.viewmodel.ResultSenderViewModel
 import com.example.garden.viewmodel.SearchViewModel
 import com.example.garden.viewmodel.utils.customViewModelFactory
+import com.github.wirye.anilibriakt.AniLibriaClient
 import kotlinx.parcelize.Parcelize
 
-sealed class Layer (
+sealed class Layer(
     val id: Long = getValidLayerId(),
     var firstElementPosition: Int = 0
 ) : Parcelable {
@@ -69,22 +68,26 @@ sealed class Layer (
         val layoutObjId: Long,
         var state: Int,
     ) : Layer()
+
     @Parcelize
     data class MainPage(
         val page: PageType,
         val scrollPositionCarousels: MutableMap<String, Int>,
         var mainRecyclerScrollPosition: Int
     ) : Layer()
+
     @Parcelize
     data class OverLay(
         val info: OverLayLayer,
     ) : Layer()
+
     @Parcelize
     data class VideoPlayer(
         var isPlaying: Boolean,
         var playbackSpeed: Float = 1.0f,
         var isControllerVisible: Boolean = true,
     ) : Layer()
+
     @Parcelize
     data class CreateCardPage(
         val parentId: Long,
@@ -105,6 +108,7 @@ sealed class Layer (
         var carouselType: CarouselType,
         var playlistType: PlayListType,
     ) : Layer()
+
     @Parcelize
     data class CreateCarouselPage(
         val localLayer: MainPage = MainPage(PageType.Home, mutableMapOf(), 0),
@@ -131,11 +135,12 @@ sealed class Layer (
         val carouselId: String? = null,
         val carouselPosition: Int = -1
     ) : Layer()
+
     @Parcelize
-    data class PageWithSearch (
+    data class PageWithSearch(
         var startsInfo: PageWithSearchInput,
         val key: String
-    ): Layer()
+    ) : Layer()
 
     @Parcelize
     data class UnspecifiedPage(
@@ -145,13 +150,14 @@ sealed class Layer (
     @Parcelize
     data class AppSettings(
         val nothing: Int = 0
-    ): Layer()
+    ) : Layer()
 
     @Parcelize
     data class AniLibertyLoginPage(
         val nothing: Int = 0
     ) : Layer()
 }
+
 @Parcelize
 enum class GlobalSearchState : Parcelable {
     Searching, Found
@@ -164,6 +170,7 @@ sealed class OverLayLayer : Parcelable {
         var state: GlobalSearchState
     ) : OverLayLayer()
 }
+
 object ResultKeys {
     var lastPageWithSearchId = 0L
     fun getPageWithSearchKey(): String {
@@ -193,6 +200,9 @@ data class CustomColors(
 
 val LocalCustomColors = staticCompositionLocalOf { CustomColors() }
 
+var AniLibriaClient: AniLibriaClient =
+    AniLibriaClient("Garden/1.0 ( https://github.com/Wirye/Garden )")
+
 class MainActivity : ComponentActivity() {
     private val db by lazy {
         AppDatabase.getDatabase(applicationContext)
@@ -207,8 +217,8 @@ class MainActivity : ComponentActivity() {
     }
 
     private val authManager by lazy {
-        AuthManager(context = applicationContext,
-            appScope = (applicationContext as App).applicationScope
+        AuthManager(
+            context = applicationContext
         )
     }
 
@@ -247,23 +257,29 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private val aniLibriaSearchRepository: AniLibriaSearchRepository by lazy {
-        AniLibriaSearchRepositoryImpl(authManager = authManager)
-    }
-
     private val artistRepository: ArtistsRepository by lazy {
         ArtistsRepositoryImpl(dao = db.objectDataDao())
     }
 
     private val searchViewModel: SearchViewModel by lazy {
-        SearchViewModel(objectRepository = repository, aniLibriaSearchRepository = aniLibriaSearchRepository, artistsRepository = artistRepository)
+        SearchViewModel(
+            objectRepository = repository,
+            artistsRepository = artistRepository
+        )
     }
 
     @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        viewModel.insertSavedCarousel() // IT'S VERY IMPORTANT THING
+        /* Important things */
+        AniLibriaClient = AniLibriaClient(
+            "Garden/1.0 ( https://github.com/Wirye/Garden )",
+            tokenProvider = { authManager.getToken() }
+        )
+
+        viewModel.insertSavedCarousel()
+        /**/
 
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.auto(

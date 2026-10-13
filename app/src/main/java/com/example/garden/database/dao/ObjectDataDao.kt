@@ -224,6 +224,9 @@ interface ObjectDataDao {
     )
     fun getCardsByParentId(parentId: Long): Flow<List<ObjectEntity>>
 
+    @Query("SELECT * FROM objectData WHERE page = :page AND parentId IS NULL")
+    fun getCarouselsByPage(page: PageType): Flow<List<ObjectEntity>>
+
     @Query("UPDATE objectData SET position = :newPosition WHERE id = :id")
     suspend fun updatePosition(id: Long, newPosition: Int)
 

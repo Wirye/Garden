@@ -1,6 +1,6 @@
 package com.example.garden.ui.screens
 
-import androidx.compose.foundation.ExperimentalFoundationApi
+import android.annotation.SuppressLint
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -26,7 +26,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -97,7 +96,7 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlin.math.abs
 import kotlin.math.round
 
-@OptIn(ExperimentalFoundationApi::class)
+@SuppressLint("FrequentlyChangingValue")
 @Composable
 fun MainPage(
     isSupportCreating: Boolean = true,
@@ -112,6 +111,7 @@ fun MainPage(
     openCreateCarouselPage: () -> Unit,
     openEditCarouselPage: (ObjectData.Carousel) -> Unit,
     openEditCardPage: (ObjectData.Card, String, CarouselType) -> Unit,
+    openEditPage: () -> Unit,
     openCarouselChildsEdit: (String) -> Unit,
     deleteCard: (String) -> Unit,
     deleteCarousel: (String) -> Unit,
@@ -165,17 +165,19 @@ fun MainPage(
         val screenHeight = with(density) { MaterialTheme.windowInfo.heightDp.toPx() }
         val heightPx = with(density) { topBarHeight.toPx() }.coerceAtLeast(1f)
         val translationY = {
-            val fraction = (topBarState.firstElementScrollOffset / heightPx).coerceIn(0f, 1f)
+            val fraction =
+                (if (listState.firstVisibleItemIndex == 0) listState.firstVisibleItemScrollOffset.toFloat() else Int.MAX_VALUE.toFloat() / heightPx).coerceIn(
+                    0f,
+                    1f
+                )
             -fraction * screenHeight
         }
 
-        val isStrokeVisible by remember(topBarHeight) {
-            derivedStateOf {
-                val fraction =
-                    (abs(topBarState.firstElementScrollOffset) / heightPx).coerceIn(0f, 1f)
-                fraction > 0.2f
-            }
-        }
+        val isStrokeVisible =
+            (abs(if (listState.firstVisibleItemIndex == 0) listState.firstVisibleItemScrollOffset.toFloat() else Int.MAX_VALUE.toFloat()) / heightPx).coerceIn(
+                0f,
+                1f
+            ) >= 0.2f
 
         FullScreenBlobs(translationY = translationY())
 
@@ -351,10 +353,10 @@ fun MainPage(
 
         MainPageTopBar(
             offsetPx = {
-                topBarState.barOffsetPx.coerceAtLeast(
+                if (listState.firstVisibleItemIndex == 0) topBarState.barOffsetPx.coerceAtLeast(
                     -(topBarHeightPx - (topBarHeightPx - listState.firstVisibleItemScrollOffset)).toFloat()
                         .coerceAtLeast(0f)
-                )
+                ) else topBarState.barOffsetPx
             },
             modifier = Modifier
                 .align(Alignment.TopCenter),
@@ -363,7 +365,7 @@ fun MainPage(
             onSearch = openGlobalSearch,
             onSettings = openSettings,
             onAddCarousel = openCreateCarouselPage,
-            onEdit = {},
+            onEdit = openEditPage,
             onSavedPage = openSavedPage
         )
     }
@@ -700,7 +702,7 @@ private fun Carousel(
                 val margin = MaterialTheme.spacing.medium
 
                 val cardElType = when (cards[0]) {
-                    is ObjectData.Card.Anime, is ObjectData.Card.AniLibria -> ElementType.AnimeCard
+                    is ObjectData.Card.Anime -> ElementType.AnimeCard
                     is ObjectData.Card.Manga -> ElementType.MangaCard
                     is ObjectData.Card.Music -> ElementType.MusicCard
                     is ObjectData.Card.Playlist -> ElementType.PlaylistCard

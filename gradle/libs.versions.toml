@@ -31,7 +31,8 @@ cryptoVersion = "1.12.0"
 profileinstallerVersion = "1.4.1"
 pagingVersion = "3.5.1"
 serializationVersion = "1.7.3"
-anilibriaKtVersion = "1.1.0"
+anilibriaKtVersion = "1.1.3"
+musicBrainzKtVersion = "1.1.4"
 
 [libraries]
 junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -82,6 +83,7 @@ crypto = { module = "com.google.crypto.tink:tink-android", version.ref = "crypto
 org-jetbrains-kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serializationVersion" }
 androidx-room-paging = { group = "androidx.room", name = "room-paging", version.ref = "room" }
 anilibria-kt = { module = "com.github.Wirye.anilibria-kt:anilibria-kt", version.ref = "anilibriaKtVersion" }
+musicBrainz-kt = { module = "com.github.Wirye.musicBrainz-kt:musicBrainz-kt", version.ref = "musicBrainzKtVersion" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

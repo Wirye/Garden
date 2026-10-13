@@ -138,7 +138,7 @@ fun StandardCarousel(
                     showAuthor = parent.childsShowAuthor,
                     showAlreadyWatchedLine = parent.childsShowAlreadyWatchedLine,
                     authors = if (card is ObjectData.Card.Music) card.authors else listOf(card.author),
-                    isAnimeCard = card is ObjectData.Card.Anime || card is ObjectData.Card.AniLibria,
+                    isAnimeCard = card is ObjectData.Card.Anime,
                     name = card.name,
                     image = card.image,
                     cornerRadius = parent.childsCornerRadius,
@@ -147,7 +147,7 @@ fun StandardCarousel(
                     alreadyWatched = 0L,
                     length = 0L,
                     isAuthorExists = card !is ObjectData.Card.Artist,
-                    isSupportEditing = card.isUserCreated && !card.id.isWebId() && card !is ObjectData.Card.AniLibria,
+                    isSupportEditing = card.isUserCreated && !card.id.isWebId(),
                     isSupportDeleting = card.isUserCreated && !card.id.isWebId(),
                     onEdit = { onEditCard(card) },
                     onDelete = { onDeleteCard(card.id) },
@@ -231,7 +231,7 @@ fun FlatGridCarousel(
             childs[index].let { card ->
                 val cardAspRatio = if (!isSearchSelectionMode) cardAspectRatio else {
                     when (card) {
-                        is ObjectData.Card.Anime, is ObjectData.Card.AniLibria -> ElementType.AnimeCard
+                        is ObjectData.Card.Anime -> ElementType.AnimeCard
                         is ObjectData.Card.Manga -> ElementType.MangaCard
                         is ObjectData.Card.Music -> ElementType.MusicCard
                         is ObjectData.Card.Playlist -> ElementType.PlaylistCard
@@ -248,7 +248,7 @@ fun FlatGridCarousel(
                     showAuthor = parent.childsShowAuthor,
                     showAlreadyWatchedLine = parent.childsShowAlreadyWatchedLine,
                     authors = if (card is ObjectData.Card.Music) card.authors else listOf(card.author),
-                    isAnimeCard = card is ObjectData.Card.Anime || card is ObjectData.Card.AniLibria,
+                    isAnimeCard = card is ObjectData.Card.Anime,
                     name = card.name,
                     image = card.image,
                     isAuthorExists = card !is ObjectData.Card.Artist,
@@ -257,7 +257,7 @@ fun FlatGridCarousel(
                     namePosition = parent.childsNamePosition,
                     alreadyWatched = 0L,
                     length = 0L,
-                    isSupportEditing = card.isUserCreated && !card.id.isWebId() && card !is ObjectData.Card.AniLibria,
+                    isSupportEditing = card.isUserCreated && !card.id.isWebId(),
                     isSupportDeleting = card.isUserCreated && !card.id.isWebId(),
                     onEdit = { onEditCard(card) },
                     onDelete = { onDeleteCard(card.id) },
@@ -403,7 +403,7 @@ fun PagedGridCarousel(
                                 showAuthor = parent.childsShowAuthor,
                                 showAlreadyWatchedLine = parent.childsShowAlreadyWatchedLine,
                                 authors = if (card is ObjectData.Card.Music) card.authors else listOf(card.author),
-                                isAnimeCard = card is ObjectData.Card.Anime || card is ObjectData.Card.AniLibria,
+                                isAnimeCard = card is ObjectData.Card.Anime,
                                 name = card.name,
                                 image = card.image,
                                 cornerRadius = parent.childsCornerRadius,
@@ -412,7 +412,7 @@ fun PagedGridCarousel(
                                 isAuthorExists = card !is ObjectData.Card.Artist,
                                 alreadyWatched = 0L,
                                 length = 0L,
-                                isSupportEditing = card.isUserCreated && !card.id.isWebId() && card !is ObjectData.Card.AniLibria,
+                                isSupportEditing = card.isUserCreated && !card.id.isWebId(),
                                 isSupportDeleting = card.isUserCreated && !card.id.isWebId(),
                                 onEdit = { onEditCard(card) },
                                 onDelete = { onDeleteCard(card.id) },
@@ -522,7 +522,7 @@ fun GridCarousel(
                             showAuthor = parent.childsShowAuthor,
                             showAlreadyWatchedLine = parent.childsShowAlreadyWatchedLine,
                             authors = if (card is ObjectData.Card.Music) card.authors else listOf(card.author),
-                            isAnimeCard = card is ObjectData.Card.Anime || card is ObjectData.Card.AniLibria,
+                            isAnimeCard = card is ObjectData.Card.Anime,
                             name = card.name,
                             image = card.image,
                             cornerRadius = parent.childsCornerRadius,
@@ -531,7 +531,7 @@ fun GridCarousel(
                             isAuthorExists = card !is ObjectData.Card.Artist,
                             alreadyWatched = 0L,
                             length = 0L,
-                            isSupportEditing = card.isUserCreated && !card.id.isWebId() && card !is ObjectData.Card.AniLibria,
+                            isSupportEditing = card.isUserCreated && !card.id.isWebId(),
                             isSupportDeleting = card.isUserCreated && !card.id.isWebId(),
                             onEdit = { onEditCard(card) },
                             onDelete = { onDeleteCard(card.id) },

@@ -112,7 +112,6 @@ import com.example.garden.ui.utils.hazeSourcesForUpperLayers
 import com.example.garden.viewmodel.CreateCarouselViewModel
 import dev.chrisbanes.haze.hazeSource
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateCarouselPage(
     layer: Layer.CreateCarouselPage,
@@ -506,7 +505,15 @@ fun CreateCarouselPage(
 
                                                         val availableCarouselTypes =
                                                             remember(stateViewModel.state.carouselType) {
-                                                                mutableStateOf(CarouselType.entries.toList())
+                                                                mutableStateOf(
+                                                                    if (stateViewModel.state.carouselId != null) {
+                                                                        listOf(stateViewModel.state.carouselType)
+                                                                    } else {
+                                                                        CarouselType.entries.toList() - listOf(
+                                                                            CarouselType.All
+                                                                        ).toSet()
+                                                                    }
+                                                                )
                                                             }
 
                                                         val selectedIndex =

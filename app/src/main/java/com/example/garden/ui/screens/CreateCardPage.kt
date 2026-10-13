@@ -661,8 +661,6 @@ fun CreateCardPage(
                                         val cursor = authorState.selection.start
                                         val authors = stateViewModel.state.authorsList
 
-                                        Log.e("SADA", "$cursor  $authors")
-
                                         var currentCursor = authors[0].length + 1
                                         var currentAuthor = authors[0]
                                         for (i in 0 until authors.size - 1) {
@@ -676,7 +674,6 @@ fun CreateCardPage(
 
                                         currentAuthorId = authors.indexOf(currentAuthor)
 
-                                        Log.e("SADA", "$currentAuthorId  $currentAuthor")
                                         searchViewModel.searchArtists(
                                             currentAuthor,
                                             listOf(stateViewModel.state.artistType ?: ArtistType.Music)
@@ -687,7 +684,6 @@ fun CreateCardPage(
                                 ArtistSearch(
                                     artistsFlow = artistSearchFlow.value.map { it.name },
                                     onArtistChange = { newAuthor ->
-                                        Log.e("WHATS","")
                                         stateViewModel.update {
                                             copy(
                                                 authorsList = authorsList.mapIndexed { index, string ->

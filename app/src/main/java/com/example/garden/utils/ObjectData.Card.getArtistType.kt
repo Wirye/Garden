@@ -6,7 +6,7 @@ import com.example.garden.database.entities.ObjectData
 
 fun ObjectData.Card.getArtistType(): ArtistType? {
     return when (this) {
-        is ObjectData.Card.Anime, is ObjectData.Card.AniLibria -> ArtistType.Anime
+        is ObjectData.Card.Anime -> ArtistType.Anime
         is ObjectData.Card.Manga -> ArtistType.Manga
         is ObjectData.Card.Music -> ArtistType.Music
         is ObjectData.Card.Playlist -> null

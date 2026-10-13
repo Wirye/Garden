@@ -135,6 +135,9 @@ class ObjectRepositoryImpl(
     override fun getCardsByParentId(parentId: Long): Flow<List<ObjectEntity>> =
         dao.getCardsByParentId(parentId)
 
+    override fun getCarouselsByPage(page: PageType): Flow<List<ObjectEntity>> =
+        dao.getCarouselsByPage(page)
+
     override suspend fun saveObject(
         data: ObjectData,
         page: PageType,
@@ -212,6 +215,10 @@ class ObjectRepositoryImpl(
         dao.upsertObject(entity)
     }
 
+    override suspend fun insertSavedCarousel(entity: ObjectEntity) {
+        dao.justUpsertObject(entity)
+    }
+
     override suspend fun deleteObject(id: Long, parentId: Long?, position: Int, author: String?) =
         dao.deleteObject(id, parentId, position, author)
 
@@ -240,10 +247,18 @@ class ObjectRepositoryImpl(
         return null
     }
 
-    override suspend fun updatePositions(cards: List<ObjectData.Card>) {
+    override suspend fun updateCardsPositions(cards: List<ObjectData.Card>) {
         db.withTransaction {
             cards.forEach { card ->
                 dao.updatePosition(id = card.id.toLongId(), newPosition = card.position)
+            }
+        }
+    }
+
+    override suspend fun updateCarouselsPosition(carousels: List<ObjectData.Carousel>) {
+        db.withTransaction {
+            carousels.forEach { carousel ->
+                dao.updatePosition(id = carousel.id.toLongId(), newPosition = carousel.position)
             }
         }
     }
@@ -262,7 +277,7 @@ class ObjectRepositoryImpl(
     private fun resolveElementType(data: ObjectData): ElementType {
         return when (data) {
             is ObjectData.Carousel -> ElementType.Carousel
-            is ObjectData.Card.Anime, is ObjectData.Card.AniLibria -> ElementType.AnimeCard
+            is ObjectData.Card.Anime -> ElementType.AnimeCard
             is ObjectData.Card.Manga -> ElementType.MangaCard
             is ObjectData.Card.Music -> ElementType.MusicCard
             is ObjectData.Card.Playlist -> ElementType.PlaylistCard

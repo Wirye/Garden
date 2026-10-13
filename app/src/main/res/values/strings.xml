@@ -170,6 +170,7 @@
     <string name="LogoutFromAniLibria">Выйти из АниЛибрии?</string>
     <string name="TheProductOfColumnsAndRowsCannotExceedThirty">Произведение столбцов и строк не может превышать 30</string>
     <string name="CarouselChildsEdit">Редактирование карточек карусели</string>
+    <string name="PageChildsEdit">Редактирование каруселей страницы</string>
     <string name="SelectCard_action">Выберите карточку</string>
     <string name="SelectCards_action">Выберите карточки</string>
     <string name="Choice">Выбрать</string>

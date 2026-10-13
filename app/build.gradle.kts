@@ -48,14 +48,6 @@ android {
     }
 }
 
-//configurations.all {
-//    resolutionStrategy {
-//        force("org.jetbrains.kotlin:kotlin-stdlib:2.0.21")
-//        force("org.jetbrains.kotlin:kotlin-stdlib-jdk8:2.0.21")
-//        force("org.jetbrains.kotlin:kotlin-reflect:2.0.21")
-//    }
-//}
-
 dependencies {
     constraints {
         implementation("org.jetbrains.kotlin:kotlin-stdlib:2.1.0") {
@@ -118,4 +110,5 @@ dependencies {
     implementation(libs.org.jetbrains.kotlinx.serialization.json)
     implementation(libs.androidx.room.paging)
     implementation(libs.anilibria.kt)
+    implementation(libs.musicBrainz.kt)
 }
