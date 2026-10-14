@@ -11,6 +11,7 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.example.garden.R
 import com.example.garden.ui.components.icons.CloseIco
+import com.example.garden.ui.components.icons.InfoIco
 import kotlinx.parcelize.IgnoredOnParcel
 import kotlinx.parcelize.Parcelize
 import kotlinx.serialization.SerialName
@@ -629,11 +630,12 @@ enum class CardSize : Parcelable {
 @Parcelize
 @Serializable
 enum class SavedIcons : Parcelable {
-    CLOSE_ICO;
+    CLOSE_ICO, INFO_ICO;
 
     val imageVector: ImageVector
         get() = when (this) {
             CLOSE_ICO -> CloseIco
+            INFO_ICO -> InfoIco
         }
 }
 
@@ -970,6 +972,7 @@ sealed interface ObjectData {
             override val genre: List<GridGenreItem> = emptyList(),
             val description: String = "",
             val chaptersList: List<ChapterInfo> = emptyList(),
+            val mangadexCardId: Long? = null
         ) : Card {
             override fun injectLocalObjectEntityData(entity: ObjectEntity): ObjectData {
                 return copy(
@@ -1013,7 +1016,8 @@ sealed interface ObjectData {
             override val genre: List<GridGenreItem> = emptyList(),
             val authors: List<String> = emptyList(),
             val song: LinkData? = null,
-            val horizontalVideo: LinkData? = null
+            val horizontalVideo: LinkData? = null,
+            val musicBrainzCardId: Long? = null
         ) : Card {
             override fun injectLocalObjectEntityData(entity: ObjectEntity): ObjectData {
                 return copy(
@@ -1055,7 +1059,8 @@ sealed interface ObjectData {
             override val author: String = "",
             override val image: ImageData,
             override val genre: List<GridGenreItem> = emptyList(),
-            val artistType: ArtistType
+            val artistType: ArtistType,
+            val musicBrainzCardId: Long? = null
         ) : Card {
             override fun injectLocalObjectEntityData(entity: ObjectEntity): ObjectData {
                 return copy(
@@ -1098,7 +1103,8 @@ sealed interface ObjectData {
             override val image: ImageData,
             override val genre: List<GridGenreItem> = emptyList(),
             val isSingle: Boolean = false,
-            val songs: List<Long> = emptyList()
+            val songs: List<Long> = emptyList(),
+            val musicBrainzCardId: Long? = null
         ) : Card {
             override fun injectLocalObjectEntityData(entity: ObjectEntity): ObjectData {
                 return copy(

@@ -18,10 +18,8 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -49,10 +47,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
-import com.example.garden.LocalCustomColors
 import com.example.garden.R
+import com.example.garden.ui.components.CloseButton
 import com.example.garden.ui.components.HelpDialog
-import com.example.garden.ui.components.icons.CloseIco
 import com.example.garden.ui.components.icons.EyeIco
 import com.example.garden.ui.components.icons.EyeOffIco
 import com.example.garden.ui.components.icons.HelpIco
@@ -133,24 +130,13 @@ fun AniLibertyLoginPage(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                FilledIconButton(
+                CloseButton(
                     onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
                         focusManager.clearFocus()
                         onClose()
-                    },
-                    colors = IconButtonDefaults.filledIconButtonColors(
-                        containerColor = LocalCustomColors.current.closeButton,
-                        contentColor = LocalCustomColors.current.onCloseButton
-                    ),
-                    shape = MaterialTheme.shapes.small
-                ) {
-                    Icon(
-                        imageVector = CloseIco,
-                        contentDescription = null,
-                        modifier = Modifier.size(MaterialTheme.dimens.iconLarge)
-                    )
-                }
+                    }
+                )
 
                 Text(
                     modifier = Modifier.weight(1f, fill = false),

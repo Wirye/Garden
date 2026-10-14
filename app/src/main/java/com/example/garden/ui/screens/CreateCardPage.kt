@@ -43,10 +43,8 @@ import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
@@ -92,7 +90,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
 import com.example.garden.Layer
-import com.example.garden.LocalCustomColors
 import com.example.garden.R
 import com.example.garden.ResultKeys
 import com.example.garden.database.entities.ArtistType
@@ -104,6 +101,7 @@ import com.example.garden.database.entities.ObjectData
 import com.example.garden.database.entities.PlayListType
 import com.example.garden.ui.components.AsyncImageWithAddPlaceholder
 import com.example.garden.ui.components.CardChoice
+import com.example.garden.ui.components.CloseButton
 import com.example.garden.ui.components.DropDownMenuWithBlur
 import com.example.garden.ui.components.GenreEditor
 import com.example.garden.ui.components.GenreEditorGenresType
@@ -112,7 +110,6 @@ import com.example.garden.ui.components.SelectableDropDownMenuWithBlur
 import com.example.garden.ui.components.SmartFilePicker
 import com.example.garden.ui.components.icons.AddIco
 import com.example.garden.ui.components.icons.ChevronForward
-import com.example.garden.ui.components.icons.CloseIco
 import com.example.garden.ui.components.icons.DownloadIco2
 import com.example.garden.ui.components.icons.EditIco
 import com.example.garden.ui.components.icons.MoreVertIco
@@ -1403,22 +1400,13 @@ fun CreateCardPage(
                     start = MaterialTheme.spacing.screenHorizontal + leftInset
                 )
         ) {
-            FilledIconButton(
+            CloseButton(
                 onClick = {
                     focusManager.clearFocus()
                     haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
                     onClose()
-                }, colors = IconButtonDefaults.filledIconButtonColors(
-                    containerColor = LocalCustomColors.current.closeButton,
-                    contentColor = LocalCustomColors.current.onCloseButton
-                ), shape = MaterialTheme.shapes.small
-            ) {
-                Icon(
-                    imageVector = CloseIco,
-                    contentDescription = null,
-                    modifier = Modifier.size(MaterialTheme.dimens.iconLarge)
-                )
-            }
+                }
+            )
         }
 
         Box(

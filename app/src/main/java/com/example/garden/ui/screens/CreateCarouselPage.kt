@@ -39,10 +39,8 @@ import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
@@ -82,7 +80,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.garden.Layer
-import com.example.garden.LocalCustomColors
 import com.example.garden.R
 import com.example.garden.database.entities.CardSize
 import com.example.garden.database.entities.CarouselType
@@ -92,12 +89,12 @@ import com.example.garden.database.entities.LayoutType
 import com.example.garden.database.entities.SizeType
 import com.example.garden.ui.components.AppAsyncImage
 import com.example.garden.ui.components.AsyncImageWithAddPlaceholder
+import com.example.garden.ui.components.CloseButton
 import com.example.garden.ui.components.HelpDialog
 import com.example.garden.ui.components.SelectableDropDownMenuWithBlur
 import com.example.garden.ui.components.SmartFilePicker
 import com.example.garden.ui.components.icons.AddIco
 import com.example.garden.ui.components.icons.ChevronForward
-import com.example.garden.ui.components.icons.CloseIco
 import com.example.garden.ui.components.icons.HelpIco
 import com.example.garden.ui.components.rememberFilePicker
 import com.example.garden.ui.theme.dimens
@@ -2014,22 +2011,13 @@ fun CreateCarouselPage(
                 .padding(top = MaterialTheme.spacing.screenHorizontal + topInset)
                 .align(Alignment.TopStart)
         ) {
-            FilledIconButton(
+            CloseButton(
                 onClick = {
                     haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
                     focusManager.clearFocus()
                     onClose()
-                }, colors = IconButtonDefaults.filledIconButtonColors(
-                    containerColor = LocalCustomColors.current.closeButton,
-                    contentColor = LocalCustomColors.current.onCloseButton
-                ), shape = MaterialTheme.shapes.small
-            ) {
-                Icon(
-                    imageVector = CloseIco,
-                    contentDescription = null,
-                    modifier = Modifier.size(MaterialTheme.dimens.iconLarge)
-                )
-            }
+                }
+            )
         }
 
         var isHelpDialogExpanded by rememberSaveable { mutableStateOf(false) }

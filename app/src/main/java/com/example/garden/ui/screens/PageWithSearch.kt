@@ -30,10 +30,8 @@ import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -68,17 +66,16 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import com.example.garden.Layer
-import com.example.garden.LocalCustomColors
 import com.example.garden.R
 import com.example.garden.ResultKeys
 import com.example.garden.database.entities.ImageData
 import com.example.garden.database.entities.LinkData
 import com.example.garden.ui.components.AsyncImageWithAddPlaceholder
+import com.example.garden.ui.components.CloseButton
 import com.example.garden.ui.components.DropDownMenuWithBlur
 import com.example.garden.ui.components.PopupMenuItem
 import com.example.garden.ui.components.SmartFilePicker
 import com.example.garden.ui.components.icons.AddIco
-import com.example.garden.ui.components.icons.CloseIco
 import com.example.garden.ui.components.icons.DeleteIco
 import com.example.garden.ui.components.icons.DragHandleIco
 import com.example.garden.ui.components.icons.EditIco
@@ -457,24 +454,13 @@ fun PageWithSearch(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            FilledIconButton(
+            CloseButton(
                 onClick = {
                     haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
                     focusManager.clearFocus()
                     onClose()
-                },
-                colors = IconButtonDefaults.filledIconButtonColors(
-                    containerColor = LocalCustomColors.current.closeButton,
-                    contentColor = LocalCustomColors.current.onCloseButton
-                ),
-                shape = MaterialTheme.shapes.small
-            ) {
-                Icon(
-                    imageVector = CloseIco,
-                    contentDescription = null,
-                    modifier = Modifier.size(MaterialTheme.dimens.iconLarge)
-                )
-            }
+                }
+            )
 
             OutlinedTextField(
                 state = rememberTextFieldState(),

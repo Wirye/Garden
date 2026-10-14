@@ -194,6 +194,8 @@
     <string name="studio">Студия</string>
     <string name="OnDevice">На устройстве</string>
     <string name="RecentQueries">Недавние запросы</string>
+    <string name="AboutApp">О приложении</string>
+    <string name="DataSources">Источники данных</string>
     <string name="ListTheAuthorsSeparatedByCommas">Указывайте авторов через запятую</string>
     <string name="CreateCarouselHelpPageText">"Что такое пресеты и зачем они нужны?
 Пресеты - это не только определённые настройки карусели, но и их функции, например пресет "Последние релизы: АниЛибрия" добавляет в карусель карточки последних релизов с АниЛибрии

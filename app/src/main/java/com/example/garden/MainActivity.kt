@@ -55,6 +55,9 @@ import com.example.garden.viewmodel.ResultSenderViewModel
 import com.example.garden.viewmodel.SearchViewModel
 import com.example.garden.viewmodel.utils.customViewModelFactory
 import com.github.wirye.anilibriakt.AniLibriaClient
+import com.github.wirye.lrclibkt.LrclibClient
+import com.github.wirye.mangaDexKt.MangaDexClient
+import com.github.wirye.musicBrainzkt.MusicBrainzClient
 import kotlinx.parcelize.Parcelize
 
 sealed class Layer(
@@ -153,6 +156,11 @@ sealed class Layer(
     ) : Layer()
 
     @Parcelize
+    data class AboutAppPage(
+        val nothing: Int = 0
+    ) : Layer()
+
+    @Parcelize
     data class AniLibertyLoginPage(
         val nothing: Int = 0
     ) : Layer()
@@ -202,6 +210,16 @@ val LocalCustomColors = staticCompositionLocalOf { CustomColors() }
 
 var AniLibriaClient: AniLibriaClient =
     AniLibriaClient("Garden/1.0 ( https://github.com/Wirye/Garden )")
+
+val MusicBrainzClient: MusicBrainzClient =
+    MusicBrainzClient("Garden/1.0 ( https://github.com/Wirye/Garden )")
+
+val LrclibClient: LrclibClient =
+    LrclibClient("Garden/1.0 ( https://github.com/Wirye/Garden )")
+
+val MangaDexClient: MangaDexClient =
+    MangaDexClient("Garden/1.0 ( https://github.com/Wirye/Garden )")
+
 
 class MainActivity : ComponentActivity() {
     private val db by lazy {

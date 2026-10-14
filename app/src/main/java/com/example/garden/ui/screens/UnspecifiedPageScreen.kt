@@ -16,10 +16,8 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -43,18 +41,17 @@ import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
 import com.example.garden.Layer
-import com.example.garden.LocalCustomColors
 import com.example.garden.R
 import com.example.garden.database.entities.ElementType
 import com.example.garden.database.entities.LayoutType
 import com.example.garden.database.entities.ObjectData
 import com.example.garden.database.entities.SizeType
 import com.example.garden.ui.components.Card
+import com.example.garden.ui.components.CloseButton
 import com.example.garden.ui.components.DropDownMenuWithBlur
 import com.example.garden.ui.components.HelpDialog
 import com.example.garden.ui.components.PopupMenuItem
 import com.example.garden.ui.components.icons.AddIco
-import com.example.garden.ui.components.icons.CloseIco
 import com.example.garden.ui.components.icons.HelpIco
 import com.example.garden.ui.components.icons.MoreVertIco
 import com.example.garden.ui.theme.dimens
@@ -214,22 +211,13 @@ fun UnspecifiedPageScreen(
                     start = MaterialTheme.spacing.screenHorizontal + leftInset
                 )
         ) {
-            FilledIconButton(
+            CloseButton(
                 onClick = {
                     focusManager.clearFocus()
                     haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
                     closeLayer()
-                }, colors = IconButtonDefaults.filledIconButtonColors(
-                    containerColor = LocalCustomColors.current.closeButton,
-                    contentColor = LocalCustomColors.current.onCloseButton
-                ), shape = MaterialTheme.shapes.small
-            ) {
-                Icon(
-                    imageVector = CloseIco,
-                    contentDescription = null,
-                    modifier = Modifier.size(MaterialTheme.dimens.iconLarge)
-                )
-            }
+                }
+            )
         }
 
         var isHelpDialogExpanded by rememberSaveable { mutableStateOf(false) }

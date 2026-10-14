@@ -111,4 +111,6 @@ dependencies {
     implementation(libs.androidx.room.paging)
     implementation(libs.anilibria.kt)
     implementation(libs.musicBrainz.kt)
+    implementation(libs.lrclib.kt)
+    implementation(libs.mangaDex.kt)
 }

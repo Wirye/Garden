@@ -26,9 +26,7 @@ import androidx.compose.foundation.shape.CornerSize
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -55,11 +53,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.garden.Layer
-import com.example.garden.LocalCustomColors
 import com.example.garden.R
 import com.example.garden.database.entities.ImageData
+import com.example.garden.database.entities.SavedIcons
 import com.example.garden.ui.components.AppAsyncImage
-import com.example.garden.ui.components.icons.CloseIco
+import com.example.garden.ui.components.CloseButton
+import com.example.garden.ui.components.SettingsBlock
 import com.example.garden.ui.components.icons.LoginIco
 import com.example.garden.ui.components.icons.LogoutIco
 import com.example.garden.ui.components.icons.SearchIco
@@ -111,7 +110,8 @@ fun AppSettings(
     }
 
     val settings = listOf(
-        stringResource(R.string.AniLibriaAccount)
+        stringResource(R.string.AniLibriaAccount),
+        stringResource(R.string.AboutApp)
     )
 
     val searchedSettings by remember(settings) {
@@ -146,24 +146,13 @@ fun AppSettings(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
             ) {
-                FilledIconButton(
+                CloseButton(
                     onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
                         focusManager.clearFocus()
                         onClose()
-                    },
-                    colors = IconButtonDefaults.filledIconButtonColors(
-                        containerColor = LocalCustomColors.current.closeButton,
-                        contentColor = LocalCustomColors.current.onCloseButton
-                    ),
-                    shape = MaterialTheme.shapes.small
-                ) {
-                    Icon(
-                        imageVector = CloseIco,
-                        contentDescription = null,
-                        modifier = Modifier.size(MaterialTheme.dimens.iconLarge)
-                    )
-                }
+                    }
+                )
 
                 OutlinedTextField(
                     state = searchState,
@@ -209,98 +198,17 @@ fun AppSettings(
                 ) { index ->
                     when (searchedSettings[index]) {
                         stringResource(R.string.AniLibriaAccount) -> {
-                            Column(
-                                modifier = Modifier
-                                    .clip(MaterialTheme.shapes.extraLarge)
-                                    .background(MaterialTheme.colorScheme.surfaceVariant)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .clickable {
-                                            if (!isAniLibertyAuthorized) {
-                                                haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
-                                                layersViewModel.openLayer(
-                                                    Layer.AniLibertyLoginPage()
-                                                )
-                                            }
-                                        }
-                                ) {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(MaterialTheme.spacing.medium),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
-                                        ) {
-                                            AppAsyncImage(
-                                                imageData = ImageData.Url("https://www.google.com/s2/favicons?domain=aniliberty.top&sz=128"),
-                                                contentDescription = null,
-                                                contentScale = ContentScale.Crop,
-                                                modifier = Modifier
-                                                    .size(MaterialTheme.dimens.minButtonHeight)
-                                                    .clip(CircleShape)
-                                            )
-
-                                            Text(
-                                                text = stringResource(R.string.Account),
-                                                style = MaterialTheme.typography.titleMedium,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                        }
-
-                                        if (!isAniLibertyAuthorized) {
-                                            Icon(
-                                                imageVector = LoginIco,
-                                                contentDescription = null,
-                                                modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
-                                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(
-                                                    alpha = 0.3f
-                                                )
-                                            )
-                                        }
-                                    }
-                                }
-
-                                val aniLibertyProfileVisibleState =
-                                    remember { MutableTransitionState(isAniLibertyAuthorized) }.apply {
-                                        targetState = isAniLibertyAuthorized
-                                    }
-
-                                AnimatedVisibility(
-                                    visibleState = aniLibertyProfileVisibleState,
-                                    enter = expandVertically() + fadeIn(),
-                                    exit = shrinkVertically() + fadeOut(),
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    var isLogoutAskExpanded by remember { mutableStateOf(false) }
-                                    if (isLogoutAskExpanded) {
-                                        ConfirmLogoutDialog(
-                                            title = stringResource(R.string.LogoutFromAniLibria),
-                                            message = stringResource(R.string.PersonalizedContentWillBecomeUnavailable),
-                                            onConfirm = {
-                                                isLogoutAskExpanded = false
-                                                authViewModel.logoutAniLiberty()
-                                            },
-                                            onDismiss = { isLogoutAskExpanded = false }
-                                        )
-                                    }
-
+                            SettingsBlock {
+                                Column {
                                     Box(
                                         modifier = Modifier
-                                            .clip(
-                                                MaterialTheme.shapes.extraLarge.copy(
-                                                    topStart = CornerSize(0.dp),
-                                                    topEnd = CornerSize(0.dp)
-                                                )
-                                            )
-                                            .background(MaterialTheme.colorScheme.surfaceVariant)
                                             .clickable {
-                                                haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
-                                                isLogoutAskExpanded = true
+                                                if (!isAniLibertyAuthorized) {
+                                                    haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                                                    layersViewModel.openLayer(
+                                                        Layer.AniLibertyLoginPage()
+                                                    )
+                                                }
                                             }
                                     ) {
                                         Row(
@@ -312,14 +220,10 @@ fun AppSettings(
                                         ) {
                                             Row(
                                                 verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(
-                                                    MaterialTheme.spacing.small
-                                                )
+                                                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
                                             ) {
                                                 AppAsyncImage(
-                                                    imageData = if (linkToAniLibertyAvatar != null) ImageData.Url(
-                                                        linkToAniLibertyAvatar
-                                                    ) else null,
+                                                    imageData = ImageData.Url("https://www.google.com/s2/favicons?domain=aniliberty.top&sz=128"),
                                                     contentDescription = null,
                                                     contentScale = ContentScale.Crop,
                                                     modifier = Modifier
@@ -328,22 +232,140 @@ fun AppSettings(
                                                 )
 
                                                 Text(
-                                                    text = aniLibertyUserName
-                                                        ?: stringResource(R.string.withoutName),
+                                                    text = stringResource(R.string.Account),
                                                     style = MaterialTheme.typography.titleMedium,
                                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                                 )
                                             }
 
-                                            Icon(
-                                                imageVector = LogoutIco,
-                                                contentDescription = null,
-                                                modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
-                                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(
-                                                    alpha = 0.3f
+                                            if (!isAniLibertyAuthorized) {
+                                                Icon(
+                                                    imageVector = LoginIco,
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
+                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                                                        alpha = 0.3f
+                                                    )
                                                 )
+                                            }
+                                        }
+                                    }
+
+                                    val aniLibertyProfileVisibleState =
+                                        remember { MutableTransitionState(isAniLibertyAuthorized) }.apply {
+                                            targetState = isAniLibertyAuthorized
+                                        }
+
+                                    AnimatedVisibility(
+                                        visibleState = aniLibertyProfileVisibleState,
+                                        enter = expandVertically() + fadeIn(),
+                                        exit = shrinkVertically() + fadeOut(),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        var isLogoutAskExpanded by remember { mutableStateOf(false) }
+                                        if (isLogoutAskExpanded) {
+                                            ConfirmLogoutDialog(
+                                                title = stringResource(R.string.LogoutFromAniLibria),
+                                                message = stringResource(R.string.PersonalizedContentWillBecomeUnavailable),
+                                                onConfirm = {
+                                                    isLogoutAskExpanded = false
+                                                    authViewModel.logoutAniLiberty()
+                                                },
+                                                onDismiss = { isLogoutAskExpanded = false }
                                             )
                                         }
+
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(
+                                                    MaterialTheme.shapes.extraLarge.copy(
+                                                        topStart = CornerSize(0.dp),
+                                                        topEnd = CornerSize(0.dp)
+                                                    )
+                                                )
+                                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                                                .clickable {
+                                                    haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                                                    isLogoutAskExpanded = true
+                                                }
+                                        ) {
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(MaterialTheme.spacing.medium),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.SpaceBetween
+                                            ) {
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(
+                                                        MaterialTheme.spacing.small
+                                                    )
+                                                ) {
+                                                    AppAsyncImage(
+                                                        imageData = if (linkToAniLibertyAvatar != null) ImageData.Url(
+                                                            linkToAniLibertyAvatar
+                                                        ) else null,
+                                                        contentDescription = null,
+                                                        contentScale = ContentScale.Crop,
+                                                        modifier = Modifier
+                                                            .size(MaterialTheme.dimens.minButtonHeight)
+                                                            .clip(CircleShape)
+                                                    )
+
+                                                    Text(
+                                                        text = aniLibertyUserName
+                                                            ?: stringResource(R.string.withoutName),
+                                                        style = MaterialTheme.typography.titleMedium,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    )
+                                                }
+
+                                                Icon(
+                                                    imageVector = LogoutIco,
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(MaterialTheme.dimens.iconLarge),
+                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                                                        alpha = 0.3f
+                                                    )
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        stringResource(R.string.AboutApp) -> {
+                            SettingsBlock {
+                                Box(
+                                    modifier = Modifier
+                                        .clickable {
+                                            haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                                            layersViewModel.openLayer(Layer.AboutAppPage())
+                                        }
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(MaterialTheme.spacing.medium),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
+                                    ) {
+                                        AppAsyncImage(
+                                            imageData = ImageData.Resource(SavedIcons.INFO_ICO),
+                                            contentDescription = null,
+                                            contentScale = ContentScale.Crop,
+                                            modifier = Modifier
+                                                .size(MaterialTheme.dimens.minButtonHeight)
+                                                .clip(CircleShape)
+                                        )
+
+                                        Text(
+                                            text = stringResource(R.string.AboutApp),
+                                            style = MaterialTheme.typography.titleMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
                                     }
                                 }
                             }

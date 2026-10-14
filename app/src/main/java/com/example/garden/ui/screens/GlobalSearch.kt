@@ -22,9 +22,7 @@ import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.clearText
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
-import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -57,7 +55,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.garden.GlobalSearchState
 import com.example.garden.Layer
-import com.example.garden.LocalCustomColors
 import com.example.garden.OverLayLayer
 import com.example.garden.R
 import com.example.garden.ResultKeys
@@ -69,6 +66,7 @@ import com.example.garden.database.entities.ObjectEntity
 import com.example.garden.database.entities.PageType
 import com.example.garden.database.entities.RecentQueriesEntity
 import com.example.garden.database.entities.SizeType
+import com.example.garden.ui.components.CloseButton
 import com.example.garden.ui.components.FlatGridCarousel
 import com.example.garden.ui.components.ShapesLoadingIndicator
 import com.example.garden.ui.components.icons.CloseIco
@@ -245,22 +243,13 @@ fun GlobalSearch(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                FilledIconButton(
+                CloseButton(
                     onClick = {
                         focusManager.clearFocus()
                         haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
                         closeLayer()
-                    }, colors = IconButtonDefaults.filledIconButtonColors(
-                        containerColor = LocalCustomColors.current.closeButton,
-                        contentColor = LocalCustomColors.current.onCloseButton
-                    ), shape = MaterialTheme.shapes.small
-                ) {
-                    Icon(
-                        imageVector = CloseIco,
-                        contentDescription = null,
-                        modifier = Modifier.size(MaterialTheme.dimens.iconLarge)
-                    )
-                }
+                    }
+                )
 
                 Spacer(modifier = Modifier.size(MaterialTheme.spacing.small))
 

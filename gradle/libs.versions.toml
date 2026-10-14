@@ -33,6 +33,8 @@ pagingVersion = "3.5.1"
 serializationVersion = "1.7.3"
 anilibriaKtVersion = "1.1.3"
 musicBrainzKtVersion = "1.1.4"
+lrclibKtVersion = "1.0.1"
+mangaDexKtVersion = "1.0.1"
 
 [libraries]
 junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -84,6 +86,8 @@ org-jetbrains-kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kot
 androidx-room-paging = { group = "androidx.room", name = "room-paging", version.ref = "room" }
 anilibria-kt = { module = "com.github.Wirye.anilibria-kt:anilibria-kt", version.ref = "anilibriaKtVersion" }
 musicBrainz-kt = { module = "com.github.Wirye.musicBrainz-kt:musicBrainz-kt", version.ref = "musicBrainzKtVersion" }
+lrclib-kt = { module = "com.github.Wirye.lrclibkt-kt:lrclibkt-kt", version.ref = "lrclibKtVersion" }
+mangaDex-kt = { module = "com.github.Wirye.mangaDex-kt:mangaDex-kt", version.ref = "mangaDexKtVersion" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

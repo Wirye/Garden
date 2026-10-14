@@ -680,6 +680,12 @@ private fun LayerContent(
                         }
                     )
                 }
+
+                is Layer.AboutAppPage -> {
+                    AboutAppScreen(
+                        onClose = closeLayer
+                    )
+                }
             }
         }
     }
