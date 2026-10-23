@@ -37,6 +37,14 @@ fun ObjectData.Card.toLayerCreateCardPage(parentId: Long, carouselType: Carousel
         cardsList = if (this is ObjectData.Card.Playlist) cardsList else emptyList(),
         song = if (this is ObjectData.Card.Music) song else null,
         horizontalVideo = if (this is ObjectData.Card.Music) horizontalVideo else null,
-        playlistType = if (this is ObjectData.Card.Playlist) playListType else PlayListType.Music
+        playlistType = if (this is ObjectData.Card.Playlist) playListType else PlayListType.Music,
+        anilibriaCardId = if (this is ObjectData.Card.Anime) anilibriaCardId else null,
+        mangadexCardId = if (this is ObjectData.Card.Manga) mangadexCardId else null,
+        musicBrainzCardId = when(this) {
+            is ObjectData.Card.Music -> musicBrainzCardId
+            is ObjectData.Card.Album -> musicBrainzCardId
+            is ObjectData.Card.Artist -> musicBrainzCardId
+            else -> null
+        }
     )
 }
