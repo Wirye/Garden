@@ -6,6 +6,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.example.garden.Layer
+import com.example.garden.database.entities.ObjectData
 
 class CreateCardViewModel(
     initialLayer: Layer.CreateCardPage
@@ -14,6 +15,8 @@ class CreateCardViewModel(
 
     var state by mutableStateOf(initialLayer)
         private set
+
+    var tempLinkingObject: ObjectData.Card? = null
 
     fun update(transform: Layer.CreateCardPage.() -> Layer.CreateCardPage) {
         state = state.transform()

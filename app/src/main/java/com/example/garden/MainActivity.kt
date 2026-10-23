@@ -110,6 +110,9 @@ sealed class Layer(
         var song: LinkData? = null,
         var carouselType: CarouselType,
         var playlistType: PlayListType,
+        var anilibriaCardId: Long? = null,
+        var musicBrainzCardId: String? = null,
+        var mangadexCardId: String? = null
     ) : Layer()
 
     @Parcelize

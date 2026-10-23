@@ -1,7 +1,9 @@
 package com.example.garden.utils
 
+import android.util.Log
 import com.example.garden.database.entities.ElementType
 import com.example.garden.database.entities.EntitySourceType
+import com.example.garden.database.entities.GenreYear
 import com.example.garden.database.entities.ImageData
 import com.example.garden.database.entities.LinkData
 import com.example.garden.database.entities.ObjectData
@@ -26,8 +28,14 @@ fun Title.toObjectEntity(position: Int, sourceType: EntitySourceType): ObjectEnt
             isUserCreated = false,
             name = (this.name?.russian) ?: "",
             author = "",
+            description = this.description ?: "",
             image = ImageData.Url((this.poster?.fullPreviewUrl) ?: ""),
             anilibriaCardId = this.id,
+            genre = (this.genres?.mapNotNull { it.getValue?.toGenre() }
+                ?: emptyList()) + (this.ageRating?.getValue?.let { listOf(it.toGenreAge()).mapNotNull { it } }
+                ?: emptyList()) + (this.year?.let { listOf(GenreYear(year = it)) }
+                ?: emptyList()) + (this.season?.getValue?.let { listOf(it.toGenreSeason()) }
+                ?: emptyList())
         ),
         source = sourceType
     )

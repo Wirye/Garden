@@ -19,7 +19,9 @@ fun Layer.CreateCardPage.toObjectData() : ObjectData {
                 description = description,
                 genre = genreList,
                 image = image ?: ImageData.Url(""),
-                link = LinkData.Self
+                link = LinkData.Self,
+                episodesList = episodesList,
+                anilibriaCardId = anilibriaCardId
             )
         }
 
@@ -32,7 +34,9 @@ fun Layer.CreateCardPage.toObjectData() : ObjectData {
                 genre = genreList,
                 image = image ?: ImageData.Url(""),
                 position = cardPosition,
-                link = LinkData.Self
+                link = LinkData.Self,
+                chaptersList = chaptersList,
+                mangadexCardId = mangadexCardId
             )
         }
 
@@ -47,7 +51,8 @@ fun Layer.CreateCardPage.toObjectData() : ObjectData {
                 position = cardPosition,
                 link = LinkData.Self,
                 song = song,
-                horizontalVideo = horizontalVideo
+                horizontalVideo = horizontalVideo,
+                musicBrainzCardId = musicBrainzCardId
             )
         }
 
@@ -74,7 +79,8 @@ fun Layer.CreateCardPage.toObjectData() : ObjectData {
                 image = image ?: ImageData.Url(""),
                 position = cardPosition,
                 link = LinkData.Self,
-                songs = cardsList
+                songs = cardsList,
+                musicBrainzCardId = musicBrainzCardId
             )
         }
 
@@ -87,7 +93,8 @@ fun Layer.CreateCardPage.toObjectData() : ObjectData {
                 image = image ?: ImageData.Url(""),
                 position = cardPosition,
                 link = LinkData.Self,
-                artistType = artistType ?: ArtistType.Music
+                artistType = artistType ?: ArtistType.Music,
+                musicBrainzCardId = musicBrainzCardId
             )
         }
 

@@ -2,7 +2,6 @@ package com.example.garden.ui.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
@@ -65,7 +64,7 @@ enum class GenreEditorGenresType {
     ANIME, MUSIC
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GenreEditor(
     onDismiss: () -> Unit,
@@ -79,7 +78,7 @@ fun GenreEditor(
         getAllGenresOfSameType(
             when (genreType) {
                 GenreEditorGenresType.ANIME -> listOf(Genre.Drama)
-                GenreEditorGenresType.MUSIC -> listOf(MusicGenre.Classical)
+                GenreEditorGenresType.MUSIC -> listOf(MusicGenre.LoFi)
             }
         )
     }

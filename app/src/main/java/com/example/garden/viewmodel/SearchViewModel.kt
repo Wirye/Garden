@@ -1,5 +1,6 @@
 package com.example.garden.viewmodel
 
+import android.icu.text.CaseMap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
@@ -14,6 +15,7 @@ import com.example.garden.repository.artists.ArtistsRepository
 import com.example.garden.repository.objects.ObjectRepository
 import com.example.garden.utils.search.buildFuzzyFtsQuery
 import com.example.garden.utils.toObjectEntity
+import com.github.wirye.anilibriakt.model.Title
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
@@ -78,7 +80,10 @@ class SearchViewModel(
         .distinctUntilChanged()
         .flatMapLatest {
             if (it.isSearching) {
-                artistsRepository.searchArtists(buildFuzzyFtsQuery(it.query.replace(" ", "")), it.allowedTypes)
+                artistsRepository.searchArtists(
+                    buildFuzzyFtsQuery(it.query.replace(" ", "")),
+                    it.allowedTypes
+                )
             } else {
                 flowOf(emptyList())
             }
@@ -90,7 +95,10 @@ class SearchViewModel(
         .distinctUntilChanged()
         .flatMapLatest {
             if (it.isSearching) {
-                objectRepository.searchCards(buildFuzzyFtsQuery(it.query.replace(" ", "")), it.allowedTypes)
+                objectRepository.searchCards(
+                    buildFuzzyFtsQuery(it.query.replace(" ", "")),
+                    it.allowedTypes
+                )
             } else {
                 flowOf(PagingData.empty())
             }
@@ -117,7 +125,14 @@ class SearchViewModel(
 
                     delay(300.milliseconds)
 
-                    objectRepository.globalSearch(query = buildFuzzyFtsQuery(cleanQuery.replace(" ", "")))
+                    objectRepository.globalSearch(
+                        query = buildFuzzyFtsQuery(
+                            cleanQuery.replace(
+                                " ",
+                                ""
+                            )
+                        )
+                    )
                         .collect { list ->
                             if (list.isNotEmpty()) {
                                 emit(ListSearchState.Success(list))
@@ -149,7 +164,10 @@ class SearchViewModel(
                         if (response != null) {
                             response.onSuccess { releases ->
                                 val entities = releases.mapIndexed { index, title ->
-                                    title.toObjectEntity(position = index, sourceType = EntitySourceType.Web)
+                                    title.toObjectEntity(
+                                        position = index,
+                                        sourceType = EntitySourceType.Web
+                                    )
                                 }
                                 if (entities.isNotEmpty()) {
                                     emit(ListSearchState.Success(entities))
@@ -170,4 +188,65 @@ class SearchViewModel(
                 flowOf(ListSearchState.Idle)
             }
         }
+
+    private val searchQueryForLinking = MutableStateFlow(Pair("", false))
+
+    fun linkingSearch(query: String) {
+        searchQueryForLinking.value = Pair(query, true)
+    }
+
+    fun clearLinkingSearch() {
+        searchQueryForLinking.value = Pair("", false)
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val linkingAniLibriaSearchFlow: Flow<ListSearchState> = searchQueryForLinking
+        .flatMapLatest { (query, isEnabled) ->
+            val cleanQuery = query.trim()
+            if (isEnabled && cleanQuery.length >= 3) {
+                flow<ListSearchState> {
+                    emit(ListSearchState.Loading)
+
+                    delay(1500.milliseconds)
+
+                    try {
+                        val response = withTimeoutOrNull(10.seconds) {
+                            AniLibriaClient.search.search(cleanQuery, 15)
+                        }
+
+                        if (response != null) {
+                            response.onSuccess { releases ->
+                                val entities = releases.mapIndexed { index, title ->
+                                    title.toObjectEntity(
+                                        position = index,
+                                        sourceType = EntitySourceType.Web
+                                    )
+                                }
+                                if (entities.isNotEmpty()) {
+                                    emit(ListSearchState.Success(entities))
+                                } else {
+                                    emit(ListSearchState.Empty)
+                                }
+                            }.onFailure {
+                                emit(ListSearchState.Empty)
+                            }
+                        } else {
+                            emit(ListSearchState.Empty)
+                        }
+                    } catch (_: Exception) {
+                        emit(ListSearchState.Empty)
+                    }
+                }
+            } else {
+                flowOf(ListSearchState.Idle)
+            }
+        }
+
+    suspend fun getAniLibriaRelease(id: Long): Result<Title> {
+        val result = withTimeoutOrNull(10.seconds) {
+            AniLibriaClient.releases.getRelease(id)
+        }
+
+        return result ?: Result.failure(Exception())
+    }
 }

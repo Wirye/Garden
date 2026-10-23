@@ -283,6 +283,76 @@ sealed interface Genre : GridGenreItem {
 
     @Parcelize
     @Serializable
+    data object Magic: Genre {
+        @IgnoredOnParcel
+        override val displayNameId = R.string.Magic
+
+        @IgnoredOnParcel
+        override val colorHex = "#1FA2FF"
+    }
+
+    @Parcelize
+    @Serializable
+    data object GirlsLove: Genre {
+        @IgnoredOnParcel
+        override val displayNameId = R.string.GirlsLove
+
+        @IgnoredOnParcel
+        override val colorHex = "#FF1FAD"
+    }
+
+    @Parcelize
+    @Serializable
+    data object Demons: Genre {
+        @IgnoredOnParcel
+        override val displayNameId = R.string.Demons
+
+        @IgnoredOnParcel
+        override val colorHex = "#FF1FAD"
+    }
+
+    @Parcelize
+    @Serializable
+    data object Superpower: Genre {
+        @IgnoredOnParcel
+        override val displayNameId = R.string.Superpower
+
+        @IgnoredOnParcel
+        override val colorHex = "#FF1FAD"
+    }
+
+    @Parcelize
+    @Serializable
+    data object Seinen: Genre {
+        @IgnoredOnParcel
+        override val displayNameId = R.string.Seinen
+
+        @IgnoredOnParcel
+        override val colorHex = "#FF1FAD"
+    }
+
+    @Parcelize
+    @Serializable
+    data object Music: Genre {
+        @IgnoredOnParcel
+        override val displayNameId = R.string.Genre_Music
+
+        @IgnoredOnParcel
+        override val colorHex = "#FF1FAD"
+    }
+
+    @Parcelize
+    @Serializable
+    data object Games: Genre {
+        @IgnoredOnParcel
+        override val displayNameId = R.string.Games
+
+        @IgnoredOnParcel
+        override val colorHex = "#FF1FAD"
+    }
+
+    @Parcelize
+    @Serializable
     data object Isekai : Genre {
         @IgnoredOnParcel
         override val displayNameId = R.string.Isekai
@@ -408,7 +478,7 @@ sealed interface Genre : GridGenreItem {
                 Shonen, ActionMovie, MartialArts, Action, Adventures, Shoujo,
                 Fantasy, Isekai, ScienceFiction, Cyberpunk, Fantastic,
                 Supernatural, PostApocalypse, Detective, Thriller, Horrors,
-                Mysticism, Etty, Harem
+                Mysticism, Etty, Harem, Magic, GirlsLove, Demons, Superpower, Seinen, Music, Games
             )
         }
     }
@@ -782,11 +852,25 @@ data class ResolvedObjectEntity(
 
 @Serializable
 @Parcelize
+data class VoiceInfo(
+    val name: String,              // "AniLibria", "Dream Cast", "Неизвестно"
+    val isAniLibria: Boolean
+) : Parcelable
+
+@Serializable
+@Parcelize
+data class EpisodeVariant(
+    val voice: VoiceInfo,
+    val link: LinkData
+) : Parcelable
+
+@Serializable
+@Parcelize
 data class EpisodeInfo(
     val position: Int,
     val name: String,
     val preview: ImageData,
-    val link: LinkData
+    val variants: List<EpisodeVariant>
 ) : Parcelable
 
 @Serializable
@@ -801,6 +885,13 @@ data class ChapterInfo(
 @Parcelize
 data class ChapterPageInfo(
     val position: Int,
+    val variants: List<ChapterPageVariant>
+) : Parcelable
+
+@Serializable
+@Parcelize
+data class ChapterPageVariant(
+    val language: String,
     val content: ImageData
 ) : Parcelable
 
@@ -972,7 +1063,7 @@ sealed interface ObjectData {
             override val genre: List<GridGenreItem> = emptyList(),
             val description: String = "",
             val chaptersList: List<ChapterInfo> = emptyList(),
-            val mangadexCardId: Long? = null
+            val mangadexCardId: String? = null
         ) : Card {
             override fun injectLocalObjectEntityData(entity: ObjectEntity): ObjectData {
                 return copy(
@@ -1017,7 +1108,7 @@ sealed interface ObjectData {
             val authors: List<String> = emptyList(),
             val song: LinkData? = null,
             val horizontalVideo: LinkData? = null,
-            val musicBrainzCardId: Long? = null
+            val musicBrainzCardId: String? = null
         ) : Card {
             override fun injectLocalObjectEntityData(entity: ObjectEntity): ObjectData {
                 return copy(
@@ -1060,7 +1151,7 @@ sealed interface ObjectData {
             override val image: ImageData,
             override val genre: List<GridGenreItem> = emptyList(),
             val artistType: ArtistType,
-            val musicBrainzCardId: Long? = null
+            val musicBrainzCardId: String? = null
         ) : Card {
             override fun injectLocalObjectEntityData(entity: ObjectEntity): ObjectData {
                 return copy(
@@ -1104,7 +1195,8 @@ sealed interface ObjectData {
             override val genre: List<GridGenreItem> = emptyList(),
             val isSingle: Boolean = false,
             val songs: List<Long> = emptyList(),
-            val musicBrainzCardId: Long? = null
+            val musicBrainzCardId: String? = null,
+            val authors: List<String> = emptyList()
         ) : Card {
             override fun injectLocalObjectEntityData(entity: ObjectEntity): ObjectData {
                 return copy(

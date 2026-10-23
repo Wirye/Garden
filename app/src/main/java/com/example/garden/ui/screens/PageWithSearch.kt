@@ -1,10 +1,9 @@
 package com.example.garden.ui.screens
 
-import android.annotation.SuppressLint
 import android.os.Parcelable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,12 +23,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -39,6 +40,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -69,24 +71,31 @@ import com.example.garden.Layer
 import com.example.garden.R
 import com.example.garden.ResultKeys
 import com.example.garden.database.entities.ImageData
-import com.example.garden.database.entities.LinkData
-import com.example.garden.ui.components.AsyncImageWithAddPlaceholder
+import com.example.garden.database.entities.VoiceInfo
 import com.example.garden.ui.components.CloseButton
 import com.example.garden.ui.components.DropDownMenuWithBlur
+import com.example.garden.ui.components.EpisodeDraft
+import com.example.garden.ui.components.EpisodeRow
+import com.example.garden.ui.components.PickedFile
 import com.example.garden.ui.components.PopupMenuItem
-import com.example.garden.ui.components.SmartFilePicker
+import com.example.garden.ui.components.addEpisodeFiles
+import com.example.garden.ui.components.addVariants
+import com.example.garden.ui.components.displayName
+import com.example.garden.ui.components.duplicatedEpisodeNumbers
+import com.example.garden.ui.components.episodesAreValid
 import com.example.garden.ui.components.icons.AddIco
-import com.example.garden.ui.components.icons.DeleteIco
-import com.example.garden.ui.components.icons.DragHandleIco
-import com.example.garden.ui.components.icons.EditIco
 import com.example.garden.ui.components.icons.MoreVertIco
 import com.example.garden.ui.components.icons.SearchIco
-import com.example.garden.ui.components.rememberFilePicker
+import com.example.garden.ui.components.newDraftId
+import com.example.garden.ui.components.rememberMultipleFilesPicker
+import com.example.garden.ui.components.removeVariant
+import com.example.garden.ui.components.setVoice
+import com.example.garden.ui.components.sortEpisodesByNumber
+import com.example.garden.ui.components.updateEpisode
 import com.example.garden.ui.theme.dimens
 import com.example.garden.ui.theme.spacing
 import com.example.garden.ui.utils.blockGestures
 import com.example.garden.ui.utils.clearFocus
-import com.example.garden.ui.utils.dataForModel
 import com.example.garden.utils.getMediaDuration
 import com.example.garden.utils.search.searchInList
 import com.example.garden.viewmodel.LayersViewModel
@@ -98,6 +107,7 @@ import kotlinx.coroutines.launch
 import kotlinx.parcelize.Parcelize
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
+import java.util.Locale
 
 @Composable
 fun PageWithSearch(
@@ -108,136 +118,130 @@ fun PageWithSearch(
 ) {
     val haptic = LocalHapticFeedback.current
     val keyboardController = LocalSoftwareKeyboardController.current
-
-    val input = remember(layer.startsInfo) { layer.startsInfo }
-
     val focusManager = LocalFocusManager.current
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
 
-    val forSaveInLayer: (List<PageWithSearchItem>) -> Unit = remember(layer) {
-        {
-            layer.startsInfo.items = it
-        }
-    }
+    val input = remember { layer.startsInfo }
+    val kind = remember { EditorKind.of(input.initType) }
 
-    val currentPendingKeys = remember { mutableListOf<Pair<Long, String>>() }
-
-    val onEditChilds: ((PageWithSearchItem) -> Unit) = remember(resultSenderViewModel) {
-        {
-            val childs = it.childs
-            if (childs != null) {
-                val key = ResultKeys.getPageWithEditSearchKey()
-                currentPendingKeys.add(Pair(it.id, key))
-                layersViewModel.openLayer(
-                    Layer.PageWithSearch(
-                        key = key,
-                        startsInfo = PageWithSearchInput(
-                            items = childs,
-                            initType = when (it.javaClass) {
-                                ChapterInfo::class.java -> PageWithSearchItemsDefaults.BaseChapterPage
-                                else -> PageWithSearchItemsDefaults.BaseChapterPage
-                            }
-                        )
-                    )
-                )
-            }
-        }
-    }
-
-    val inputList = remember(input.items) {
+    val inputList = remember {
         input.items
-            .filter { it.javaClass == input.initType.javaClass }
+            .filter { kind.accepts(it) }
             .toMutableStateList()
     }
 
     LaunchedEffect(inputList) {
-        forSaveInLayer(inputList)
+        snapshotFlow { inputList.toList() }
+            .distinctUntilChanged()
+            .collect { layer.startsInfo.items = it }
     }
 
-    val type = remember(input.initType) {
-        when (input.initType) {
-            is EpisodeInfo -> arrayOf("video/*")
-            is ChapterPageInfo -> arrayOf("image/*")
-            else -> arrayOf("image/*")
-        }
-    }
+    // ── вложенное редактирование страниц главы ──────────────────────────────
+    val pendingKeys =
+        remember { mutableListOf<Pair<Long, String>>() }   // (id главы, ключ результата)
 
-    val coroutineScope = rememberCoroutineScope()
-
-    val context = LocalContext.current
-
-    val addItemFilePicker = rememberFilePicker(
-        mimeTypes = type
-    ) { uri ->
-        if (uri != null) {
-            coroutineScope.launch {
-                when (input.initType.javaClass) {
-                    EpisodeInfo::class.java -> inputList.add(
-                        EpisodeInfo(
-                            id = generateNewChapterId(),
-                            name = "",
-                            link = LinkData.Device(path = uri.toString()),
-                            length = context.getMediaDuration(uri.toString()),
-                            image = null
-                        )
-                    )
-
-                    ChapterPageInfo::class.java -> inputList.add(
-                        ChapterPageInfo(
-                            id = generateNewChapterId(),
-                            image = ImageData.Device(uri.toString()),
-                            name = null
-                        )
-                    )
-
-                    ChapterInfo::class.java -> inputList.add(
-                        ChapterInfo(
-                            id = generateNewChapterId(),
-                            name = "",
-                            link = LinkData.Self,
-                            childs = mutableListOf()
-                        )
-                    )
-
-                    else -> {}
-                }
-            }
-        }
-    }
-
-    val onAddItem = {
-        if (input.initType !is ChapterInfo) {
-            addItemFilePicker()
-        } else {
-            inputList.add(
-                ChapterInfo(
-                    id = generateNewChapterId(),
-                    name = "",
-                    link = LinkData.Self,
-                    childs = mutableListOf(),
-                    length = null,
-                    image = null
+    val onEditChapterPages: (ChapterDraft) -> Unit = { chapter ->
+        val key = ResultKeys.getPageWithEditSearchKey()
+        pendingKeys.add(chapter.id to key)
+        layersViewModel.openLayer(
+            Layer.PageWithSearch(
+                key = key,
+                startsInfo = PageWithSearchInput(
+                    items = chapter.pages,
+                    initType = PageDraft.Empty
                 )
             )
+        )
+    }
+
+    var lastVoice by rememberSaveable { mutableStateOf(VoiceInfo(name = "", isAniLibria = false)) }
+    var pendingEpisodeId by rememberSaveable { mutableStateOf<Long?>(null) }   // null = новые эпизоды
+
+    val pickVideos = rememberMultipleFilesPicker(arrayOf("video/*")) { uris ->
+        coroutineScope.launch {
+            val files = uris.map {
+                PickedFile(
+                    it.toString(),
+                    context.displayName(it),
+                    context.getMediaDuration(it.toString())
+                )
+            }
+            val target = pendingEpisodeId
+            if (target == null) inputList.addEpisodeFiles(files, lastVoice)
+            else inputList.addVariants(target, files, lastVoice)
+            pendingEpisodeId = null
         }
     }
 
-    val firstVisibleItem = { layer.firstElementPosition }
-    val searchState = rememberTextFieldState(initialText = "")
-    val listState = rememberLazyListState(initialFirstVisibleItemIndex = firstVisibleItem())
+    var addedLanguages by rememberSaveable { mutableStateOf(listOf<String>()) }
+    var selectedLanguage by rememberSaveable { mutableStateOf<String?>(null) }
+    var isAddLanguageDialogShown by rememberSaveable { mutableStateOf(false) }
 
-    LaunchedEffect(inputList) {
-        snapshotFlow { inputList.toList() }
-            .collect { updatedList ->
-                forSaveInLayer(updatedList)
-            }
+    val pageLanguages by remember {
+        derivedStateOf {
+            val existing = inputList.filterIsInstance<PageDraft>()
+                .flatMap { page -> page.variants.map { it.language } }
+            (existing.ifEmpty { listOf(Locale.getDefault().language) } + addedLanguages).distinct()
+        }
     }
+    val language = selectedLanguage?.takeIf { it in pageLanguages } ?: pageLanguages.first()
+
+    val pickImages = rememberMultipleFilesPicker(arrayOf("image/*")) { uris ->
+        val images = uris
+            .map { it to context.displayName(it) }
+            .sortedWith { a, b -> naturalCompare(a.second, b.second) }
+            .map { ImageData.Device(it.first.toString()) }
+        inputList.addPageImages(images, language)
+    }
+
+    val onAddItem: () -> Unit = {
+        when (kind) {
+            EditorKind.Episodes -> {
+                pendingEpisodeId = null
+                pickVideos()
+            }
+
+            EditorKind.Chapters -> inputList.addChapter()
+            EditorKind.Pages -> pickImages()
+        }
+    }
+
+    val duplicates by remember(inputList) {
+        derivedStateOf {
+            when (kind) {
+                EditorKind.Episodes -> inputList.duplicatedEpisodeNumbers()
+                EditorKind.Chapters -> inputList.duplicatedChapterNumbers()
+                EditorKind.Pages -> emptySet()
+            }
+        }
+    }
+    val canSave by remember(inputList) {
+        derivedStateOf {
+            when (kind) {
+                EditorKind.Episodes -> inputList.episodesAreValid()
+                EditorKind.Chapters -> inputList.chaptersAreValid()
+                EditorKind.Pages -> true
+            }
+        }
+    }
+
+    val searchState = rememberTextFieldState(initialText = "")
+    val listState = rememberLazyListState(initialFirstVisibleItemIndex = 0)
 
     val reorderableState = rememberReorderableLazyListState(
         listState,
         PaddingValues(0.dp)
     ) { from, to ->
-        inputList.add(to.index - 3, inputList.removeAt(from.index - 3))
+        val fromIndex = inputList.indexOfFirst { it.id == from.key }
+        val toIndex = inputList.indexOfFirst { it.id == to.key }
+        if (fromIndex != -1 && toIndex != -1) {
+            inputList.add(toIndex, inputList.removeAt(fromIndex))
+        }
     }
+
+    val headerItemCount =
+        if (kind == EditorKind.Pages) 4 else 3   // topBarSpacer, topBarText, [languageBar], spacer
 
     val density = LocalDensity.current
     val topInset = with(density) { WindowInsets.safeDrawing.getTop(density).toDp() }
@@ -249,33 +253,39 @@ fun PageWithSearch(
         WindowInsets.safeDrawing.getRight(density, LocalLayoutDirection.current).toDp()
     }
 
+    // Поиск: число прыгает на эпизод/главу/страницу с таким номером, текст ищется по названию
     val searchText = searchState.text.toString()
+    val minButtonHeight = MaterialTheme.dimens.minButtonHeight
     LaunchedEffect(searchText) {
         if (searchText.isNotEmpty()) {
-            val names = inputList.mapNotNull { it.name }
-            val searchResults = searchInList(names, searchText, minScore = 50)
-            if (searchResults.isNotEmpty()) {
-                val matchedName = searchResults.first()
-                val targetIndex = inputList.indexOfFirst { it.name == matchedName }
-                if (targetIndex != -1) {
-                    listState.animateScrollToItem(
-                        index = targetIndex,
-                        scrollOffset = -20
-                    )
+            val number = searchText.trim().toIntOrNull()
+            val targetIndex = when {
+                number != null && kind == EditorKind.Pages -> number - 1
+                number != null -> inputList.indexOfFirst {
+                    (it as? EpisodeDraft)?.number == number || (it as? ChapterDraft)?.number == number
                 }
+
+                else -> {
+                    val names = inputList.mapNotNull { it.name }.filter { it.isNotEmpty() }
+                    searchInList(names, searchText, minScore = 50).firstOrNull()
+                        ?.let { matched -> inputList.indexOfFirst { it.name == matched } }
+                        ?: -1
+                }
+            } + headerItemCount
+            coroutineScope.launch {
+                listState.requestScrollToItem(
+                    index = targetIndex,
+                    scrollOffset = -with(density) { (minButtonHeight * 2f + topInset).toPx() }.toInt()
+                )
             }
         }
     }
 
     LaunchedEffect(listState) {
-        snapshotFlow {
-            val firstVisibleItem = listState.layoutInfo.visibleItemsInfo.firstOrNull()
-            firstVisibleItem?.index
-        }.distinctUntilChanged()
+        snapshotFlow { listState.layoutInfo.visibleItemsInfo.firstOrNull()?.index }
+            .distinctUntilChanged()
             .filterNotNull()
-            .collect { holderIndex ->
-                layer.firstElementPosition = holderIndex
-            }
+            .collect { layer.firstElementPosition = it }
     }
 
     Box(
@@ -285,10 +295,7 @@ fun PageWithSearch(
             .blockGestures()
             .clearFocus(focusManager)
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-        ) {
+        Box(modifier = Modifier.fillMaxSize()) {
             LazyColumn(
                 state = listState,
                 modifier = Modifier
@@ -321,9 +328,10 @@ fun PageWithSearch(
                         )
 
                         OutlinedTextField(
-                            state = searchState,
+                            state = rememberTextFieldState(initialText = ""),
                             modifier = Modifier
-                                .weight(1f),
+                                .weight(1f)
+                                .visible(false),
                             shape = CircleShape,
                             colors = OutlinedTextFieldDefaults.colors(
                                 unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(
@@ -366,6 +374,44 @@ fun PageWithSearch(
                     }
                 }
 
+                if (kind == EditorKind.Pages) {
+                    item("languageBar") {
+                        Column {
+                            Spacer(modifier = Modifier.height(MaterialTheme.spacing.small))
+
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                pageLanguages.forEach { language ->
+                                    FilterChip(
+                                        selected = language == selectedLanguage,
+                                        onClick = { selectedLanguage = language },
+                                        label = { Text(language.uppercase()) }
+                                    )
+                                }
+                                FilterChip(
+                                    selected = false,
+                                    onClick = {
+                                        focusManager.clearFocus()
+                                        isAddLanguageDialogShown = true
+                                    },
+                                    label = {
+                                        Icon(
+                                            imageVector = AddIco,
+                                            contentDescription = stringResource(R.string.languageAdd),
+                                            modifier = Modifier.size(MaterialTheme.dimens.iconMedium)
+                                        )
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+
                 item("spacer") {
                     Spacer(
                         modifier = Modifier
@@ -378,9 +424,9 @@ fun PageWithSearch(
                     items = inputList,
                     key = { _, item -> item.id }
                 ) { index, item ->
-                    val useHolderIndex = item is ChapterInfo
-
-                    ReorderableItem(reorderableState, key = item.id) { isDragging ->
+                    ReorderableItem(
+                        reorderableState, key = item.id
+                    ) { isDragging ->
                         Surface(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -397,39 +443,107 @@ fun PageWithSearch(
                             color = MaterialTheme.colorScheme.surfaceContainerHigh,
                             shadowElevation = if (isDragging) MaterialTheme.dimens.shadowElevation else 0.dp
                         ) {
-                            PageWithSearchItem(
-                                item = item,
-                                holderIndex = index + 1,
-                                useHolderIndexInsteadOfImage = useHolderIndex,
-                                onNameChange = { newName ->
-                                    inputList[index] = item.copyWithName(newName)
-                                },
-                                onImageChange = { newImage ->
-                                    inputList[index] = item.copyWithImage(newImage)
-                                },
-                                onDelete = {
-                                    inputList.removeAt(index)
-                                },
-                                onEdit = {
-                                    onEditChilds(item)
-                                },
-                                dragModifier = Modifier.draggableHandle(
-                                    onDragStarted = { focusManager.clearFocus() }
+                            when (item) {
+                                is EpisodeDraft -> EpisodeRow(
+                                    item = item,
+                                    hasNumberError = item.number == null || item.number in (inputList - listOf(
+                                        item
+                                    ).toSet()).filterIsInstance<EpisodeDraft>().map { it.number },
+                                    onNumberChange = { n ->
+                                        inputList.updateEpisode(item.id) {
+                                            it.copy(
+                                                number = n
+                                            )
+                                        }
+                                    },
+                                    onNumberCommit = { inputList.sortEpisodesByNumber() },
+                                    onNameChange = { n ->
+                                        inputList.updateEpisode(item.id) {
+                                            it.copy(
+                                                name = n
+                                            )
+                                        }
+                                    },
+                                    onPreviewChange = { p ->
+                                        inputList.updateEpisode(item.id) {
+                                            it.copy(
+                                                image = p
+                                            )
+                                        }
+                                    },
+                                    onVoiceChange = { variantId, voice ->
+                                        inputList.setVoice(item.id, variantId, voice)
+                                        lastVoice = voice
+                                    },
+                                    onDeleteVariant = { variantId ->
+                                        inputList.removeVariant(
+                                            item.id,
+                                            variantId
+                                        )
+                                    },
+                                    onAddVariant = {
+                                        pendingEpisodeId = item.id
+                                        pickVideos()
+                                    },
+                                    onDelete = { inputList.removeAll { it.id == item.id } }
                                 )
-                            )
+
+                                is ChapterDraft -> ChapterRow(
+                                    item = item,
+                                    hasNumberError = item.number == null || item.number in duplicates,
+                                    onNumberChange = { n ->
+                                        inputList.updateChapter(item.id) {
+                                            it.copy(
+                                                number = n
+                                            )
+                                        }
+                                    },
+                                    onNumberCommit = { inputList.sortChaptersByNumber() },
+                                    onNameChange = { n ->
+                                        inputList.updateChapter(item.id) {
+                                            it.copy(
+                                                name = n
+                                            )
+                                        }
+                                    },
+                                    onEditPages = { onEditChapterPages(item) },
+                                    onDelete = { inputList.removeAll { it.id == item.id } }
+                                )
+
+                                is PageDraft -> {
+                                    PageRow(
+                                        page = item,
+                                        position = index + 1,
+                                        language = language,
+                                        onImageChange = { image ->
+                                            inputList.setPageImage(
+                                                item.id,
+                                                language,
+                                                image
+                                            )
+                                        },
+                                        onDelete = { inputList.removeAll { it.id == item.id } },
+                                        dragModifier = Modifier.draggableHandle(
+                                            onDragStarted = { focusManager.clearFocus() }
+                                        )
+                                    )
+                                }
+
+                                else -> Unit
+                            }
                         }
                     }
 
-                    Spacer(modifier = Modifier
-                        .fillMaxWidth()
-                        .height(MaterialTheme.spacing.small))
+                    Spacer(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(MaterialTheme.spacing.small)
+                    )
                 }
 
                 if (inputList.isEmpty()) {
                     item("nothingIsHereText") {
-                        Box(
-                            modifier = Modifier.fillParentMaxSize(),
-                        ) {
+                        Box(modifier = Modifier.fillParentMaxSize()) {
                             Text(
                                 text = stringResource(R.string.nothingIsHere),
                                 style = MaterialTheme.typography.titleLarge,
@@ -463,14 +577,13 @@ fun PageWithSearch(
             )
 
             OutlinedTextField(
-                state = rememberTextFieldState(),
+                state = searchState,
                 modifier = Modifier
-                    .weight(1f)
-                    .visible(false),
+                    .weight(1f),
                 shape = CircleShape,
                 colors = OutlinedTextFieldDefaults.colors(
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0f),
-                    focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0f),
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
                     focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                     unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh
                 ),
@@ -511,7 +624,7 @@ fun PageWithSearch(
 
                 DropDownMenuWithBlur(
                     expanded = { isExtraOptionsExpanded },
-                    hazeState = LocalHazeLayers.current.mainScreen,
+                    hazeState = LocalHazeStates.current.hazeStates[LocalLayerIndex.current],
                     onDismissRequest = { isExtraOptionsExpanded = false }
                 ) {
                     PopupMenuItem(
@@ -521,7 +634,6 @@ fun PageWithSearch(
                     )
                 }
             }
-
         }
 
         Box(
@@ -576,14 +688,19 @@ fun PageWithSearch(
                     onClick = {
                         focusManager.clearFocus()
                         haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                        when (kind) {
+                            EditorKind.Episodes -> inputList.sortEpisodesByNumber()
+                            EditorKind.Chapters -> inputList.sortChaptersByNumber()
+                            EditorKind.Pages -> Unit
+                        }
                         resultSenderViewModel.sendResult(
                             requestKey = layer.key,
-                            data = PageWithSearchSaveOutput(inputList)
+                            data = PageWithSearchSaveOutput(inputList.toList())
                         )
                         onClose()
                     },
-                    modifier = Modifier
-                        .fillMaxWidth(),
+                    enabled = canSave,
+                    modifier = Modifier.fillMaxWidth(),
                     shape = CircleShape,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary,
@@ -592,36 +709,37 @@ fun PageWithSearch(
                 ) {
                     Text(
                         text = stringResource(R.string.Save),
-                        style = MaterialTheme.typography.labelLarge,
-                        modifier = Modifier.padding(vertical = MaterialTheme.spacing.small)
+                        style = MaterialTheme.typography.labelLarge
                     )
                 }
             }
         }
     }
 
-    val lifecycleOwner = LocalLifecycleOwner.current
+    if (isAddLanguageDialogShown) {
+        AddLanguageDialog(
+            onDismiss = { isAddLanguageDialogShown = false },
+            onConfirm = { code ->
+                addedLanguages = (addedLanguages + code).distinct()
+                selectedLanguage = code
+                isAddLanguageDialogShown = false
+            }
+        )
+    }
 
+    // Результат вложенного редактора страниц возвращается в главу
+    val lifecycleOwner = LocalLifecycleOwner.current
     LaunchedEffect(resultSenderViewModel.results, lifecycleOwner) {
         lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
             resultSenderViewModel.results.collect { (key, data) ->
-                if (key in currentPendingKeys.map { it.second }) {
-                    val newData = data as? PageWithSearchSaveOutput
+                val pendingIndex = pendingKeys.indexOfFirst { it.second == key }
+                if (pendingIndex == -1) return@collect
 
-                    val index = currentPendingKeys.indexOfFirst { it.second == key }
-
-                    if (newData != null && index != -1) {
-                        val keyItem = currentPendingKeys[index]
-                        val inputListItemIndex = inputList.indexOfFirst { it.id == keyItem.first }
-                        if (inputListItemIndex != -1) {
-                            inputList[inputListItemIndex] =
-                                inputList[inputListItemIndex].copyWithChilds(newData.items.toMutableList())
-                            forSaveInLayer(inputList)
-                        }
-                    }
-
-                    if (index != -1) {
-                        currentPendingKeys.removeAt(index)
+                val chapterId = pendingKeys.removeAt(pendingIndex).first
+                val output = data as? PageWithSearchSaveOutput
+                if (output != null) {
+                    inputList.updateChapter(chapterId) {
+                        it.copy(pages = output.items.filterIsInstance<PageDraft>())
                     }
                 }
             }
@@ -629,246 +747,47 @@ fun PageWithSearch(
     }
 }
 
-@Composable
-private fun PageWithSearchItem(
-    @SuppressLint("ModifierParameter") dragModifier: Modifier = Modifier,
-    item: PageWithSearchItem,
-    holderIndex: Int,
-    useHolderIndexInsteadOfImage: Boolean,
-    onNameChange: (String) -> Unit,
-    onImageChange: (ImageData) -> Unit?,
-    onDelete: () -> Unit,
-    onEdit: () -> Unit,
-) {
-    val haptic = LocalHapticFeedback.current
+private enum class EditorKind {
+    Episodes, Chapters, Pages;
 
-    val nameState = rememberTextFieldState(initialText = item.name ?: "")
-
-    LaunchedEffect(nameState.text) {
-        if (nameState.text.toString() != item.name && item.name != null) {
-            onNameChange(nameState.text.toString())
-        }
+    fun accepts(item: PageWithSearchItem) = when (this) {
+        Episodes -> item is EpisodeDraft
+        Chapters -> item is ChapterDraft
+        Pages -> item is PageDraft
     }
 
-    val image = remember(item.image) { mutableStateOf(item.image) }
-
-    val isImageChangeDialogExpanded = remember { mutableStateOf(false) }
-
-    val openImagePicker = rememberFilePicker(
-        mimeTypes = arrayOf("image/*")
-    ) { uri ->
-        if (uri != null) {
-            val newImage = ImageData.Device(uri.toString())
-            image.value = newImage
-            onImageChange(newImage)
-        }
-    }
-
-    SmartFilePicker(
-        expanded = isImageChangeDialogExpanded.value,
-        onDismiss = { isImageChangeDialogExpanded.value = false },
-        onFileDelete = {
-            isImageChangeDialogExpanded.value = false
-        },
-        onFileChange = {
-            isImageChangeDialogExpanded.value = false
-            openImagePicker()
-        },
-        hazeState = LocalHazeLayers.current.mainScreen
-    )
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(MaterialTheme.spacing.medium),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium),
-            modifier = Modifier.weight(1f, fill = true)
-        ) {
-            if (useHolderIndexInsteadOfImage) {
-                Text(
-                    text = "#$holderIndex",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            } else {
-                AsyncImageWithAddPlaceholder(
-                    model = image.value?.dataForModel(),
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clickable(onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
-                            isImageChangeDialogExpanded.value = true
-                        }),
-                    shape = MaterialTheme.shapes.small
-                )
-            }
-
-            if (item.name != null) {
-                OutlinedTextField(
-                    state = nameState,
-                    modifier = Modifier.weight(1f),
-                    shape = MaterialTheme.shapes.small,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer
-                    ),
-                    textStyle = MaterialTheme.typography.bodyMedium.copy(
-                        color = MaterialTheme.colorScheme.onSurface
-                    ),
-                    lineLimits = TextFieldLineLimits.SingleLine,
-                    placeholder = {
-                        Text(
-                            text = stringResource(R.string.title),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                )
-            }
-        }
-
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.extraSmall)
-        ) {
-            if (item.childs != null) {
-                IconButton(onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
-                    onEdit()
-                }) {
-                    Icon(
-                        imageVector = EditIco,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(MaterialTheme.dimens.iconMedium)
-                    )
-                }
-            }
-
-            Icon(
-                imageVector = DragHandleIco,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = dragModifier
-                    .padding(MaterialTheme.spacing.small)
-                    .size(MaterialTheme.dimens.iconMedium)
-            )
-
-            IconButton(onClick = {
-                haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
-                onDelete()
-            }) {
-                Icon(
-                    imageVector = DeleteIco,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.size(MaterialTheme.dimens.iconMedium)
-                )
-            }
+    companion object {
+        fun of(initType: PageWithSearchItem) = when (initType) {
+            is EpisodeDraft -> Episodes
+            is ChapterDraft -> Chapters
+            else -> Pages
         }
     }
 }
-
 
 @Parcelize
 data class PageWithSearchInput(
     var items: List<PageWithSearchItem>,
-    val initType: PageWithSearchItem  // This element will not be displayed in the list
+    val initType: PageWithSearchItem  // Этот элемент в списке не отображается
 ) : Parcelable
 
+/**
+ * Всё, кроме id, необязательно: конкретные типы (EpisodeDraft, ChapterDraft, PageDraft)
+ * переопределяют только то, что им нужно.
+ */
 interface PageWithSearchItem : Parcelable {
     val id: Long
-    val name: String?
-    val link: LinkData?
-    val length: Long?
-    val image: ImageData?
-    val childs: MutableList<PageWithSearchItem>?
-    fun copyWithName(newName: String): PageWithSearchItem
-    fun copyWithImage(newImage: ImageData?): PageWithSearchItem
-    fun copyWithChilds(newChilds: MutableList<PageWithSearchItem>?): PageWithSearchItem
+    val name: String? get() = null
+    val image: ImageData? get() = null
+    fun copyWithName(newName: String): PageWithSearchItem = this
+    fun copyWithImage(newImage: ImageData?): PageWithSearchItem = this
 }
 
-private var episodeId = 0L
-fun generateNewChapterId(): Long {
-    val res = episodeId
-    episodeId += 1L
-    return res
-}
-
-@Parcelize
-data class EpisodeInfo(
-    override val id: Long,
-    override val image: ImageData?,
-    override val name: String,
-    override val link: LinkData,
-    override val length: Long,
-    override val childs: MutableList<PageWithSearchItem>? = null,
-) : PageWithSearchItem {
-    override fun copyWithName(newName: String) = copy(name = newName)
-    override fun copyWithImage(newImage: ImageData?) = copy(image = newImage)
-    override fun copyWithChilds(newChilds: MutableList<PageWithSearchItem>?) = copy()
-}
-
-@Parcelize
-data class ChapterInfo(
-    override val id: Long,
-    override val image: ImageData? = null,
-    override val name: String,
-    override val link: LinkData,
-    override val length: Long? = null,
-    override val childs: MutableList<PageWithSearchItem>,
-) : PageWithSearchItem {
-    override fun copyWithName(newName: String) = copy(name = newName)
-    override fun copyWithImage(newImage: ImageData?) = copy()
-    override fun copyWithChilds(newChilds: MutableList<PageWithSearchItem>?) =
-        copy(childs = newChilds ?: mutableListOf())
-}
-
-@Parcelize
-data class ChapterPageInfo(
-    override val id: Long,
-    override val image: ImageData,
-    override val name: String? = null,
-    override val link: LinkData? = null,
-    override val length: Long? = null,
-    override val childs: MutableList<PageWithSearchItem>? = null,
-) : PageWithSearchItem {
-    override fun copyWithName(newName: String) = copy(name = newName)
-    override fun copyWithImage(newImage: ImageData?) = copy(
-        image = newImage ?: ImageData.Device("")
-    )
-
-    override fun copyWithChilds(newChilds: MutableList<PageWithSearchItem>?) = copy()
-}
+@Deprecated("Используй newDraftId()", ReplaceWith("newDraftId()"))
+fun generateNewChapterId(): Long = newDraftId()
 
 object PageWithSearchItemsDefaults {
-    val BaseChapter = ChapterInfo(
-        id = 0L,
-        name = "",
-        link = LinkData.Self,
-        childs = mutableListOf()
-    )
-
-    val BaseEpisode = EpisodeInfo(
-        id = 0L,
-        name = "",
-        link = LinkData.Device(""),
-        length = 0L,
-        image = null
-    )
-
-    val BaseChapterPage = ChapterPageInfo(
-        id = 0L,
-        name = null,
-        image = ImageData.Device(""),
-        link = null,
-        length = null
-    )
+    val BaseChapter = ChapterDraft.Empty
+    val BaseEpisode = EpisodeDraft.Empty
+    val BaseChapterPage = PageDraft.Empty
 }

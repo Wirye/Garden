@@ -58,6 +58,7 @@ import com.example.garden.database.entities.ImageData
 import com.example.garden.database.entities.SavedIcons
 import com.example.garden.ui.components.AppAsyncImage
 import com.example.garden.ui.components.CloseButton
+import com.example.garden.ui.components.DialogWithChoice
 import com.example.garden.ui.components.SettingsBlock
 import com.example.garden.ui.components.icons.LoginIco
 import com.example.garden.ui.components.icons.LogoutIco
@@ -264,9 +265,11 @@ fun AppSettings(
                                     ) {
                                         var isLogoutAskExpanded by remember { mutableStateOf(false) }
                                         if (isLogoutAskExpanded) {
-                                            ConfirmLogoutDialog(
+                                            DialogWithChoice(
                                                 title = stringResource(R.string.LogoutFromAniLibria),
                                                 message = stringResource(R.string.PersonalizedContentWillBecomeUnavailable),
+                                                confirmButtonTitle = stringResource(R.string.Logout),
+                                                dismissButtonTitle = stringResource(R.string.Cancel),
                                                 onConfirm = {
                                                     isLogoutAskExpanded = false
                                                     authViewModel.logoutAniLiberty()
@@ -381,44 +384,4 @@ fun AppSettings(
             }
         }
     }
-}
-
-@Composable
-fun ConfirmLogoutDialog(
-    title: String,
-    message: String,
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit
-) {
-    val haptic = LocalHapticFeedback.current
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(text = title)
-        },
-        text = {
-            Text(text = message)
-        },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
-                    onConfirm()
-                }
-            ) {
-                Text(text = stringResource(R.string.Logout))
-            }
-        },
-        dismissButton = {
-            TextButton(
-                onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
-                    onDismiss()
-                }
-            ) {
-                Text(text = stringResource(R.string.Cancel))
-            }
-        }
-    )
 }

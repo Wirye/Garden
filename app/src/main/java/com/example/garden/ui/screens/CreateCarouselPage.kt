@@ -729,13 +729,6 @@ fun CreateCarouselPage(
                                                                                     isIcoChangeDialogExpanded.value =
                                                                                         true
                                                                                 }
-                                                                            )
-                                                                            .hazeSource(
-                                                                                LocalHazeLayers.current.mainScreen
-                                                                            )
-                                                                            .hazeSourcesForUpperLayers(
-                                                                                LocalHazeStates.current.hazeStates,
-                                                                                LocalLayerIndex.current
                                                                             ),
                                                                         shape = shape,
                                                                         model = stateViewModel.state.ico?.dataForModel()

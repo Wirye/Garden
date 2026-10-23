@@ -37,11 +37,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -78,7 +80,10 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.max
@@ -95,26 +100,32 @@ import com.example.garden.ResultKeys
 import com.example.garden.database.entities.ArtistType
 import com.example.garden.database.entities.CardSize
 import com.example.garden.database.entities.ElementType
+import com.example.garden.database.entities.EntitySourceType
 import com.example.garden.database.entities.ImageData
 import com.example.garden.database.entities.LinkData
 import com.example.garden.database.entities.ObjectData
 import com.example.garden.database.entities.PlayListType
 import com.example.garden.ui.components.AsyncImageWithAddPlaceholder
 import com.example.garden.ui.components.CardChoice
+import com.example.garden.ui.components.CardPreview
 import com.example.garden.ui.components.CloseButton
+import com.example.garden.ui.components.DialogWithChoice
 import com.example.garden.ui.components.DropDownMenuWithBlur
+import com.example.garden.ui.components.EpisodeDraft
 import com.example.garden.ui.components.GenreEditor
 import com.example.garden.ui.components.GenreEditorGenresType
 import com.example.garden.ui.components.PopupMenuItem
 import com.example.garden.ui.components.SelectableDropDownMenuWithBlur
+import com.example.garden.ui.components.ShapesLoadingIndicator
 import com.example.garden.ui.components.SmartFilePicker
 import com.example.garden.ui.components.icons.AddIco
 import com.example.garden.ui.components.icons.ChevronForward
-import com.example.garden.ui.components.icons.DownloadIco2
 import com.example.garden.ui.components.icons.EditIco
+import com.example.garden.ui.components.icons.LinkIco
 import com.example.garden.ui.components.icons.MoreVertIco
 import com.example.garden.ui.components.icons.PauseIco
 import com.example.garden.ui.components.icons.PlayArrowFilledIco
+import com.example.garden.ui.components.icons.SearchIco
 import com.example.garden.ui.components.rememberFilePicker
 import com.example.garden.ui.theme.dimens
 import com.example.garden.ui.theme.spacing
@@ -128,19 +139,21 @@ import com.example.garden.ui.utils.dataForModel
 import com.example.garden.ui.utils.getAspectRatio
 import com.example.garden.ui.utils.getCardWidth
 import com.example.garden.ui.utils.getLargeCardWidth
-import com.example.garden.ui.utils.hazeSourcesForUpperLayers
 import com.example.garden.ui.utils.toChapterInfo
+import com.example.garden.ui.utils.toDraft
 import com.example.garden.ui.utils.toEpisodeInfo
 import com.example.garden.ui.utils.toObjectData
 import com.example.garden.utils.getArtistType
+import com.example.garden.utils.toObjectEntity
 import com.example.garden.viewmodel.CreateCardViewModel
 import com.example.garden.viewmodel.LayersViewModel
+import com.example.garden.viewmodel.ListSearchState
 import com.example.garden.viewmodel.PageWithSearchSaveOutput
 import com.example.garden.viewmodel.ResultSenderViewModel
 import com.example.garden.viewmodel.SearchViewModel
-import dev.chrisbanes.haze.hazeSource
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.launch
 
 @Composable
 fun CreateCardPage(
@@ -175,6 +188,7 @@ fun CreateCardPage(
             layer.cardsList = updated.cardsList
             layer.playlistType = updated.playlistType
             layer.artistType = updated.artistType
+            layer.anilibriaCardId = updated.anilibriaCardId
         }
     }
 
@@ -245,8 +259,8 @@ fun CreateCardPage(
         }
     }
 
-    val artistSearchFlow = searchViewModel.searchArtistsFlow.collectAsStateWithLifecycle(initialValue = emptyList())
-    Log.e("ARTISTSEARCH", "$artistSearchFlow")
+    val artistSearchFlow =
+        searchViewModel.searchArtistsFlow.collectAsStateWithLifecycle(initialValue = emptyList())
 
     val currentPendingEditEpisodesKey = remember { mutableStateOf("") }
     val currentPendingEditChaptersKey = remember { mutableStateOf("") }
@@ -259,7 +273,7 @@ fun CreateCardPage(
         layersViewModel.openLayer(
             layer = Layer.PageWithSearch(
                 startsInfo = PageWithSearchInput(
-                    items = currentEpisodes.map { it.toEpisodeInfo() },
+                    items = currentEpisodes.map { it.toDraft() },
                     initType = PageWithSearchItemsDefaults.BaseEpisode
                 ),
                 key = currentPendingEditEpisodesKey.value
@@ -274,7 +288,7 @@ fun CreateCardPage(
         layersViewModel.openLayer(
             layer = Layer.PageWithSearch(
                 startsInfo = PageWithSearchInput(
-                    items = currentChapters.map { it.toChapterInfo() },
+                    items = currentChapters.map { it.toDraft() },
                     initType = PageWithSearchItemsDefaults.BaseChapter
                 ),
                 key = currentPendingEditChaptersKey.value
@@ -427,6 +441,81 @@ fun CreateCardPage(
         val bannerShape =
             if (stateViewModel.state.cardType != ElementType.ArtistCard) MaterialTheme.shapes.medium else CircleShape
 
+        val replaceFieldsWithLinkingCard = {
+            val obj = stateViewModel.tempLinkingObject
+            if (obj != null) {
+                val name = obj.name.takeIf { it.isNotBlank() } ?: stateViewModel.state.name
+
+                val author = when (obj) {
+                    is ObjectData.Card.Music -> obj.authors
+                    is ObjectData.Card.Album -> obj.authors
+                    else -> listOf(obj.author)
+                }
+
+                val description = when (obj) {
+                    is ObjectData.Card.Anime -> obj.description
+                    is ObjectData.Card.Manga -> obj.description
+                    else -> stateViewModel.state.description
+                }
+
+                stateViewModel.update {
+                    copy(
+                        name = name,
+                        image = obj.image.takeIf { it != ImageData.Url("") }
+                            ?: stateViewModel.state.image,
+                        authorsList = author,
+                        description = description,
+                        genreList = obj.genre,
+                    )
+                }
+
+                nameState.setTextAndPlaceCursorAtEnd(name)
+                authorState.setTextAndPlaceCursorAtEnd(author.joinToString(", "))
+                descriptionState.setTextAndPlaceCursorAtEnd(description)
+            }
+        }
+
+        var isEditFieldsWithLinkingObjectIsExpanded by remember { mutableStateOf(false) }
+        if (isEditFieldsWithLinkingObjectIsExpanded) {
+            DialogWithChoice(
+                title = stringResource(R.string.replaceFields),
+                message = stringResource(R.string.replaceFieldsMessage),
+                confirmButtonTitle = stringResource(R.string.replace),
+                dismissButtonTitle = stringResource(R.string.Cancel),
+                onDismiss = {
+                    isEditFieldsWithLinkingObjectIsExpanded = false
+                },
+                onConfirm = {
+                    isEditFieldsWithLinkingObjectIsExpanded = false
+                    replaceFieldsWithLinkingCard()
+                }
+            )
+        }
+
+        var isLinkCardChoiceExpanded by remember { mutableStateOf(false) }
+        if (isLinkCardChoiceExpanded) {
+            when (stateViewModel.state.cardType) {
+                ElementType.AnimeCard -> AniLibriaCardsSearch(
+                    initCard = stateViewModel.tempLinkingObject.takeIf { it is ObjectData.Card.Anime } as? ObjectData.Card.Anime,
+                    searchViewModel = searchViewModel,
+                    onSave = {
+                        stateViewModel.update {
+                            copy(
+                                anilibriaCardId = it.anilibriaCardId
+                            )
+                        }
+
+                        stateViewModel.tempLinkingObject = it
+
+                        isEditFieldsWithLinkingObjectIsExpanded = true
+                    },
+                    onDismiss = { isLinkCardChoiceExpanded = false }
+                )
+
+                else -> {}
+            }
+        }
+
         LazyColumn(
             state = listState,
             verticalArrangement = Arrangement.spacedBy(spacing),
@@ -533,10 +622,6 @@ fun CreateCardPage(
                                 haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
                                 isBannerImageChangeDialogExpanded.value = true
                             })
-                            .hazeSource(LocalHazeLayers.current.mainScreen)
-                            .hazeSourcesForUpperLayers(
-                                LocalHazeStates.current.hazeStates, LocalLayerIndex.current
-                            )
                     )
                 }
             }
@@ -559,10 +644,6 @@ fun CreateCardPage(
                                     haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
                                     isBannerImageChangeDialogExpanded.value = true
                                 })
-                                .hazeSource(LocalHazeLayers.current.mainScreen)
-                                .hazeSourcesForUpperLayers(
-                                    LocalHazeStates.current.hazeStates, LocalLayerIndex.current
-                                )
                         )
                     }
 
@@ -592,7 +673,8 @@ fun CreateCardPage(
                                     text = stringResource(
                                         if (stateViewModel.state.cardType != ElementType.ArtistCard &&
                                             stateViewModel.state.artistType != ArtistType.Music &&
-                                            stateViewModel.state.artistType != ArtistType.Manga) {
+                                            stateViewModel.state.artistType != ArtistType.Manga
+                                        ) {
                                             R.string.title
                                         } else {
                                             R.string.name
@@ -673,7 +755,9 @@ fun CreateCardPage(
 
                                         searchViewModel.searchArtists(
                                             currentAuthor,
-                                            listOf(stateViewModel.state.artistType ?: ArtistType.Music)
+                                            listOf(
+                                                stateViewModel.state.artistType ?: ArtistType.Music
+                                            )
                                         )
                                     }
                                 }
@@ -688,7 +772,11 @@ fun CreateCardPage(
                                                 }
                                             )
                                         }
-                                        authorState.setTextAndPlaceCursorAtEnd(stateViewModel.state.authorsList.joinToString(", "))
+                                        authorState.setTextAndPlaceCursorAtEnd(
+                                            stateViewModel.state.authorsList.joinToString(
+                                                ", "
+                                            )
+                                        )
                                     }
                                 )
                             }
@@ -1437,16 +1525,21 @@ fun CreateCardPage(
                     onDismissRequest = { isExtraButtonsMenuOpened.value = false },
                     hazeState = LocalHazeLayers.current.mainScreen
                 ) {
-                    if (stateViewModel.state.cardType == ElementType.AnimeCard) {
+                    if (stateViewModel.state.cardType !in listOf(
+                            ElementType.PlaylistCard,
+                            ElementType.Carousel
+                        )
+                    ) {
                         PopupMenuItem(
-                            text = stringResource(R.string.importFromAniLiberty),
+                            text = stringResource(R.string.link),
                             onClick = {
                                 haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
                                 isExtraButtonsMenuOpened.value = false
+                                isLinkCardChoiceExpanded = true
                             },
                             icon = {
                                 Icon(
-                                    imageVector = DownloadIco2,
+                                    imageVector = LinkIco,
                                     contentDescription = null,
                                     modifier = Modifier.size(MaterialTheme.dimens.iconLarge)
                                 )
@@ -1490,6 +1583,7 @@ fun CreateCardPage(
                     onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
                         focusManager.clearFocus()
+                        Log.e("RESULT CARD", "${stateViewModel.state.toObjectData()}")
                         onCloseAndApply(
                             stateViewModel.state.toObjectData(),
                             stateViewModel.state
@@ -1531,17 +1625,17 @@ fun CreateCardPage(
                 currentPendingEditEpisodesKey.value -> {
                     val newData = data as? PageWithSearchSaveOutput
                     if (newData != null) {
-                        val newEpisodes = newData.items.filterIsInstance<EpisodeInfo>().toList()
+                        val newEpisodes = newData.items.filterIsInstance<EpisodeDraft>().toList()
 
                         stateViewModel.update {
                             copy(episodesList = newEpisodes.map {
-                                it.toEpisodeInfo(
-                                    newEpisodes.indexOf(
-                                        it
-                                    )
-                                )
+                                it.toEpisodeInfo()
                             })
                         }
+
+                        Log.e("EPISODES LIST", "${stateViewModel.state.episodesList}  ;;; ${newEpisodes.map {
+                            it.toEpisodeInfo()
+                        }}")
                     }
                     currentPendingEditEpisodesKey.value = ""
                 }
@@ -1549,17 +1643,17 @@ fun CreateCardPage(
                 currentPendingEditChaptersKey.value -> {
                     val newData = data as? PageWithSearchSaveOutput
                     if (newData != null) {
-                        val newChapters = newData.items.filterIsInstance<ChapterInfo>().toList()
+                        val newChapters = newData.items.filterIsInstance<ChapterDraft>().toList()
 
                         stateViewModel.update {
                             copy(chaptersList = newChapters.map {
-                                it.toChapterInfo(
-                                    newChapters.indexOf(
-                                        it
-                                    )
-                                )
+                                it.toChapterInfo()
                             })
                         }
+
+                        Log.e("CH LIST", "${stateViewModel.state.chaptersList}  ;;; ${newChapters.map {
+                            it.toChapterInfo()
+                        }}")
                     }
                     currentPendingEditChaptersKey.value = ""
                 }
@@ -1797,6 +1891,264 @@ private fun ArtistSearch(
                     labelColor = MaterialTheme.colorScheme.onSecondaryContainer,
                 )
             )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AniLibriaCardsSearch(
+    initCard: ObjectData.Card.Anime? = null,
+    searchViewModel: SearchViewModel,
+    onSave: (ObjectData.Card.Anime) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val searchState = rememberTextFieldState()
+
+    val searchResults =
+        searchViewModel.linkingAniLibriaSearchFlow.collectAsStateWithLifecycle(ListSearchState.Loading).value.apply {
+            if (this is ListSearchState.Success) {
+                this.items.filter { it.info is ObjectData.Card.Anime }
+            }
+        }
+
+    LaunchedEffect(searchState.text) {
+        if (searchState.text.length >= 3) {
+            searchViewModel.linkingSearch(searchState.text.toString().trim())
+        }
+    }
+
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val coroutineScope = rememberCoroutineScope()
+
+    val animateAndDismiss = {
+        bottomSheetAnimateAndDismiss(coroutineScope, sheetState, onDismiss)
+        searchViewModel.clearLinkingSearch()
+    }
+
+    var selectedCard by remember { mutableStateOf(initCard) }
+
+    ModalBottomSheet(
+        onDismissRequest = {
+            onDismiss()
+            searchViewModel.clearLinkingSearch()
+        },
+        sheetState = sheetState
+    ) {
+        val haptic = LocalHapticFeedback.current
+        val focusManager = LocalFocusManager.current
+        val keyboardController = LocalSoftwareKeyboardController.current
+        val coroutineScope = rememberCoroutineScope()
+        var isLoading by remember { mutableStateOf(false) }
+
+        val saveCard = {
+            coroutineScope.launch {
+                val selectedCard = selectedCard ?: return@launch
+                isLoading = true
+
+                val result =
+                    selectedCard.anilibriaCardId?.let { searchViewModel.getAniLibriaRelease(it) }
+                        ?: return@launch
+
+                result.onSuccess { title ->
+                    isLoading = false
+                    val entity =
+                        title.toObjectEntity(position = 0, sourceType = EntitySourceType.Web)
+                    val card = entity.info as? ObjectData.Card.Anime ?: return@onSuccess
+                    animateAndDismiss()
+                    onSave(card)
+                }
+
+                result.onFailure {
+                    isLoading = false
+                    animateAndDismiss()
+                    onSave(selectedCard)
+                }
+            }
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .blockGestures()
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = MaterialTheme.spacing.screenHorizontal),
+                verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    modifier = Modifier.fillMaxWidth(),
+                    text = stringResource(R.string.SelectCard_action),
+                    style = MaterialTheme.typography.titleLarge,
+                    textAlign = TextAlign.Center
+                )
+
+                OutlinedTextField(
+                    state = searchState,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = CircleShape,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0f),
+                        focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0f),
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                    ),
+                    placeholder = {
+                        Text(
+                            text = stringResource(R.string.Search),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = SearchIco,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(MaterialTheme.dimens.iconMedium)
+                        )
+                    },
+                    onKeyboardAction = { _ ->
+                        keyboardController?.hide()
+                        focusManager.clearFocus()
+                    },
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                    lineLimits = TextFieldLineLimits.SingleLine
+                )
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                ) {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        contentPadding = PaddingValues(bottom = MaterialTheme.dimens.minButtonHeight + MaterialTheme.spacing.medium)
+                    ) {
+                        when (searchResults) {
+                            is ListSearchState.Success -> {
+                                items(
+                                    count = (searchResults.items.size),
+                                    key = { it.toString() },
+                                    contentType = { "AniLibriaCardSearchItem" }
+                                ) { index ->
+                                    val entity =
+                                        searchResults.items[index]
+
+                                    val card = entity.info as? ObjectData.Card.Anime
+
+                                    if (card?.anilibriaCardId != null) {
+                                        val isSelected =
+                                            card.anilibriaCardId == (selectedCard?.anilibriaCardId
+                                                ?: -10L)
+
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clip(MaterialTheme.shapes.medium)
+                                                .clickable {
+                                                    haptic.performHapticFeedback(HapticFeedbackType.VirtualKey)
+                                                    selectedCard = card
+                                                }
+                                                .background(
+                                                    if (isSelected) MaterialTheme.colorScheme.secondaryContainer
+                                                    else MaterialTheme.colorScheme.surfaceContainerHigh
+                                                )
+                                        ) {
+                                            CardPreview(isSupportDragging = false, card = card)
+                                        }
+                                    }
+                                }
+                            }
+
+                            is ListSearchState.Loading -> {
+                                item {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .background(
+                                                MaterialTheme.colorScheme.secondaryContainer.copy(
+                                                    alpha = 0.5f
+                                                )
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        ShapesLoadingIndicator()
+                                    }
+                                }
+                            }
+
+                            is ListSearchState.Empty, is ListSearchState.Idle -> {
+                                item {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize(),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = stringResource(R.string.nothingIsHere),
+                                            style = MaterialTheme.typography.titleMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                                                alpha = 0.38f
+                                            )
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .background(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                MaterialTheme.colorScheme.surface
+                            )
+                        )
+                    )
+                    .padding(horizontal = MaterialTheme.spacing.screenHorizontal)
+            ) {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.extraSmall),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Button(
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = selectedCard != null && !isLoading,
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                            selectedCard?.let { saveCard() }
+                        },
+                        shape = MaterialTheme.shapes.medium,
+                    ) {
+                        if (isLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(MaterialTheme.dimens.iconMedium),
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                strokeWidth = MaterialTheme.dimens.strokeThick
+                            )
+                        } else {
+                            Text(
+                                text = stringResource(R.string.apply),
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }
