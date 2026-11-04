@@ -756,6 +756,12 @@ sealed interface LinkData : Parcelable {
 
     @Parcelize
     @Serializable
+    data class AniLibriaEpisode(
+        val id: String
+    ) : LinkData
+
+    @Parcelize
+    @Serializable
     object Self : LinkData
 
     @Parcelize
@@ -870,6 +876,8 @@ data class EpisodeInfo(
     val position: Int,
     val name: String,
     val preview: ImageData,
+    val positionPr: Float = 0f,
+    val watched: Boolean = false,
     val variants: List<EpisodeVariant>
 ) : Parcelable
 
@@ -941,24 +949,27 @@ sealed interface ObjectData {
     val link: LinkData?
     val isUserCreated: Boolean
     val name: String
+    val favourite: Boolean
 
     fun injectLocalObjectEntityData(entity: ObjectEntity): ObjectData
     fun injectWebObjectEntityData(entity: WebObjectEntity): ObjectData
     fun copyWithPosition(position: Int): ObjectData
+    fun copyWithFavourite(favourite: Boolean): ObjectData
 
     @Serializable
     @SerialName("carousel")
+    @Parcelize
     data class Carousel(
         override val id: String = "-1",
         override val position: Int = 0,
         override val link: LinkData? = null,
         override val isUserCreated: Boolean = false,
         override val name: String = "",
+        override val favourite: Boolean = false,
         val showIco: Boolean = false,
         val ico: ImageData? = null,
         val childsShowName: Boolean = false,
         val childsNamePosition: Int = 0,
-        val childsShowAlreadyWatchedLine: Boolean = true,
         val childsShowAuthor: Boolean = false,
         val carouselType: CarouselType = CarouselType.Anime,
         val carouselCollectionType: CollectionType = CollectionType.None,
@@ -972,7 +983,7 @@ sealed interface ObjectData {
         val adaptiveGridSize: Boolean = false,
         val maxObjectsInOneLineForAdaptiveSize: Int? = null,
         val maxLinesForAdaptiveSize: Int? = null
-    ) : ObjectData {
+    ) : ObjectData, Parcelable {
         override fun injectLocalObjectEntityData(entity: ObjectEntity): ObjectData {
             return copy(
                 id = "${entity.source.name}_${entity.id}",
@@ -996,6 +1007,10 @@ sealed interface ObjectData {
         override fun copyWithPosition(position: Int): ObjectData {
             return copy(position = position)
         }
+
+        override fun copyWithFavourite(favourite: Boolean): ObjectData {
+            return copy(favourite = favourite)
+        }
     }
 
     @Serializable
@@ -1008,6 +1023,7 @@ sealed interface ObjectData {
 
         @Serializable
         @SerialName("card_anime")
+        @Parcelize
         data class Anime(
             override val id: String = "-1",
             override val position: Int = 0,
@@ -1017,10 +1033,12 @@ sealed interface ObjectData {
             override val author: String = "",
             override val image: ImageData,
             override val genre: List<GridGenreItem> = emptyList(),
+            override val favourite: Boolean = false,
             val description: String = "",
             val episodesList: List<EpisodeInfo> = emptyList(), // Local episodes
-            val anilibriaCardId: Long? = null
-        ) : Card {
+            val anilibriaCardId: Long? = null,
+            val lastVoiceName: String? = null
+        ) : Card, Parcelable {
             override fun injectLocalObjectEntityData(entity: ObjectEntity): ObjectData {
                 return copy(
                     id = "${entity.source.name}_${entity.id}",
@@ -1048,10 +1066,15 @@ sealed interface ObjectData {
             override fun copyWithAuthors(authors: List<String>): Card {
                 return copy(author = authors.firstOrNull() ?: "")
             }
+
+            override fun copyWithFavourite(favourite: Boolean): ObjectData {
+                return copy(favourite = favourite)
+            }
         }
 
         @Serializable
         @SerialName("card_manga")
+        @Parcelize
         data class Manga(
             override val id: String = "-1",
             override val position: Int = 0,
@@ -1061,10 +1084,11 @@ sealed interface ObjectData {
             override val author: String = "",
             override val image: ImageData,
             override val genre: List<GridGenreItem> = emptyList(),
+            override val favourite: Boolean = false,
             val description: String = "",
             val chaptersList: List<ChapterInfo> = emptyList(),
             val mangadexCardId: String? = null
-        ) : Card {
+        ) : Card, Parcelable {
             override fun injectLocalObjectEntityData(entity: ObjectEntity): ObjectData {
                 return copy(
                     id = "${entity.source.name}_${entity.id}",
@@ -1092,10 +1116,15 @@ sealed interface ObjectData {
             override fun copyWithAuthors(authors: List<String>): Card {
                 return copy(author = authors.firstOrNull() ?: "")
             }
+
+            override fun copyWithFavourite(favourite: Boolean): ObjectData {
+                return copy(favourite = favourite)
+            }
         }
 
         @Serializable
         @SerialName("card_music")
+        @Parcelize
         data class Music(
             override val id: String = "-1",
             override val position: Int = 0,
@@ -1105,11 +1134,12 @@ sealed interface ObjectData {
             override val author: String = "",
             override val image: ImageData,
             override val genre: List<GridGenreItem> = emptyList(),
+            override val favourite: Boolean = false,
             val authors: List<String> = emptyList(),
             val song: LinkData? = null,
             val horizontalVideo: LinkData? = null,
             val musicBrainzCardId: String? = null
-        ) : Card {
+        ) : Card, Parcelable {
             override fun injectLocalObjectEntityData(entity: ObjectEntity): ObjectData {
                 return copy(
                     id = "${entity.source.name}_${entity.id}",
@@ -1137,10 +1167,15 @@ sealed interface ObjectData {
             override fun copyWithAuthors(authors: List<String>): Card {
                 return copy(authors = authors)
             }
+
+            override fun copyWithFavourite(favourite: Boolean): ObjectData {
+                return copy(favourite = favourite)
+            }
         }
 
         @Serializable
         @SerialName("card_artist")
+        @Parcelize
         data class Artist(
             override val id: String = "-1",
             override val position: Int = 0,
@@ -1150,9 +1185,10 @@ sealed interface ObjectData {
             override val author: String = "",
             override val image: ImageData,
             override val genre: List<GridGenreItem> = emptyList(),
+            override val favourite: Boolean = false,
             val artistType: ArtistType,
             val musicBrainzCardId: String? = null
-        ) : Card {
+        ) : Card, Parcelable {
             override fun injectLocalObjectEntityData(entity: ObjectEntity): ObjectData {
                 return copy(
                     id = "${entity.source.name}_${entity.id}",
@@ -1180,10 +1216,15 @@ sealed interface ObjectData {
             override fun copyWithAuthors(authors: List<String>): Card {
                 return copy(author = authors.firstOrNull() ?: "")
             }
+
+            override fun copyWithFavourite(favourite: Boolean): ObjectData {
+                return copy(favourite = favourite)
+            }
         }
 
         @Serializable
         @SerialName("card_album")
+        @Parcelize
         data class Album(
             override val id: String = "-1",
             override val position: Int = 0,
@@ -1193,11 +1234,12 @@ sealed interface ObjectData {
             override val author: String = "",
             override val image: ImageData,
             override val genre: List<GridGenreItem> = emptyList(),
+            override val favourite: Boolean = false,
             val isSingle: Boolean = false,
             val songs: List<Long> = emptyList(),
             val musicBrainzCardId: String? = null,
             val authors: List<String> = emptyList()
-        ) : Card {
+        ) : Card, Parcelable {
             override fun injectLocalObjectEntityData(entity: ObjectEntity): ObjectData {
                 return copy(
                     id = "${entity.source.name}_${entity.id}",
@@ -1225,10 +1267,15 @@ sealed interface ObjectData {
             override fun copyWithAuthors(authors: List<String>): Card {
                 return copy(author = authors.firstOrNull() ?: "")
             }
+
+            override fun copyWithFavourite(favourite: Boolean): ObjectData {
+                return copy(favourite = favourite)
+            }
         }
 
         @Serializable
         @SerialName("card_playlist")
+        @Parcelize
         data class Playlist(
             override val id: String = "-1",
             override val position: Int = 0,
@@ -1238,9 +1285,10 @@ sealed interface ObjectData {
             override val author: String = "",
             override val image: ImageData,
             override val genre: List<GridGenreItem> = emptyList(),
+            override val favourite: Boolean = false,
             val playListType: PlayListType,
             val cardsList: List<Long> = emptyList()
-        ) : Card {
+        ) : Card, Parcelable {
             override fun injectLocalObjectEntityData(entity: ObjectEntity): ObjectData {
                 return copy(
                     id = "${entity.source.name}_${entity.id}",
@@ -1267,6 +1315,10 @@ sealed interface ObjectData {
 
             override fun copyWithAuthors(authors: List<String>): Card {
                 return copy(author = authors.firstOrNull() ?: "")
+            }
+
+            override fun copyWithFavourite(favourite: Boolean): ObjectData {
+                return copy(favourite = favourite)
             }
         }
     }

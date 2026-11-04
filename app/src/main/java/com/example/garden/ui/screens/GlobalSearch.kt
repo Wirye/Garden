@@ -557,7 +557,6 @@ private fun SearchSelection(
             isUserCreated = false,
             childsShowName = true,
             childsShowAuthor = true,
-            childsShowAlreadyWatchedLine = false,
             childsCornerRadius = SizeType.SMALL,
             layoutType = LayoutType.CAROUSEL_FROM_FLAT_GRID,
             childsNamePosition = 1,

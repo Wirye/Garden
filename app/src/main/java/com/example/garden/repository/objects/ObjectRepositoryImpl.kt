@@ -19,6 +19,7 @@ import com.example.garden.database.entities.PageType
 import com.example.garden.utils.getArtistType
 import com.example.garden.utils.toLongId
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 
 class ObjectRepositoryImpl(
@@ -137,6 +138,9 @@ class ObjectRepositoryImpl(
 
     override fun getCarouselsByPage(page: PageType): Flow<List<ObjectEntity>> =
         dao.getCarouselsByPage(page)
+
+    /** Подходит только для изменения параметров у УЖЕ СУЩЕСТВУЮЩЕГО объекта **/
+    override suspend fun justUpsertObject(entity: ObjectEntity): Long = dao.justUpsertObject(entity)
 
     override suspend fun saveObject(
         data: ObjectData,
@@ -264,6 +268,7 @@ class ObjectRepositoryImpl(
     }
 
     override suspend fun getById(id: Long): ObjectEntity? = dao.getObjectById(id)
+    override fun getByIdAsFlow(id: Long): Flow<ObjectEntity?> = dao.getObjectByIdAsFlow(id)
 
     override suspend fun saveCarouselWithChilds(
         carousel: ObjectData.Carousel,

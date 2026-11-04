@@ -97,10 +97,12 @@ import com.example.garden.ui.utils.hazeSourcesForUpperLayers
 import com.example.garden.ui.utils.toLayerCreateCardPage
 import com.example.garden.ui.utils.toLayerCreateCarouselPage
 import com.example.garden.ui.utils.toObjectData
+import com.example.garden.utils.isLocalId
 import com.example.garden.utils.toLongId
 import com.example.garden.viewmodel.AuthViewModel
 import com.example.garden.viewmodel.LayersViewModel
 import com.example.garden.viewmodel.MainViewModel
+import com.example.garden.viewmodel.ObjectLinksViewModel
 import com.example.garden.viewmodel.RecentQueriesViewModel
 import com.example.garden.viewmodel.ResultSenderViewModel
 import com.example.garden.viewmodel.SearchViewModel
@@ -131,7 +133,8 @@ fun MainScreen(
     resultSenderViewModel: ResultSenderViewModel,
     authViewModel: AuthViewModel,
     recentQueriesViewModel: RecentQueriesViewModel,
-    searchViewModel: SearchViewModel
+    searchViewModel: SearchViewModel,
+    objectLinksViewModel: ObjectLinksViewModel
 ) {
     val backStack = layersViewModel.backStack
     val mainPagesBackStack = layersViewModel.mainPagesStack
@@ -197,7 +200,8 @@ fun MainScreen(
                             resultSenderViewModel = resultSenderViewModel,
                             authViewModel = authViewModel,
                             recentQueriesViewModel = recentQueriesViewModel,
-                            searchViewModel = searchViewModel
+                            searchViewModel = searchViewModel,
+                            objectLinksViewModel = objectLinksViewModel
                         )
                     }
                 }
@@ -282,7 +286,8 @@ private fun LayerContent(
     resultSenderViewModel: ResultSenderViewModel,
     authViewModel: AuthViewModel,
     recentQueriesViewModel: RecentQueriesViewModel,
-    searchViewModel: SearchViewModel
+    searchViewModel: SearchViewModel,
+    objectLinksViewModel: ObjectLinksViewModel
 ) {
     val mainViewModel: MainViewModel = viewModel()
     val coroutineScope = rememberCoroutineScope()
@@ -484,7 +489,6 @@ private fun LayerContent(
                                     childsShowAuthor = true,
                                     childsCornerRadius = SizeType.MEDIUM,
                                     childsNamePosition = 0,
-                                    childsShowAlreadyWatchedLine = true,
                                     dovodchik = false,
                                     showDovodchikDots = false,
                                     objectsInOneLine = null,
@@ -548,13 +552,91 @@ private fun LayerContent(
                         },
                         openSavedPage = {
                             layersViewModel.openLayer(layer = Layer.UnspecifiedPage())
+                        },
+                        onClickCard = {
+                            coroutineScope.launch {
+                                if (it.id.isLocalId()) {
+                                    val info =
+                                        mainViewModel.getRootObjectById(it.id.toLongId()) as? ObjectData.Card
+                                            ?: return@launch
+                                    if (info is ObjectData.Card.Anime) {
+                                        layersViewModel.openLayer(
+                                            Layer.AnimePage(
+                                                card = info,
+                                                uiState = AnimePageUiState.Episodes
+                                            )
+                                        )
+                                    }
+                                } else {
+                                    if (it is ObjectData.Card.Anime) {
+                                        layersViewModel.openLayer(
+                                            Layer.AnimePage(
+                                                card = it,
+                                                uiState = AnimePageUiState.Episodes
+                                            )
+                                        )
+                                    }
+                                }
+                            }
                         }
                     )
                 }
 
-                is Layer.AnimePage -> {}
+                is Layer.AnimePage -> {
+                    AnimePage(
+                        layer = layer,
+                        mainViewModel = mainViewModel,
+                        objectLinksViewModel = objectLinksViewModel,
+                        closePage = closeLayer,
+                        onOpenEpisode = { episodes, epNum ->
+                            layersViewModel.openLayer(
+                                layer = Layer.VideoPlayer(
+                                    episodesList = episodes,
+                                    titleName = layer.card.name,
+                                    cardId = layer.card.id.toLongId(),
+                                    startEpisodePosition = epNum,
+                                    lastVoiceName = layer.card.lastVoiceName
+                                )
+                            )
+                        },
+                        onOpenCard = {
+                            coroutineScope.launch {
+                                if (it.id.isLocalId()) {
+                                    val info =
+                                        mainViewModel.getRootObjectById(it.id.toLongId()) as? ObjectData.Card
+                                            ?: return@launch
+                                    if (info is ObjectData.Card.Anime) {
+                                        layersViewModel.openLayer(
+                                            Layer.AnimePage(
+                                                card = info,
+                                                uiState = AnimePageUiState.Episodes
+                                            )
+                                        )
+                                    }
+                                } else {
+                                    layersViewModel.openLayer(
+                                        Layer.AnimePage(
+                                            card = it,
+                                            uiState = AnimePageUiState.Episodes
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                    )
+                }
 
-                is Layer.VideoPlayer -> {}
+                is Layer.VideoPlayer -> {
+                    EpisodePlayerScreen(
+                        episodes = layer.episodesList,
+                        title = layer.titleName,
+                        id = layer.cardId,
+                        closeLayer = closeLayer,
+                        mainViewModel = mainViewModel,
+                        startEpisodePosition = layer.startEpisodePosition,
+                        lastVoiceName = layer.lastVoiceName
+                    )
+                }
 
                 is Layer.OverLay -> {
                     when (layer.info) {
@@ -708,7 +790,8 @@ private fun LayerScreen(
     resultSenderViewModel: ResultSenderViewModel,
     authViewModel: AuthViewModel,
     recentQueriesViewModel: RecentQueriesViewModel,
-    searchViewModel: SearchViewModel
+    searchViewModel: SearchViewModel,
+    objectLinksViewModel: ObjectLinksViewModel
 ) {
     val coroutineScope = rememberCoroutineScope()
     val density = LocalDensity.current
@@ -913,7 +996,8 @@ private fun LayerScreen(
                 resultSenderViewModel = resultSenderViewModel,
                 authViewModel = authViewModel,
                 recentQueriesViewModel = recentQueriesViewModel,
-                searchViewModel = searchViewModel
+                searchViewModel = searchViewModel,
+                objectLinksViewModel = objectLinksViewModel
             )
         }
     }

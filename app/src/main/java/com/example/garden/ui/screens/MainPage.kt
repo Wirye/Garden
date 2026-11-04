@@ -115,7 +115,8 @@ fun MainPage(
     openCarouselChildsEdit: (String) -> Unit,
     deleteCard: (String) -> Unit,
     deleteCarousel: (String) -> Unit,
-    openSavedPage: () -> Unit
+    openSavedPage: () -> Unit,
+    onClickCard: (ObjectData) -> Unit
 ) {
     var visibleCardPos by rememberSaveable(layer.id) {
         mutableIntStateOf(layer.firstElementPosition)
@@ -305,7 +306,7 @@ fun MainPage(
                                         }
                                     },
                                     onEditCarouselSettings = { openEditCarouselPage(item.parent) },
-                                    onClickCard = {},
+                                    onClickCard = onClickCard,
                                     onWatchAllClick = {},
                                     onEditCard = {
                                         val parentId = item.parent.id
@@ -449,7 +450,6 @@ fun CarouselPreview(
                 childsSize = info.childsSize,
                 childsShowAuthor = info.childsShowAuthor,
                 childsNamePosition = info.childsNamePosition,
-                childsShowAlreadyWatchedLine = info.childsShowAlreadyWatchedLine,
                 carouselType = carouselType,
                 carouselCollectionType = info.carouselCollectionType,
                 layoutType = info.layoutType,

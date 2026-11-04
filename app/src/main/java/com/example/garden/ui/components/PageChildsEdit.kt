@@ -74,9 +74,6 @@ fun PageChildsEdit(
     val focusManager = LocalFocusManager.current
 
     val carousels by mainViewModel.getCarouselsByPage(page).collectAsStateWithLifecycle(emptyList())
-    LaunchedEffect(carousels) {
-        Log.e("CAROUSELS", "$carousels")
-    }
 
     val newCarousels = remember(carousels) {
         carousels
@@ -102,11 +99,6 @@ fun PageChildsEdit(
         listState,
         PaddingValues(0.dp)
     ) { from, to ->
-        Log.e(
-            "111PageChildsEdit",
-            "from: ${from.index}, to: ${to.index}   ${newCarousels.map { Pair(it.position, it.id) }}"
-        )
-
         newCarousels.add(to.index - 2, newCarousels.removeAt(from.index - 2))
         val fromPosition = newCarousels[from.index - 2].position
         val toPosition = newCarousels[to.index - 2].position
@@ -114,11 +106,6 @@ fun PageChildsEdit(
             newCarousels[from.index - 2].copyWithPosition(toPosition) as ObjectData.Carousel
         newCarousels[to.index - 2] =
             newCarousels[to.index - 2].copyWithPosition(fromPosition) as ObjectData.Carousel
-
-        Log.e(
-            "PageChildsEdit",
-            "from: ${from.index}, to: ${to.index}   ${newCarousels.map { Pair(it.position, it.id) }}"
-        )
     }
 
     ModalBottomSheet(

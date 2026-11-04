@@ -23,7 +23,6 @@ fun Layer.CreateCarouselPage.toObjectData() : ObjectData.Carousel {
         childsShowAuthor = childsShowAuthor,
         childsNamePosition = childsNamePosition,
         childsCornerRadius = childsCornerRadius,
-        childsShowAlreadyWatchedLine = childsShowAlreadyWatchedLine,
         carouselType = carouselType,
         dovodchik = dovodchik,
         showDovodchikDots = showDovodchikDots

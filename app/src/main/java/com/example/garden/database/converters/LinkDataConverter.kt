@@ -12,6 +12,7 @@ class LinkDataConverter {
             is LinkData.Insert -> "insert:${link.targetId}"
             is LinkData.Device -> "device:${link.path}"
             is LinkData.Url -> "url:${link.url}"
+            is LinkData.AniLibriaEpisode -> "anilibriaepisode:${link.id}"
             LinkData.Self -> "self"
             LinkData.None -> "none"
         }
@@ -30,6 +31,7 @@ class LinkDataConverter {
             "url" -> LinkData.Url(data)
             "self" -> LinkData.Self
             "none" -> LinkData.None
+            "anilibriaepisode" -> LinkData.AniLibriaEpisode(data)
             else -> LinkData.None
         }
     }

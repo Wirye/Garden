@@ -37,6 +37,7 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        isCoreLibraryDesugaringEnabled = true
     }
     kotlin {
         compilerOptions {
@@ -113,4 +114,7 @@ dependencies {
     implementation(libs.musicBrainz.kt)
     implementation(libs.lrclib.kt)
     implementation(libs.mangaDex.kt)
+    implementation(libs.androidx.media3.exoplayer.hls)
+    implementation(libs.androidx.media3.exoplayer.ima)
+    coreLibraryDesugaring(libs.desugar.jdk.libs)
 }

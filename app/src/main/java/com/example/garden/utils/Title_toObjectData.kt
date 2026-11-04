@@ -1,6 +1,5 @@
 package com.example.garden.utils
 
-import android.util.Log
 import com.example.garden.database.entities.ElementType
 import com.example.garden.database.entities.EntitySourceType
 import com.example.garden.database.entities.GenreYear

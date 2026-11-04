@@ -101,11 +101,6 @@ fun CarouselChildsEdit(
         listState,
         PaddingValues(0.dp)
     ) { from, to ->
-        Log.e(
-            "111CarouselChildsEdit",
-            "from: ${from.index}, to: ${to.index}   ${newCards.map { Pair(it.position, it.id) }}"
-        )
-
         newCards.add(to.index - 2, newCards.removeAt(from.index - 2))
         val fromPosition = newCards[from.index - 2].position
         val toPosition = newCards[to.index - 2].position
@@ -113,11 +108,6 @@ fun CarouselChildsEdit(
             newCards[from.index - 2].copyWithPosition(toPosition) as ObjectData.Card
         newCards[to.index - 2] =
             newCards[to.index - 2].copyWithPosition(fromPosition) as ObjectData.Card
-
-        Log.e(
-            "CarouselChildsEdit",
-            "from: ${from.index}, to: ${to.index}   ${newCards.map { Pair(it.position, it.id) }}"
-        )
     }
 
     ModalBottomSheet(

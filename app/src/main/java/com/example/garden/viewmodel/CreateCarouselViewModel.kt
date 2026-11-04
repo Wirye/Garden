@@ -66,13 +66,9 @@ class CreateCarouselViewModel(
         onUpdate(state)
 
         objectsInOneLineError =
-            if ((state.objectsInOneLine != null && state.maxObjectsInOneLineForAdaptiveSize == null && state.adaptiveGridSize) || (state.objectsInOneLine == null && state.maxObjectsInOneLineForAdaptiveSize != null && state.adaptiveGridSize)) {
-                false
-            } else {
-                ((state.objectsInOneLine
-                    ?: 1) > (state.maxObjectsInOneLineForAdaptiveSize
-                    ?: 1)) && state.adaptiveGridSize
-            }
+            !((state.objectsInOneLine != null && state.maxObjectsInOneLineForAdaptiveSize == null && state.adaptiveGridSize) || (state.objectsInOneLine == null && state.maxObjectsInOneLineForAdaptiveSize != null && state.adaptiveGridSize)) && ((state.objectsInOneLine
+                ?: 1) > (state.maxObjectsInOneLineForAdaptiveSize
+                ?: 1)) && state.adaptiveGridSize
 
         maxLinesZeroError = state.maxLines == 0
 

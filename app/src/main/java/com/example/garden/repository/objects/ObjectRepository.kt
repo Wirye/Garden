@@ -21,10 +21,12 @@ interface ObjectRepository {
     suspend fun getMaxChildPosition(parentId: Long?) : Int?
     suspend fun deleteObject(id: Long, parentId: Long?, position: Int, author: String? = null)
     suspend fun getById(id: Long) : ObjectEntity?
+    fun getByIdAsFlow(id: Long) : Flow<ObjectEntity?>
     suspend fun updateCardsPositions(cards: List<ObjectData.Card>)
     suspend fun updateCarouselsPosition(carousels: List<ObjectData.Carousel>)
     fun searchCards(query: String, allowedTypes: List<ElementType>): Flow<PagingData<ObjectEntity>>
     fun globalSearch(query: String): Flow<List<ObjectEntity>>
     fun getCardsByParentId(parentId: Long) : Flow<List<ObjectEntity>>
     fun getCarouselsByPage(page: PageType): Flow<List<ObjectEntity>>
+    suspend fun justUpsertObject(entity: ObjectEntity): Long
 }

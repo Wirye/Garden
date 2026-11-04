@@ -286,7 +286,6 @@ fun AppSettings(
                                                         topEnd = CornerSize(0.dp)
                                                     )
                                                 )
-                                                .background(MaterialTheme.colorScheme.surfaceVariant)
                                                 .clickable {
                                                     haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
                                                     isLogoutAskExpanded = true

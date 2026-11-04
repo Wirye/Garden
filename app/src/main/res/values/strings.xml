@@ -233,4 +233,33 @@
 
 Почему я не могу добавлять карточку в карусель?
 Если кнопки Добавить карточку нету - значит карусель с таким пресетом не поддерживает сторонние карточки"</string>
+    <string name="animePageAbout">Об аниме странице</string>
+    <string name="AboutPage">О странице</string>
+    <string name="episodeNumber">Номер эпизода</string>
+    <string name="searchByName">Искать по имени</string>
+    <string name="searchByEpisodeNumber">Искать по номеру эпизода</string>
+    <string name="changeView">Изменить вид</string>
+    <string name="seasons">Сезоны</string>
+    <string name="continueWatching">Продолжить просмотр</string>
+    <string name="startWithFirstEpisode">Смотреть с начала</string>
+    <string name="episodePlayerError">Ошибка2</string>
+    <string name="episodePlayerEpisodeNotSupported">Ошибка</string>
+    <string name="episodePlayerAd">Реклама</string>
+    <string name="episodePlayerQuality">Качество</string>
+    <string name="episodePlayerVoice">Озвучка</string>
+    <string name="episodePlayerAutoSkipOpeningEnding">Пропустимть</string>
+    <string name="episodePlayerSearchEpisode">Поисккк</string>
+
+    <string name="playerUnsupportedSource">Ошибка воспроизведения: плеер не поддерживает такой формат видео</string>
+    <string name="playerUnknownError">Ошибка воспроизведения</string>
+    <string name="playerEpisodesList">Список эпизодов</string>
+    <string name="playerPrevious">Назад</string>
+    <string name="playerPause">Пауза</string>
+    <string name="playerPlay">Продолжить</string>
+    <string name="playerNext">Далее</string>
+    <string name="playerSettings">Настройки</string>
+    <string name="playerQuality">Качество</string>
+    <string name="playerQualityValue">КАЧЕСТВОООО</string>
+    <string name="playerAutoSkip">Пропуск опеннингов/эндингов</string>
+    <string name="playerVoice">Озвучка</string>
 </resources>

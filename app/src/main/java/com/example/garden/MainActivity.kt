@@ -33,16 +33,19 @@ import com.example.garden.database.entities.GridGenreItem
 import com.example.garden.database.entities.ImageData
 import com.example.garden.database.entities.LayoutType
 import com.example.garden.database.entities.LinkData
+import com.example.garden.database.entities.ObjectData
 import com.example.garden.database.entities.PageType
 import com.example.garden.database.entities.PlayListType
 import com.example.garden.database.entities.SizeType
 import com.example.garden.repository.artists.ArtistsRepository
 import com.example.garden.repository.artists.ArtistsRepositoryImpl
 import com.example.garden.repository.auth.AuthRepositoryImpl
+import com.example.garden.repository.objectLinks.ObjectLinksRepositoryImpl
 import com.example.garden.repository.objects.ObjectRepositoryImpl
 import com.example.garden.repository.recentQueries.RecentQueriesRepositoryImpl
 import com.example.garden.repository.uiRepository.UiRepositoryImpl
 import com.example.garden.repository.webObjects.WebObjectsRepositoryImpl
+import com.example.garden.ui.screens.AnimePageUiState
 import com.example.garden.ui.screens.MainScreen
 import com.example.garden.ui.screens.PageWithSearchInput
 import com.example.garden.ui.theme.GardenTheme
@@ -50,6 +53,7 @@ import com.example.garden.utils.getValidLayerId
 import com.example.garden.viewmodel.AuthViewModel
 import com.example.garden.viewmodel.LayersViewModel
 import com.example.garden.viewmodel.MainViewModel
+import com.example.garden.viewmodel.ObjectLinksViewModel
 import com.example.garden.viewmodel.RecentQueriesViewModel
 import com.example.garden.viewmodel.ResultSenderViewModel
 import com.example.garden.viewmodel.SearchViewModel
@@ -67,9 +71,8 @@ sealed class Layer(
 
     @Parcelize
     data class AnimePage(
-        var mainRecyclerScrollPositionInPx: Int,
-        val layoutObjId: Long,
-        var state: Int,
+        val card: ObjectData.Card.Anime,
+        var uiState: AnimePageUiState,
     ) : Layer()
 
     @Parcelize
@@ -86,9 +89,11 @@ sealed class Layer(
 
     @Parcelize
     data class VideoPlayer(
-        var isPlaying: Boolean,
-        var playbackSpeed: Float = 1.0f,
-        var isControllerVisible: Boolean = true,
+        var episodesList: List<EpisodeInfo>,
+        var titleName: String,
+        var cardId: Long,
+        var startEpisodePosition: Int? = null,
+        var lastVoiceName: String? = null,
     ) : Layer()
 
     @Parcelize
@@ -123,7 +128,6 @@ sealed class Layer(
         var childsCornerRadius: SizeType,
         var childsShowName: Boolean,
         var childsNamePosition: Int,
-        var childsShowAlreadyWatchedLine: Boolean,
         var layoutType: LayoutType,
         var objectsInOneLine: Int?,
         var maxLines: Int?,
@@ -211,17 +215,19 @@ data class CustomColors(
 
 val LocalCustomColors = staticCompositionLocalOf { CustomColors() }
 
+const val UserAgent = "Garden/1.0 ( https://github.com/Wirye/Garden )"
+
 var AniLibriaClient: AniLibriaClient =
-    AniLibriaClient("Garden/1.0 ( https://github.com/Wirye/Garden )")
+    AniLibriaClient(UserAgent)
 
 val MusicBrainzClient: MusicBrainzClient =
-    MusicBrainzClient("Garden/1.0 ( https://github.com/Wirye/Garden )")
+    MusicBrainzClient(UserAgent)
 
 val LrclibClient: LrclibClient =
-    LrclibClient("Garden/1.0 ( https://github.com/Wirye/Garden )")
+    LrclibClient(UserAgent)
 
 val MangaDexClient: MangaDexClient =
-    MangaDexClient("Garden/1.0 ( https://github.com/Wirye/Garden )")
+    MangaDexClient(UserAgent)
 
 
 class MainActivity : ComponentActivity() {
@@ -289,6 +295,16 @@ class MainActivity : ComponentActivity() {
         )
     }
 
+    private val objectLinksRepository by lazy {
+        ObjectLinksRepositoryImpl(db.objectLinkDao())
+    }
+
+    private val objectLinksViewModel: ObjectLinksViewModel by viewModels {
+        customViewModelFactory {
+            ObjectLinksViewModel(objectLinksRepository)
+        }
+    }
+
     @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -327,7 +343,8 @@ class MainActivity : ComponentActivity() {
                             resultSenderViewModel = resultSenderViewModel,
                             authViewModel = authViewModel,
                             recentQueriesViewModel = recentQueriesViewModel,
-                            searchViewModel = searchViewModel
+                            searchViewModel = searchViewModel,
+                            objectLinksViewModel = objectLinksViewModel
                         )
                     }
                 }

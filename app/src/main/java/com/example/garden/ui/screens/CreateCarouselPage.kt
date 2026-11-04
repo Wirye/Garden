@@ -139,7 +139,6 @@ fun CreateCarouselPage(
             layer.childsCornerRadius = it.childsCornerRadius
             layer.childsShowName = it.childsShowName
             layer.childsNamePosition = it.childsNamePosition
-            layer.childsShowAlreadyWatchedLine = it.childsShowAlreadyWatchedLine
             layer.childsSize = it.childsSize
             layer.childsShowAuthor = it.childsShowAuthor
             layer.carouselCollectionType = it.carouselCollectionType
@@ -773,7 +772,6 @@ fun CreateCarouselPage(
                                                                             childsCornerRadius = collection.overrideChildsCornerRadius,
                                                                             childsShowName = collection.overrideChildsShowName,
                                                                             childsNamePosition = collection.overrideChildsNamePosition,
-                                                                            childsShowAlreadyWatchedLine = collection.overrideChildsShowAlreadyWatchedLine,
                                                                             childsSize = collection.overrideChildsSize,
                                                                             childsShowAuthor = collection.overrideChildsShowAuthor,
                                                                             layoutType = collection.overrideLayoutType
@@ -1644,71 +1642,6 @@ fun CreateCarouselPage(
                                                             steps = steps - 1,
                                                             modifier = Modifier.fillMaxWidth()
                                                         )
-                                                    }
-
-                                                    val expandedThs =
-                                                        stateViewModel.state.childsShowAlreadyWatchedLine
-
-                                                    Box(
-                                                        modifier = Modifier
-                                                            .fillMaxWidth()
-                                                            .clip(MaterialTheme.shapes.medium)
-                                                            .clipToBounds()
-                                                            .background(MaterialTheme.colorScheme.surfaceVariant)
-                                                    ) {
-                                                        Row(
-                                                            modifier = Modifier
-                                                                .fillMaxWidth()
-                                                                .clickable {
-                                                                    if (stateViewModel.state.childsShowAlreadyWatchedLine) {
-                                                                        haptic.performHapticFeedback(
-                                                                            HapticFeedbackType.ToggleOff
-                                                                        )
-                                                                    } else {
-                                                                        haptic.performHapticFeedback(
-                                                                            HapticFeedbackType.ToggleOn
-                                                                        )
-                                                                    }
-                                                                    stateViewModel.update {
-                                                                        copy(
-                                                                            childsShowAlreadyWatchedLine = !childsShowAlreadyWatchedLine
-                                                                        )
-                                                                    }
-                                                                }
-                                                                .padding(MaterialTheme.spacing.medium),
-                                                            verticalAlignment = Alignment.CenterVertically,
-                                                            horizontalArrangement = Arrangement.Absolute.SpaceBetween
-                                                        ) {
-                                                            Text(
-                                                                modifier = Modifier.weight(
-                                                                    1f,
-                                                                    fill = false
-                                                                ),
-                                                                text = stringResource(R.string.showingAlreadyWatchedLine),
-                                                                style = MaterialTheme.typography.titleMedium,
-                                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                            )
-
-                                                            Switch(
-                                                                checked = expandedThs,
-                                                                onCheckedChange = {
-                                                                    if (it) {
-                                                                        haptic.performHapticFeedback(
-                                                                            HapticFeedbackType.ToggleOn
-                                                                        )
-                                                                    } else {
-                                                                        haptic.performHapticFeedback(
-                                                                            HapticFeedbackType.ToggleOff
-                                                                        )
-                                                                    }
-                                                                    stateViewModel.update {
-                                                                        copy(
-                                                                            childsShowAlreadyWatchedLine = it
-                                                                        )
-                                                                    }
-                                                                }
-                                                            )
-                                                        }
                                                     }
 
                                                     val expandedFvs =

@@ -1583,7 +1583,6 @@ fun CreateCardPage(
                     onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
                         focusManager.clearFocus()
-                        Log.e("RESULT CARD", "${stateViewModel.state.toObjectData()}")
                         onCloseAndApply(
                             stateViewModel.state.toObjectData(),
                             stateViewModel.state
@@ -1632,10 +1631,6 @@ fun CreateCardPage(
                                 it.toEpisodeInfo()
                             })
                         }
-
-                        Log.e("EPISODES LIST", "${stateViewModel.state.episodesList}  ;;; ${newEpisodes.map {
-                            it.toEpisodeInfo()
-                        }}")
                     }
                     currentPendingEditEpisodesKey.value = ""
                 }
@@ -1650,10 +1645,6 @@ fun CreateCardPage(
                                 it.toChapterInfo()
                             })
                         }
-
-                        Log.e("CH LIST", "${stateViewModel.state.chaptersList}  ;;; ${newChapters.map {
-                            it.toChapterInfo()
-                        }}")
                     }
                     currentPendingEditChaptersKey.value = ""
                 }

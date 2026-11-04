@@ -15,7 +15,7 @@ fun SettingsBlock(
     Box(
         modifier = modifier
             .clip(MaterialTheme.shapes.extraLarge)
-            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .background(MaterialTheme.colorScheme.surfaceContainer)
     ) {
         content()
     }

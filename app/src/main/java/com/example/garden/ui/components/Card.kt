@@ -22,7 +22,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
@@ -76,9 +75,6 @@ fun Card(
     authors: List<String>,
     isAnimeCard: Boolean,
     image: ImageData? = null,
-    alreadyWatched: Long,
-    length: Long,
-    showAlreadyWatchedLine: Boolean,
     cornerRadius: SizeType,
     layoutType: LayoutType,
     isSupportEditing: Boolean = true,
@@ -261,27 +257,6 @@ fun Card(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(MaterialTheme.spacing.small)
-                        )
-                    }
-                }
-
-                if (showAlreadyWatchedLine) {
-                    val progress = if (alreadyWatched > 0L && length > 0L) {
-                        (alreadyWatched.toFloat() / length.toFloat()).coerceIn(0f, 1f)
-                    } else {
-                        0f
-                    }
-
-                    if (progress > 0f) {
-                        LinearProgressIndicator(
-                            progress = { progress },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(MaterialTheme.dimens.strokeThick)
-                                .align(Alignment.BottomCenter),
-                            color = LocalCustomColors.current.closeButton,
-                            trackColor = Color.Transparent,
-                            drawStopIndicator = {}
                         )
                     }
                 }

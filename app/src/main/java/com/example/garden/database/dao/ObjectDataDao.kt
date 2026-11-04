@@ -191,6 +191,40 @@ interface ObjectDataDao {
 
     @Query(
         """
+        SELECT 
+        child.id AS id,
+        child.page AS page,
+        child.parentId AS parentId,
+        child.position AS position,
+        child.elementType AS elementType,
+        child.link AS link,
+        child.isUserCreated AS isUserCreated,
+        child.source AS source,
+        
+        CASE 
+            WHEN child.link LIKE 'insert:%' AND parent.id IS NOT NULL 
+            THEN parent.name 
+            ELSE child.name 
+        END AS name,
+        
+        CASE 
+            WHEN child.link LIKE 'insert:%' AND parent.id IS NOT NULL 
+            THEN parent.info 
+            ELSE child.info 
+        END AS info
+
+    FROM objectData AS child
+    LEFT JOIN objectData AS parent 
+        ON child.link LIKE 'insert:%' 
+        AND CAST(SUBSTR(child.link, 8) AS INTEGER) = parent.id
+    WHERE child.id = :id
+    LIMIT 1
+    """
+    )
+    fun getObjectByIdAsFlow(id: Long): Flow<ObjectEntity?>
+
+    @Query(
+        """
     SELECT 
         child.id AS id,
         child.page AS page,

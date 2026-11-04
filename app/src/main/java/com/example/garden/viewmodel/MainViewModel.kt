@@ -1,5 +1,6 @@
 package com.example.garden.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
@@ -8,6 +9,7 @@ import com.example.garden.database.ObjectWithChilds2
 import com.example.garden.database.entities.CollectionType
 import com.example.garden.database.entities.ElementType
 import com.example.garden.database.entities.EntitySourceType
+import com.example.garden.database.entities.EpisodeInfo
 import com.example.garden.database.entities.LayoutType
 import com.example.garden.database.entities.LinkData
 import com.example.garden.database.entities.ObjectData
@@ -81,6 +83,39 @@ class MainViewModel(
                 )
             )
         }
+    }
+
+    suspend fun updateAnimeCardLastVoiceName(id: Long, lastVoiceName: String) {
+        val obj = repository.getById(id) ?: return
+        if (obj.info !is ObjectData.Card.Anime) return
+        repository.justUpsertObject(
+            obj.copy(
+                info = obj.info.copy(
+                    lastVoiceName = lastVoiceName
+                )
+            )
+        )
+    }
+
+    suspend fun updateAnimeCardEpisodesProgress(id: Long, newEpList: List<EpisodeInfo>) {
+        val obj = repository.getById(id) ?: return
+        if (obj.info !is ObjectData.Card.Anime) return
+        repository.justUpsertObject(
+            obj.copy(
+                info = obj.info.copy(
+                    episodesList = newEpList
+                )
+            )
+        )
+    }
+
+    suspend fun updateFavourite(id: Long, newValue: Boolean) {
+        val obj = repository.getById(id) ?: return
+        repository.justUpsertObject(
+            obj.copy(
+                info = obj.info.copyWithFavourite(newValue)
+            )
+        )
     }
 
     suspend fun updateCardsPositions(cards: List<ObjectData.Card>) = repository.updateCardsPositions(cards)
@@ -201,6 +236,8 @@ class MainViewModel(
             is ObjectData.Carousel -> {}
         }
     }
+
+    fun getObjectByIdAsFlow(id: Long) : Flow<ObjectEntity?> = repository.getByIdAsFlow(id)
 
     suspend fun deleteObjectById(id: Long) {
         val obj = repository.getById(id) ?: return
