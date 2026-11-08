@@ -291,6 +291,38 @@ private fun LayerContent(
 ) {
     val mainViewModel: MainViewModel = viewModel()
     val coroutineScope = rememberCoroutineScope()
+    fun openCard(data: ObjectData) {
+        coroutineScope.launch {
+            when(data) {
+                is ObjectData.Card.Anime -> {
+                    if (data.id.isLocalId()) {
+                        val card = mainViewModel.getRootObjectById(data.id.toLongId()) as? ObjectData.Card.Anime
+
+                        if (card != null) {
+                            layersViewModel.openLayer(
+                                Layer.AnimePage(
+                                    card = card,
+                                    uiState = AnimePageUiState.Episodes
+                                )
+                            )
+                        }
+                    } else {
+                        val card = if (data.anilibriaCardId == null) data else mainViewModel.getCardByAniLibriaCardId(data.anilibriaCardId) ?: data
+
+                        layersViewModel.openLayer(
+                            Layer.AnimePage(
+                                card = card,
+                                uiState = AnimePageUiState.Episodes
+                            )
+                        )
+                    }
+                }
+
+                else -> {}
+            }
+        }
+    }
+
     CompositionLocalProvider(LocalLayerIndex provides layerIndex) {
         Box(modifier = modifier.fillMaxSize()) {
             val haptic = LocalHapticFeedback.current
@@ -554,30 +586,7 @@ private fun LayerContent(
                             layersViewModel.openLayer(layer = Layer.UnspecifiedPage())
                         },
                         onClickCard = {
-                            coroutineScope.launch {
-                                if (it.id.isLocalId()) {
-                                    val info =
-                                        mainViewModel.getRootObjectById(it.id.toLongId()) as? ObjectData.Card
-                                            ?: return@launch
-                                    if (info is ObjectData.Card.Anime) {
-                                        layersViewModel.openLayer(
-                                            Layer.AnimePage(
-                                                card = info,
-                                                uiState = AnimePageUiState.Episodes
-                                            )
-                                        )
-                                    }
-                                } else {
-                                    if (it is ObjectData.Card.Anime) {
-                                        layersViewModel.openLayer(
-                                            Layer.AnimePage(
-                                                card = it,
-                                                uiState = AnimePageUiState.Episodes
-                                            )
-                                        )
-                                    }
-                                }
-                            }
+                            openCard(it)
                         }
                     )
                 }
@@ -600,28 +609,7 @@ private fun LayerContent(
                             )
                         },
                         onOpenCard = {
-                            coroutineScope.launch {
-                                if (it.id.isLocalId()) {
-                                    val info =
-                                        mainViewModel.getRootObjectById(it.id.toLongId()) as? ObjectData.Card
-                                            ?: return@launch
-                                    if (info is ObjectData.Card.Anime) {
-                                        layersViewModel.openLayer(
-                                            Layer.AnimePage(
-                                                card = info,
-                                                uiState = AnimePageUiState.Episodes
-                                            )
-                                        )
-                                    }
-                                } else {
-                                    layersViewModel.openLayer(
-                                        Layer.AnimePage(
-                                            card = it,
-                                            uiState = AnimePageUiState.Episodes
-                                        )
-                                    )
-                                }
-                            }
+                            openCard(it)
                         }
                     )
                 }
@@ -647,7 +635,7 @@ private fun LayerContent(
                                 searchViewModel = searchViewModel,
                                 resultSenderViewModel = resultSenderViewModel,
                                 layer = layer,
-                                onCardClick = {}
+                                onCardClick = { openCard(it) }
                             )
                         }
                     }
@@ -719,7 +707,7 @@ private fun LayerContent(
                         mainViewModel = mainViewModel,
                         layer = layer,
                         closeLayer = closeLayer,
-                        onClickCard = {},
+                        onClickCard = { openCard(it) },
                         deleteCard = { id ->
                             coroutineScope.launch {
                                 val card = mainViewModel.getRootObjectById(id.toLongId())

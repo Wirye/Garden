@@ -1,6 +1,5 @@
 package com.example.garden.viewmodel
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
@@ -97,6 +96,11 @@ class MainViewModel(
         )
     }
 
+    suspend fun getCardByAniLibriaCardId(anilibriaCardId: Long): ObjectData.Card.Anime? {
+        val obj = repository.getCardByAniLibriaCardId(anilibriaCardId)
+        return obj?.info?.injectLocalObjectEntityData(obj) as? ObjectData.Card.Anime
+    }
+
     suspend fun updateAnimeCardEpisodesProgress(id: Long, newEpList: List<EpisodeInfo>) {
         val obj = repository.getById(id) ?: return
         if (obj.info !is ObjectData.Card.Anime) return
@@ -118,8 +122,11 @@ class MainViewModel(
         )
     }
 
-    suspend fun updateCardsPositions(cards: List<ObjectData.Card>) = repository.updateCardsPositions(cards)
-    suspend fun updateCarouselsPosition(carousels: List<ObjectData.Carousel>) = repository.updateCarouselsPosition(carousels)
+    suspend fun updateCardsPositions(cards: List<ObjectData.Card>) =
+        repository.updateCardsPositions(cards)
+
+    suspend fun updateCarouselsPosition(carousels: List<ObjectData.Carousel>) =
+        repository.updateCarouselsPosition(carousels)
 
     fun getCardsByParentId(parentId: Long): Flow<List<ObjectEntity>> =
         repository.getCardsByParentId(parentId)
@@ -237,7 +244,7 @@ class MainViewModel(
         }
     }
 
-    fun getObjectByIdAsFlow(id: Long) : Flow<ObjectEntity?> = repository.getByIdAsFlow(id)
+    fun getObjectByIdAsFlow(id: Long): Flow<ObjectEntity?> = repository.getByIdAsFlow(id)
 
     suspend fun deleteObjectById(id: Long) {
         val obj = repository.getById(id) ?: return

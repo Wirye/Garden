@@ -19,7 +19,6 @@ import com.example.garden.database.entities.PageType
 import com.example.garden.utils.getArtistType
 import com.example.garden.utils.toLongId
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 
 class ObjectRepositoryImpl(
@@ -250,6 +249,8 @@ class ObjectRepositoryImpl(
 
         return null
     }
+
+    override suspend fun getCardByAniLibriaCardId(anilibriaCardId: Long): ObjectEntity? = dao.getCardByAniLibriaCardId(anilibriaCardId)
 
     override suspend fun updateCardsPositions(cards: List<ObjectData.Card>) {
         db.withTransaction {

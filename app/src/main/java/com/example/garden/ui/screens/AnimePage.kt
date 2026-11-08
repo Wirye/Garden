@@ -1,7 +1,6 @@
 package com.example.garden.ui.screens
 
 import android.os.Parcelable
-import android.util.Log
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
@@ -1018,6 +1017,7 @@ fun AnimePage(
         }
     } else {
         Box(
+            modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
             ShapesLoadingIndicator()

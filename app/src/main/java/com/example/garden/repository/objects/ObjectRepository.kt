@@ -29,4 +29,5 @@ interface ObjectRepository {
     fun getCardsByParentId(parentId: Long) : Flow<List<ObjectEntity>>
     fun getCarouselsByPage(page: PageType): Flow<List<ObjectEntity>>
     suspend fun justUpsertObject(entity: ObjectEntity): Long
+    suspend fun getCardByAniLibriaCardId(anilibriaCardId: Long): ObjectEntity?
 }

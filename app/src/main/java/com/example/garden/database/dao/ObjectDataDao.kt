@@ -40,6 +40,9 @@ interface ObjectDataDao {
         return justUpsertObject(entity)
     }
 
+    @Query("SELECT * FROM objectData WHERE link NOT LIKE 'insert:%' AND json_extract(info, '$.anilibriaCardId') IS :anilibriaCardId LIMIT 1")
+    suspend fun getCardByAniLibriaCardId(anilibriaCardId: Long): ObjectEntity?
+
     @Transaction
     @Query("SELECT * FROM objectData WHERE page = :page AND parentId IS NULL ORDER BY position ASC")
     fun getRootObjectsWithChildren(page: PageType): PagingSource<Int, ObjectWithChilds>
