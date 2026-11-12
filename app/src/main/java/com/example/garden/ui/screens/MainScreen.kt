@@ -180,6 +180,9 @@ fun MainScreen(
                                 }
 
                                 if (close) {
+                                    if (layer is Layer.VideoPlayer) {
+                                        resultSenderViewModel.sendResult(layer.resultKey, "")
+                                    }
                                     if (!isTopLayer) {
                                         layersViewModel.removeLayerById(layer.id)
                                     } else {
@@ -595,14 +598,17 @@ private fun LayerContent(
                     AnimePage(
                         layer = layer,
                         mainViewModel = mainViewModel,
+                        resultSenderViewModel = resultSenderViewModel,
                         objectLinksViewModel = objectLinksViewModel,
                         closePage = closeLayer,
-                        onOpenEpisode = { episodes, epNum ->
+                        onOpenEpisode = { episodes, epNum, key ->
                             layersViewModel.openLayer(
                                 layer = Layer.VideoPlayer(
+                                    resultKey = key,
                                     episodesList = episodes,
                                     titleName = layer.card.name,
                                     cardId = layer.card.id.toLongId(),
+                                    anilibriaCardId = layer.card.anilibriaCardId,
                                     startEpisodePosition = epNum,
                                     lastVoiceName = layer.card.lastVoiceName
                                 )
@@ -619,6 +625,7 @@ private fun LayerContent(
                         episodes = layer.episodesList,
                         title = layer.titleName,
                         id = layer.cardId,
+                        aniLibriaCardId = layer.anilibriaCardId,
                         closeLayer = closeLayer,
                         mainViewModel = mainViewModel,
                         startEpisodePosition = layer.startEpisodePosition,

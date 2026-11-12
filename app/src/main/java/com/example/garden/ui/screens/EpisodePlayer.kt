@@ -120,10 +120,12 @@ import com.example.garden.ui.utils.blockGestures
 import com.example.garden.ui.utils.clearFocus
 import com.example.garden.viewmodel.MainViewModel
 import com.github.wirye.anilibriakt.model.Episode
+import com.github.wirye.anilibriakt.model.EpisodeTimecode
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.File
 import java.util.Locale
+import kotlin.math.floor
 import kotlin.time.Duration.Companion.milliseconds
 
 private const val UI_HIDE_DELAY_MS = 5_000L
@@ -163,6 +165,7 @@ fun EpisodePlayerScreen(
     episodes: List<EpisodeInfo>,
     title: String,
     id: Long,
+    aniLibriaCardId: Long?,
     closeLayer: () -> Unit,
     mainViewModel: MainViewModel,
     startEpisodePosition: Int? = null, // какой эпизод запускать; по умолчанию первый непросмотренный
@@ -206,6 +209,19 @@ fun EpisodePlayerScreen(
     var menuOpen by remember { mutableStateOf(false) }
     var dragFraction by remember { mutableStateOf<Float?>(null) }
     var seekFlash by remember { mutableStateOf<Pair<Boolean, Int>?>(null) }
+    var episodes by remember { mutableStateOf<List<Episode>>(emptyList()) }
+
+
+    LaunchedEffect(aniLibriaCardId) {
+        scope.launch {
+            if (aniLibriaCardId != null) {
+                val eps = AniLibriaClient.releases.getRelease(aniLibriaCardId)
+                eps.onSuccess {
+                    episodes = (it.episodes ?: emptyList())
+                }
+            }
+        }
+    }
 
     val playerView = remember(context) {
         PlayerView(context).apply {
@@ -231,8 +247,24 @@ fun EpisodePlayerScreen(
         if (idx < 0) return
         val pr = (player.currentPosition.toFloat() / dur).coerceIn(0f, 1f)
         val old = episodesList[idx]
+        val anlOld = episodes.firstOrNull { (it.ordinal ?: -1).toInt() == old.position }
+        Log.e("ANLOLD", "$anlOld  $episodes")
+        if (anlOld != null) {
+            val wPr = floor((anlOld.duration ?: 0L) * pr)
+            scope.launch {
+                AniLibriaClient.account.history.updateTimecodes(
+                    listOf(
+                        EpisodeTimecode(
+                            anlOld.episodeId,
+                            wPr,
+                            pr >= WATCHED_THRESHOLD
+                        )
+                    )
+                )
+            }
+        }
         val newList = ArrayList(episodesList)
-        newList[idx] = old.copy(positionPr = pr, watched = old.watched || pr >= WATCHED_THRESHOLD)
+        newList[idx] = old.copy(positionPr = pr, watched = pr >= WATCHED_THRESHOLD)
         episodesList = newList
         scope.launch {
             mainViewModel.updateAnimeCardEpisodesProgress(id, newList.toList().notWeb())
@@ -373,7 +405,8 @@ fun EpisodePlayerScreen(
         }
         player.addListener(listener)
         onDispose {
-            player.removeListener(listener) }
+            player.removeListener(listener)
+        }
 
     }
 

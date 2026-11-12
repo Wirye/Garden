@@ -89,9 +89,11 @@ sealed class Layer(
 
     @Parcelize
     data class VideoPlayer(
+        val resultKey: String,
         var episodesList: List<EpisodeInfo>,
         var titleName: String,
         var cardId: Long,
+        var anilibriaCardId: Long?,
         var startEpisodePosition: Int? = null,
         var lastVoiceName: String? = null,
     ) : Layer()
@@ -199,6 +201,13 @@ object ResultKeys {
         val res = lastPageWithSearchEditId
         lastPageWithSearchEditId += 1L
         return "PAGE_WITH_SEARCH_EDIT_${res}"
+    }
+
+    var lastEpisodesPlayerClosedId = 0L
+    fun getEpisodesPlayerClosedKey() : String {
+        val res = lastEpisodesPlayerClosedId
+        lastEpisodesPlayerClosedId += 1L
+        return "EPISODES_PLAYER_CLOSED_$res"
     }
 
     const val NO_DATA = "NO_DATA"

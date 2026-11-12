@@ -42,6 +42,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.pullToRefresh
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.windowsizeclass.WindowHeightSizeClass
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
@@ -88,6 +90,7 @@ import com.example.garden.AniLibriaClient
 import com.example.garden.Layer
 import com.example.garden.LocalCustomColors
 import com.example.garden.R
+import com.example.garden.ResultKeys
 import com.example.garden.database.entities.CardSize
 import com.example.garden.database.entities.ElementType
 import com.example.garden.database.entities.EntitySourceType
@@ -107,6 +110,7 @@ import com.example.garden.ui.components.DropDownMenuWithBlur
 import com.example.garden.ui.components.HelpDialog
 import com.example.garden.ui.components.PopupMenuItem
 import com.example.garden.ui.components.ShapesLoadingIndicator
+import com.example.garden.ui.components.ShapesPullToRefreshIndicator
 import com.example.garden.ui.components.StrokeText
 import com.example.garden.ui.components.icons.CloseIco
 import com.example.garden.ui.components.icons.MoreVertIco
@@ -131,6 +135,7 @@ import com.example.garden.utils.toLongId
 import com.example.garden.utils.toObjectEntity
 import com.example.garden.viewmodel.MainViewModel
 import com.example.garden.viewmodel.ObjectLinksViewModel
+import com.example.garden.viewmodel.ResultSenderViewModel
 import com.github.wirye.anilibriakt.model.Episode
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.flowOf
@@ -164,9 +169,10 @@ private sealed class ListState<T> {
 fun AnimePage(
     layer: Layer.AnimePage,
     mainViewModel: MainViewModel,
+    resultSenderViewModel: ResultSenderViewModel,
     objectLinksViewModel: ObjectLinksViewModel,
     closePage: () -> Unit,
-    onOpenEpisode: (List<EpisodeInfo>, Int?) -> Unit = { _, _ -> },
+    onOpenEpisode: (List<EpisodeInfo>, Int?, String) -> Unit = { _, _, _ -> },
     onOpenCard: (ObjectData.Card.Anime) -> Unit = {},
 ) {
     val haptic = LocalHapticFeedback.current
@@ -184,6 +190,23 @@ fun AnimePage(
     val rightInset = with(density) { rightInsetPx.toDp() }
     val leftInset = with(density) { leftInsetPx.toDp() }
     val bottomInset = with(density) { bottomInsetPx.toDp() }
+    var updater by remember { mutableStateOf(false) }
+
+    var isInfoRefreshing by remember { mutableStateOf(false) }
+    var isContentRefreshing by remember { mutableStateOf(false) }
+    val isRefreshing = isInfoRefreshing || isContentRefreshing
+
+    var playerClosedKey by remember { mutableStateOf("-9-023108328834717410 fully bred") }
+
+    LaunchedEffect(Unit) {
+        resultSenderViewModel.results.collect { (key, _) ->
+            when (key) {
+                playerClosedKey -> {
+                    updater = !updater
+                }
+            }
+        }
+    }
 
     val card =
         if (layer.card.id.isLocalId() && (layer.card.id.toLongId() != 0L || layer.card.id.toLongId() != -1L))
@@ -194,8 +217,9 @@ fun AnimePage(
     val genre = remember(card) { mutableStateOf(card?.genre ?: emptyList()) }
 
     if (layer.card.id.isWebId() && layer.card.anilibriaCardId != null) {
-        LaunchedEffect(layer.card) {
-            coroutineScope.launch {
+        LaunchedEffect(layer.card, updater) {
+            val tracked = isInfoRefreshing
+            val loadJob = coroutineScope.launch {
                 withTimeout(10.seconds) {
                     AniLibriaClient.releases.getRelease(layer.card.anilibriaCardId).map {
                         it.toObjectEntity(
@@ -209,6 +233,7 @@ fun AnimePage(
                     }
                 }
             }
+            if (tracked) loadJob.invokeOnCompletion { isInfoRefreshing = false }
         }
     }
 
@@ -218,7 +243,7 @@ fun AnimePage(
 
         var isInFavourite by remember(Unit) { mutableStateOf(Pair(false, false)) }
 
-        LaunchedEffect(card) {
+        LaunchedEffect(card, updater) {
             if (card.anilibriaCardId == null) {
                 isInFavourite = Pair(card.favourite, true)
             } else {
@@ -276,14 +301,18 @@ fun AnimePage(
 
         val finalGroups by remember(comparedGroups) { mutableStateOf(comparedGroups.filter { card.anilibriaCardId != null && it.anilibriaCardId != card.anilibriaCardId }) }
 
-        LaunchedEffect(Unit, card) {
-            coroutineScope.launch {
+        LaunchedEffect(card, updater) {
+            val tracked = isContentRefreshing
+            val loadJob = coroutineScope.launch {
                 if (card.anilibriaCardId != null) {
                     val episodes = async {
                         withTimeout(10.seconds) {
                             AniLibriaClient.releases.getRelease(card.anilibriaCardId)
                         }.onFailure {
-                            episodes = ListState.Loaded(card.episodesList.asReversed())
+                            // при неудачном обновлении не затираем уже загруженный список
+                            if (episodes is ListState.Loading) {
+                                episodes = ListState.Loaded(card.episodesList.asReversed())
+                            }
                         }.onSuccess {
                             val webEpisodes = it.episodes
                             if (webEpisodes != null) {
@@ -334,7 +363,9 @@ fun AnimePage(
                         withTimeout(10.seconds) {
                             AniLibriaClient.releases.franchises.getFranchisesForRelease(card.anilibriaCardId)
                         }.onFailure {
-                            webGroupsObjects = ListState.Loaded(emptyList())
+                            if (webGroupsObjects is ListState.Loading) {
+                                webGroupsObjects = ListState.Loaded(emptyList())
+                            }
                         }.onSuccess { franchises ->
                             webGroupsObjects =
                                 ListState.Loaded(franchises.asSequence().mapNotNull { franchise ->
@@ -356,6 +387,7 @@ fun AnimePage(
                     webGroupsObjects = ListState.Loaded(emptyList())
                 }
             }
+            if (tracked) loadJob.invokeOnCompletion { isContentRefreshing = false }
         }
 
         var viewMode by remember { mutableStateOf(EpisodesViewMode.Grid) }
@@ -364,6 +396,7 @@ fun AnimePage(
         var isAboutOpened by remember { mutableStateOf(false) }
         var isViewMenuOpened by remember { mutableStateOf(false) }
         val gridState = rememberLazyGridState()
+        val pullState = rememberPullToRefreshState()
         val searchFocus = remember { FocusRequester() }
 
         val width = MaterialTheme.windowInfo.widthDp
@@ -552,7 +585,9 @@ fun AnimePage(
                                     tick()
                                     val eps = episodes
                                     if (eps is ListState.Loaded && continueWith.first != -1) {
-                                        onOpenEpisode(eps.episodes, continueWith.first)
+                                        val key = ResultKeys.getEpisodesPlayerClosedKey()
+                                        playerClosedKey = key
+                                        onOpenEpisode(eps.episodes, continueWith.first, key)
                                     }
                                 },
                                 modifier = Modifier.weight(1f),
@@ -602,7 +637,20 @@ fun AnimePage(
             LazyVerticalGrid(
                 state = gridState,
                 columns = GridCells.Fixed(columns),
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .pullToRefresh(
+                        isRefreshing = isRefreshing,
+                        state = pullState,
+                        // у локальных карточек нечего обновлять из сети
+                        enabled = card.anilibriaCardId != null,
+                        onRefresh = {
+                            tick()
+                            isInfoRefreshing = true
+                            isContentRefreshing = true
+                            updater = !updater
+                        }
+                    ),
                 contentPadding = PaddingValues(
                     start = horizontal + leftInset,
                     end = horizontal + rightInset,
@@ -850,7 +898,9 @@ fun AnimePage(
                                         .clip(MaterialTheme.shapes.large)
                                         .clickable {
                                             tick()
-                                            onOpenEpisode(state.episodes, episode.position)
+                                            val key = ResultKeys.getEpisodesPlayerClosedKey()
+                                            playerClosedKey = key
+                                            onOpenEpisode(state.episodes, episode.position, key)
                                         }
                                 ) {
                                     AppAsyncImage(
@@ -909,7 +959,9 @@ fun AnimePage(
                                         .clip(MaterialTheme.shapes.medium)
                                         .clickable {
                                             tick()
-                                            onOpenEpisode(state.episodes, episode.position)
+                                            val key = ResultKeys.getEpisodesPlayerClosedKey()
+                                            playerClosedKey = key
+                                            onOpenEpisode(state.episodes, episode.position, key)
                                         }
                                 ) { EpisodePreview(episode) }
                             }
@@ -947,6 +999,14 @@ fun AnimePage(
                     }
                 }
             }
+
+            ShapesPullToRefreshIndicator(
+                state = pullState,
+                isRefreshing = isRefreshing,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = topInset)
+            )
 
             Box(
                 modifier = Modifier
