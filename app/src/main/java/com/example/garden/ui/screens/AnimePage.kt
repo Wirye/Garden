@@ -1,6 +1,7 @@
 package com.example.garden.ui.screens
 
 import android.os.Parcelable
+import android.util.Log
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
@@ -255,6 +256,10 @@ fun AnimePage(
                     }
                 }
             }
+        }
+
+        LaunchedEffect(episodes) {
+            Log.e("EP", "$episodes")
         }
 
         suspend fun updateFavourite(newValue: Boolean) {
@@ -1204,7 +1209,7 @@ private fun ListState<EpisodeInfo>.continueWith(): Pair<Int, Boolean> {
         } else {
             Pair(
                 eps.episodes.continueWith(),
-                ((eps.episodes.first { it.position == eps.episodes.continueWith() }.watched) && (eps.episodes.continueWith() == min(
+                ((eps.episodes.first { it.position == eps.episodes.continueWith() }.watched || eps.episodes.first { it.position == eps.episodes.continueWith() }.positionPr == 0f) && (eps.episodes.continueWith() == min(
                     eps.episodes.map { it.position })))
             )
         }

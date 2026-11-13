@@ -40,6 +40,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -95,6 +96,13 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.database.StandaloneDatabaseProvider
+import androidx.media3.datasource.DefaultDataSource
+import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.datasource.cache.CacheDataSource
+import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
+import androidx.media3.datasource.cache.SimpleCache
+import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.ui.PlayerView
@@ -121,10 +129,14 @@ import com.example.garden.ui.utils.clearFocus
 import com.example.garden.viewmodel.MainViewModel
 import com.github.wirye.anilibriakt.model.Episode
 import com.github.wirye.anilibriakt.model.EpisodeTimecode
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.Locale
+import java.util.UUID
 import kotlin.math.floor
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -133,6 +145,14 @@ private const val SEEK_STEP_MS = 10_000L
 private const val SAVE_INTERVAL_MS = 5_000L
 private const val WATCHED_THRESHOLD = 0.95f
 private const val OP_ED_UNIT_MS = 1_000L
+
+// ── кэш воспроизведения / буфер ──
+private const val CACHE_MAX_BYTES = 1024L * 1024L * 1024L // 1 ГБ, дальше вытесняются самые старые куски
+private const val BUFFER_MIN_MS = 30_000          // ниже этого порога плеер снова начинает подкачку
+private const val BUFFER_MAX_MS = 180_000         // качаем вперёд до 3 минут (ограничено ещё и по байтам)
+private const val BUFFER_FOR_PLAYBACK_MS = 2_500
+private const val BUFFER_AFTER_REBUFFER_MS = 5_000
+private const val BACK_BUFFER_MS = 15_000         // ±10 сек двойным тапом — мгновенно, остальное из дискового кэша
 
 // ───────────────────────────── модели состояния ─────────────────────────────
 
@@ -145,6 +165,41 @@ private sealed interface PlayerPhase {
     data object Loading : PlayerPhase
     data object Main : PlayerPhase
     data class Error(val message: String?, val unsupported: Boolean = false) : PlayerPhase
+}
+
+/**
+ * Дисковый кэш одного экземпляра плеера. Живёт, пока открыт экран:
+ *  - [clear] — сброс при переключении видео (эпизод/озвучка);
+ *  - [destroy] — полное удаление при закрытии плеера.
+ * Каждый экземпляр пишет в свою папку, «хвосты» после убитого процесса чистит [deleteStale].
+ */
+@OptIn(UnstableApi::class)
+private class PlayerCache(context: Context) {
+    private val root = File(context.cacheDir, "player_cache")
+    private val dir = File(root, UUID.randomUUID().toString())
+    private val db = StandaloneDatabaseProvider(context)
+    val cache = SimpleCache(dir, LeastRecentlyUsedCacheEvictor(CACHE_MAX_BYTES), db)
+
+    /** Удаляет всё содержимое кэша, сам кэш остаётся рабочим. */
+    fun clear() {
+        cache.keys.toList().forEach { key -> runCatching { cache.removeResource(key) } }
+    }
+
+    /** Удаляет папки кэша, оставшиеся от прошлых запусков (процесс убили, не вызвав destroy). */
+    fun deleteStale() {
+        root.listFiles()
+            ?.filter { it != dir }
+            ?.forEach { runCatching { SimpleCache.delete(it, db) } }
+    }
+
+    /** Освобождает кэш и удаляет файлы с диска — в фоне, чтобы не блокировать UI. */
+    fun destroy() {
+        CoroutineScope(Dispatchers.IO).launch {
+            runCatching { cache.release() }
+            runCatching { SimpleCache.delete(dir, db) }
+            runCatching { db.close() }
+        }
+    }
 }
 
 fun List<EpisodeInfo>.notWeb(): List<EpisodeInfo> {
@@ -200,7 +255,10 @@ fun EpisodePlayerScreen(
     var positionMs by remember { mutableLongStateOf(0L) }
     var durationMs by remember { mutableLongStateOf(0L) }
     var pendingSeek by remember { mutableStateOf<PendingSeek?>(null) }
+    var retryToken by remember { mutableIntStateOf(0) } // инкремент = перезагрузить текущее видео
     val skippedMarks = remember { mutableSetOf<String>() }
+    // для какого (эпизод, озвучка) сейчас лежит кэш — чтобы не чистить его при retry
+    val cacheOwner = remember { arrayOfNulls<Pair<Int, String?>>(1) }
 
     var uiVisible by remember { mutableStateOf(true) }
     var lastInteraction by remember { mutableLongStateOf(SystemClock.elapsedRealtime()) }
@@ -230,12 +288,43 @@ fun EpisodePlayerScreen(
         }
     }
 
-    val mediaSourceFactory = DefaultMediaSourceFactory(context)
+    val playerCache = remember(context) { PlayerCache(context) }
 
     val player = remember {
-        ExoPlayer.Builder(context)
-            .setMediaSourceFactory(mediaSourceFactory)
+        val httpFactory = DefaultHttpDataSource.Factory()
+            .setAllowCrossProtocolRedirects(true)
+            .setConnectTimeoutMs(15_000)
+            .setReadTimeoutMs(15_000)
+
+        // Всё, что приходит по сети, проходит через дисковый кэш.
+        // Локальные файлы (file://, content://) DefaultDataSource отдаёт напрямую, мимо кэша.
+        val cacheFactory = CacheDataSource.Factory()
+            .setCache(playerCache.cache)
+            .setUpstreamDataSourceFactory(httpFactory)
+            .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
+        val dataSourceFactory = DefaultDataSource.Factory(context, cacheFactory)
+
+        // Большой буфер вперёд: пока интернет есть, плеер тянет видео заранее,
+        // и всё скачанное оседает в дисковом кэше (можно вернуться назад без сети).
+        val loadControl = DefaultLoadControl.Builder()
+            .setBufferDurationsMs(
+                BUFFER_MIN_MS,
+                BUFFER_MAX_MS,
+                BUFFER_FOR_PLAYBACK_MS,
+                BUFFER_AFTER_REBUFFER_MS
+            )
+            .setBackBuffer(BACK_BUFFER_MS, true)
             .build()
+
+        ExoPlayer.Builder(context)
+            .setMediaSourceFactory(DefaultMediaSourceFactory(dataSourceFactory))
+            .setLoadControl(loadControl)
+            .build()
+    }
+
+    // «хвосты» кэша от прошлых запусков
+    LaunchedEffect(playerCache) {
+        withContext(Dispatchers.IO) { playerCache.deleteStale() }
     }
 
     // ── вспомогательные функции ──
@@ -313,6 +402,16 @@ fun EpisodePlayerScreen(
         startMain(url)
     }
 
+    fun retry() {
+        // Позиция уже сохранена в pendingSeek в момент ошибки (см. onPlayerError).
+        // Страховка — на случай, если ошибка пришла не из плеера, а плеер всё ещё помнит позицию.
+        if (pendingSeek == null) {
+            val pos = player.currentPosition
+            if (pos > 0) pendingSeek = PendingSeek.Ms(pos)
+        }
+        retryToken++
+    }
+
     fun togglePlay() {
         if (phase !is PlayerPhase.Main) return
         if (player.isPlaying) player.pause() else player.play()
@@ -329,6 +428,7 @@ fun EpisodePlayerScreen(
             if (landscapeLocked) ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
             else ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
     }
+
     DisposableEffect(Unit) {
         onDispose { activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED }
     }
@@ -343,6 +443,7 @@ fun EpisodePlayerScreen(
         onDispose {
             persistProgress()
             player.release()
+            playerCache.destroy() // кэш живёт только пока открыт плеер
         }
     }
 
@@ -400,6 +501,12 @@ fun EpisodePlayerScreen(
             }
 
             override fun onPlayerError(error: PlaybackException) {
+                // Запоминаем точную позицию ДО того, как что-либо сбросит плеер.
+                // Если seek ещё не применился (ошибка при загрузке) — он остаётся как есть.
+                if (pendingSeek == null) {
+                    val pos = player.currentPosition
+                    if (pos > 0) pendingSeek = PendingSeek.Ms(pos)
+                }
                 phase = PlayerPhase.Error(error.localizedMessage ?: error.errorCodeName)
             }
         }
@@ -410,8 +517,8 @@ fun EpisodePlayerScreen(
 
     }
 
-    // ── загрузка источника при смене эпизода / озвучки ──
-    LaunchedEffect(currentPosition, voiceName) {
+    // ── загрузка источника при смене эпизода / озвучки (и при retry) ──
+    LaunchedEffect(currentPosition, voiceName, retryToken) {
         val episode = episodesList.firstOrNull { it.position == currentPosition }
         phase = PlayerPhase.Loading
         player.stop()
@@ -419,6 +526,14 @@ fun EpisodePlayerScreen(
         webEpisode = null
         positionMs = 0L
         durationMs = 0L
+
+        // Новое видео — чистим кэш предыдущего. При retry (то же видео) кэш не трогаем:
+        // уже скачанное пригодится после повторной попытки.
+        val videoKey = currentPosition to voiceName
+        if (cacheOwner[0] != videoKey) {
+            cacheOwner[0] = videoKey
+            withContext(Dispatchers.IO) { playerCache.clear() }
+        }
         if (episode == null) {
             phase = PlayerPhase.Error(null)
             return@LaunchedEffect
@@ -618,15 +733,31 @@ fun EpisodePlayerScreen(
                 )
             }
             if (ph is PlayerPhase.Error) {
-                Text(
-                    text = if (ph.unsupported) stringResource(R.string.playerUnsupportedSource)
-                    else ph.message ?: stringResource(R.string.playerUnknownError),
-                    color = Color.White,
-                    textAlign = TextAlign.Center,
+                Column(
                     modifier = Modifier
                         .align(Alignment.Center)
-                        .padding(horizontal = MaterialTheme.spacing.large)
-                )
+                        .padding(horizontal = MaterialTheme.spacing.large),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)
+                ) {
+                    Text(
+                        text = if (ph.unsupported) stringResource(R.string.playerUnsupportedSource)
+                        else ph.message ?: stringResource(R.string.playerUnknownError),
+                        color = Color.White,
+                        textAlign = TextAlign.Center
+                    )
+                    // для неподдерживаемого источника повтор бессмысленен
+                    if (!ph.unsupported) {
+                        Button(
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.ContextClick)
+                                retry()
+                            }
+                        ) {
+                            Text(stringResource(R.string.playerRetry))
+                        }
+                    }
+                }
             }
             seekFlash?.let { (forward, _) ->
                 StrokeText(
